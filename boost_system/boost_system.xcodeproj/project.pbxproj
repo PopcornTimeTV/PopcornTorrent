@@ -1,0 +1,353 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		577CF23F1BEA129500AA21D6 /* error_code.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 577CF23E1BEA129500AA21D6 /* error_code.cpp */; };
+		9265166E1CEA6A13000F57D4 /* error_code.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 577CF23E1BEA129500AA21D6 /* error_code.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		577CF1141BEA114900AA21D6 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		926516701CEA6A13000F57D4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		577CF1161BEA114900AA21D6 /* libboost_system.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libboost_system.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		577CF23E1BEA129500AA21D6 /* error_code.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = error_code.cpp; sourceTree = "<group>"; };
+		926516741CEA6A13000F57D4 /* libboost_system_ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libboost_system_ios.a; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		577CF1131BEA114900AA21D6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9265166F1CEA6A13000F57D4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		577CF10D1BEA114900AA21D6 = {
+			isa = PBXGroup;
+			children = (
+				577CF1181BEA114900AA21D6 /* boost_system */,
+				577CF1171BEA114900AA21D6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		577CF1171BEA114900AA21D6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				577CF1161BEA114900AA21D6 /* libboost_system.a */,
+				926516741CEA6A13000F57D4 /* libboost_system_ios.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		577CF1181BEA114900AA21D6 /* boost_system */ = {
+			isa = PBXGroup;
+			children = (
+				577CF23D1BEA129500AA21D6 /* src */,
+			);
+			path = boost_system;
+			sourceTree = "<group>";
+		};
+		577CF23D1BEA129500AA21D6 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				577CF23E1BEA129500AA21D6 /* error_code.cpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		577CF1151BEA114900AA21D6 /* boost_system */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 577CF11F1BEA114A00AA21D6 /* Build configuration list for PBXNativeTarget "boost_system" */;
+			buildPhases = (
+				577CF1121BEA114900AA21D6 /* Sources */,
+				577CF1131BEA114900AA21D6 /* Frameworks */,
+				577CF1141BEA114900AA21D6 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = boost_system;
+			productName = boost_system;
+			productReference = 577CF1161BEA114900AA21D6 /* libboost_system.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		9265166C1CEA6A13000F57D4 /* boost_system_ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 926516711CEA6A13000F57D4 /* Build configuration list for PBXNativeTarget "boost_system_ios" */;
+			buildPhases = (
+				9265166D1CEA6A13000F57D4 /* Sources */,
+				9265166F1CEA6A13000F57D4 /* Frameworks */,
+				926516701CEA6A13000F57D4 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = boost_system_ios;
+			productName = boost_system;
+			productReference = 926516741CEA6A13000F57D4 /* libboost_system_ios.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		577CF10E1BEA114900AA21D6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0710;
+				ORGANIZATIONNAME = "Andrey Chuprina";
+				TargetAttributes = {
+					577CF1151BEA114900AA21D6 = {
+						CreatedOnToolsVersion = 7.1;
+					};
+				};
+			};
+			buildConfigurationList = 577CF1111BEA114900AA21D6 /* Build configuration list for PBXProject "boost_system" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 577CF10D1BEA114900AA21D6;
+			productRefGroup = 577CF1171BEA114900AA21D6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				577CF1151BEA114900AA21D6 /* boost_system */,
+				9265166C1CEA6A13000F57D4 /* boost_system_ios */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		577CF1121BEA114900AA21D6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				577CF23F1BEA129500AA21D6 /* error_code.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9265166D1CEA6A13000F57D4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9265166E1CEA6A13000F57D4 /* error_code.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		577CF11D1BEA114A00AA21D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		577CF11E1BEA114A00AA21D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		577CF1201BEA114A00AA21D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_UNROLL_LOOPS = NO;
+				HEADER_SEARCH_PATHS = ../include;
+				LLVM_LTO = NO;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "appletvsimulator appletvos";
+			};
+			name = Debug;
+		};
+		577CF1211BEA114A00AA21D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_UNROLL_LOOPS = NO;
+				HEADER_SEARCH_PATHS = ../include;
+				LLVM_LTO = NO;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "appletvsimulator appletvos";
+			};
+			name = Release;
+		};
+		926516721CEA6A13000F57D4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_UNROLL_LOOPS = NO;
+				HEADER_SEARCH_PATHS = ../include;
+				LLVM_LTO = NO;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+			};
+			name = Debug;
+		};
+		926516731CEA6A13000F57D4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_UNROLL_LOOPS = NO;
+				HEADER_SEARCH_PATHS = ../include;
+				LLVM_LTO = NO;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		577CF1111BEA114900AA21D6 /* Build configuration list for PBXProject "boost_system" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				577CF11D1BEA114A00AA21D6 /* Debug */,
+				577CF11E1BEA114A00AA21D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		577CF11F1BEA114A00AA21D6 /* Build configuration list for PBXNativeTarget "boost_system" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				577CF1201BEA114A00AA21D6 /* Debug */,
+				577CF1211BEA114A00AA21D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		926516711CEA6A13000F57D4 /* Build configuration list for PBXNativeTarget "boost_system_ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				926516721CEA6A13000F57D4 /* Debug */,
+				926516731CEA6A13000F57D4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 577CF10E1BEA114900AA21D6 /* Project object */;
+}

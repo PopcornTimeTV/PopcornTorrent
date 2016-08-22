@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:PopcornTorrent.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:boost_system/boost_system.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:boost_filesystem/boost_filesystem.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:torrent/torrent.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Pods/Pods.xcodeproj">
+   </FileRef>
+</Workspace>

@@ -1,0 +1,6 @@
+framework module PopcornTorrent {
+  umbrella header "PopcornTorrent.h"
+
+  export *
+  module * { export * }
+}

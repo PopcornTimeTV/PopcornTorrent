@@ -1,0 +1,17 @@
+
+use_frameworks!
+platform :tvos ,'9.0'
+target "PopcornTorrent" do
+    
+    pod "GCDWebServer", "~> 3.0"
+end
+
+target "PopcornTorrentTests" do
+    
+    pod "GCDWebServer", "~> 3.0"
+end
+
+target "PopcornTorrent-iOS" do
+    platform :ios, '7.0'
+    pod "GCDWebServer", "~> 3.0"
+end

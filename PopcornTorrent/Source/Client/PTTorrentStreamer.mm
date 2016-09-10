@@ -1,13 +1,14 @@
 #import "PTTorrentStreamer.h"
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 #import <string>
 #import <libtorrent/session.hpp>
 #import <libtorrent/alert.hpp>
 #import <libtorrent/alert_types.hpp>
 #import "CocoaSecurity.h"
-#import "GCDWebServer.h"
-#import "GCDWebServerFileRequest.h"
-#import "GCDWebServerFileResponse.h"
+#import <GCDWebServer/GCDWebServer.h>
+#import <GCDWebServer/GCDWebServerFileRequest.h>
+#import <GCDWebServer/GCDWebServerFileResponse.h>
+#import <GCDWebServer/GCDWebServerPrivate.h>
 
 #define ALERTS_LOOP_WAIT_MILLIS 500
 #define MIN_PIECES 15
@@ -60,19 +61,21 @@ std::mutex mtx;
 #pragma mark -
 
 + (NSString *)downloadsDirectory {
-    NSString *cachesPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject];
-    NSString *downloadsDirectoryPath = [cachesPath stringByAppendingPathComponent:@"Downloads"];
+    NSString *downloadsDirectoryPath;
+    NSString *cachesPath = NSTemporaryDirectory();
+    downloadsDirectoryPath = [cachesPath stringByAppendingPathComponent:@"Downloads"];
     if (![[NSFileManager defaultManager] fileExistsAtPath:downloadsDirectoryPath]) {
         NSError *error;
         [[NSFileManager defaultManager] createDirectoryAtPath:downloadsDirectoryPath
-                                  withIntermediateDirectories:YES
-                                                   attributes:nil
+                                    withIntermediateDirectories:YES
+                                                    attributes:nil
                                                         error:&error];
         if (error) {
             NSLog(@"%@", error);
             return nil;
         }
     }
+    NSLog(@"%@",downloadsDirectoryPath);
     return downloadsDirectoryPath;
 }
 
@@ -95,10 +98,13 @@ std::mutex mtx;
 
     if(![NSThread isMainThread])
         dispatch_sync(dispatch_get_main_queue(), ^{
+            [GCDWebServer   setLogLevel:kGCDWebServerLoggingLevel_Error];
             _mediaServer= [[GCDWebServer alloc]init];
         });
-    else
+    else{
+        [GCDWebServer   setLogLevel:kGCDWebServerLoggingLevel_Error];
         _mediaServer= [[GCDWebServer alloc]init];
+    }
 
     
 }
@@ -156,6 +162,7 @@ std::mutex mtx;
                                                     error:&error];
     if (error) {
         NSLog(@"Can't create directory at path: %@", self.savePath);
+        throw [[NSError alloc] initWithDomain:@"com.popcorntime.torrentstreamer.FileException" code:1 userInfo:nil];
         return;
     }
     
@@ -232,7 +239,7 @@ std::mutex mtx;
 }
 
 
-- (void)cancelStreaming {
+- (void)cancelStreamingAndDeleteData:(BOOL) deleteData {
     if ([self isDownloading]) {
         self.alertsQueue = nil;
         self.alertsLoopActive = NO;
@@ -250,14 +257,13 @@ std::mutex mtx;
         if(_mediaServer.isRunning)[_mediaServer stop];
         
         NSError *error;
-        [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:&error];
+        if(deleteData == true)[[NSFileManager defaultManager] removeItemAtPath:self.savePath error:&error];
         if (error) NSLog(@"%@", error);
         
         self.savePath = nil;
         
         self.streaming = NO;
         self.downloading = NO;
-        //[UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
     }
 }
 

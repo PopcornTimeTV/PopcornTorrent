@@ -1,0 +1,1673 @@
+BCSymbolMap Version: 1.0
++[CocoaSecurity aesEncrypt:key:]
++[CocoaSecurity aesEncrypt:hexKey:hexIv:]
++[CocoaSecurity aesEncrypt:key:iv:]
++[CocoaSecurity aesEncryptWithData:key:iv:]
++[CocoaSecurity aesDecryptWithBase64:key:]
++[CocoaSecurity aesDecryptWithBase64:hexKey:hexIv:]
++[CocoaSecurity aesDecryptWithBase64:key:iv:]
++[CocoaSecurity aesDecryptWithData:key:iv:]
++[CocoaSecurity md5:]
++[CocoaSecurity md5WithData:]
++[CocoaSecurity hmacMd5:hmacKey:]
++[CocoaSecurity hmacMd5WithData:hmacKey:]
++[CocoaSecurity sha1:]
++[CocoaSecurity sha1WithData:]
++[CocoaSecurity sha224:]
++[CocoaSecurity sha224WithData:]
++[CocoaSecurity sha256:]
++[CocoaSecurity sha256WithData:]
++[CocoaSecurity sha384:]
++[CocoaSecurity sha384WithData:]
++[CocoaSecurity sha512:]
++[CocoaSecurity sha512WithData:]
++[CocoaSecurity hmacSha1:hmacKey:]
++[CocoaSecurity hmacSha1WithData:hmacKey:]
++[CocoaSecurity hmacSha224:hmacKey:]
++[CocoaSecurity hmacSha224WithData:hmacKey:]
++[CocoaSecurity hmacSha256:hmacKey:]
++[CocoaSecurity hmacSha256WithData:hmacKey:]
++[CocoaSecurity hmacSha384:hmacKey:]
++[CocoaSecurity hmacSha384WithData:hmacKey:]
++[CocoaSecurity hmacSha512:hmacKey:]
++[CocoaSecurity hmacSha512WithData:hmacKey:]
+-[CocoaSecurityResult initWithBytes:length:]
+-[CocoaSecurityResult utf8String]
+-[CocoaSecurityResult hex]
+-[CocoaSecurityResult hexLower]
+-[CocoaSecurityResult base64]
+-[CocoaSecurityResult data]
+-[CocoaSecurityResult .cxx_destruct]
+-[CocoaSecurityEncoder base64:]
+-[CocoaSecurityEncoder hex:useLower:]
+-[CocoaSecurityDecoder base64:]
+-[CocoaSecurityDecoder hex:]
+OBJC_METH_VAR_NAME_
+OBJC_SELECTOR_REFERENCES_
+OBJC_METH_VAR_NAME_.1
+OBJC_SELECTOR_REFERENCES_.2
+OBJC_METH_VAR_NAME_.3
+OBJC_SELECTOR_REFERENCES_.4
+OBJC_METH_VAR_NAME_.5
+OBJC_SELECTOR_REFERENCES_.6
+OBJC_CLASSLIST_REFERENCES_$_
+OBJC_METH_VAR_NAME_.7
+OBJC_SELECTOR_REFERENCES_.8
+OBJC_METH_VAR_NAME_.9
+OBJC_SELECTOR_REFERENCES_.10
+OBJC_METH_VAR_NAME_.11
+OBJC_SELECTOR_REFERENCES_.12
+OBJC_METH_VAR_NAME_.13
+OBJC_SELECTOR_REFERENCES_.14
+OBJC_METH_VAR_NAME_.15
+OBJC_SELECTOR_REFERENCES_.16
+OBJC_CLASSLIST_REFERENCES_$_.17
+.str
+_unnamed_cfstring_
+.str.18
+_unnamed_cfstring_.19
+OBJC_METH_VAR_NAME_.20
+OBJC_SELECTOR_REFERENCES_.21
+.str.22
+_unnamed_cfstring_.23
+OBJC_METH_VAR_NAME_.24
+OBJC_SELECTOR_REFERENCES_.25
+OBJC_CLASSLIST_REFERENCES_$_.26
+OBJC_METH_VAR_NAME_.27
+OBJC_SELECTOR_REFERENCES_.28
+OBJC_METH_VAR_NAME_.29
+OBJC_SELECTOR_REFERENCES_.30
+.str.31
+_unnamed_cfstring_.32
+OBJC_METH_VAR_NAME_.33
+OBJC_SELECTOR_REFERENCES_.34
+OBJC_METH_VAR_NAME_.35
+OBJC_SELECTOR_REFERENCES_.36
+OBJC_METH_VAR_NAME_.37
+OBJC_SELECTOR_REFERENCES_.38
+.str.39
+_unnamed_cfstring_.40
+OBJC_METH_VAR_NAME_.41
+OBJC_SELECTOR_REFERENCES_.42
+OBJC_METH_VAR_NAME_.43
+OBJC_SELECTOR_REFERENCES_.44
+OBJC_METH_VAR_NAME_.45
+OBJC_SELECTOR_REFERENCES_.46
+OBJC_METH_VAR_NAME_.47
+OBJC_SELECTOR_REFERENCES_.48
+OBJC_METH_VAR_NAME_.49
+OBJC_SELECTOR_REFERENCES_.50
+OBJC_METH_VAR_NAME_.51
+OBJC_SELECTOR_REFERENCES_.52
+OBJC_METH_VAR_NAME_.53
+OBJC_SELECTOR_REFERENCES_.54
+OBJC_METH_VAR_NAME_.55
+OBJC_SELECTOR_REFERENCES_.56
+OBJC_METH_VAR_NAME_.57
+OBJC_SELECTOR_REFERENCES_.58
+OBJC_METH_VAR_NAME_.59
+OBJC_SELECTOR_REFERENCES_.60
+OBJC_METH_VAR_NAME_.61
+OBJC_SELECTOR_REFERENCES_.62
+OBJC_METH_VAR_NAME_.63
+OBJC_SELECTOR_REFERENCES_.64
+OBJC_METH_VAR_NAME_.65
+OBJC_SELECTOR_REFERENCES_.66
+OBJC_CLASS_NAME_
+OBJC_METH_VAR_NAME_.67
+OBJC_METH_VAR_TYPE_
+OBJC_METH_VAR_NAME_.68
+OBJC_METH_VAR_TYPE_.69
+OBJC_METH_VAR_NAME_.70
+OBJC_METH_VAR_NAME_.71
+OBJC_METH_VAR_NAME_.72
+OBJC_METH_VAR_TYPE_.73
+OBJC_METH_VAR_NAME_.74
+OBJC_METH_VAR_NAME_.75
+OBJC_METH_VAR_NAME_.76
+OBJC_METH_VAR_NAME_.77
+OBJC_METH_VAR_NAME_.78
+OBJC_METH_VAR_NAME_.79
+OBJC_METH_VAR_NAME_.80
+OBJC_METH_VAR_NAME_.81
+OBJC_METH_VAR_NAME_.82
+OBJC_METH_VAR_NAME_.83
+l_OBJC_$_CLASS_METHODS_CocoaSecurity
+l_OBJC_METACLASS_RO_$_CocoaSecurity
+l_OBJC_CLASS_RO_$_CocoaSecurity
+OBJC_CLASSLIST_SUP_REFS_$_
+OBJC_METH_VAR_NAME_.84
+OBJC_SELECTOR_REFERENCES_.85
+OBJC_CLASSLIST_REFERENCES_$_.86
+OBJC_METH_VAR_NAME_.87
+OBJC_SELECTOR_REFERENCES_.88
+OBJC_IVAR_$_CocoaSecurityResult._data
+OBJC_CLASSLIST_REFERENCES_$_.89
+OBJC_METH_VAR_NAME_.90
+OBJC_SELECTOR_REFERENCES_.91
+OBJC_CLASSLIST_REFERENCES_$_.92
+OBJC_METH_VAR_NAME_.93
+OBJC_SELECTOR_REFERENCES_.94
+OBJC_CLASS_NAME_.95
+l_OBJC_METACLASS_RO_$_CocoaSecurityResult
+OBJC_CLASS_NAME_.96
+OBJC_METH_VAR_TYPE_.97
+OBJC_METH_VAR_NAME_.98
+OBJC_METH_VAR_TYPE_.99
+OBJC_METH_VAR_NAME_.100
+OBJC_METH_VAR_NAME_.101
+OBJC_METH_VAR_NAME_.102
+OBJC_METH_VAR_NAME_.103
+OBJC_METH_VAR_TYPE_.104
+l_OBJC_$_INSTANCE_METHODS_CocoaSecurityResult
+OBJC_METH_VAR_NAME_.105
+OBJC_METH_VAR_TYPE_.106
+l_OBJC_$_INSTANCE_VARIABLES_CocoaSecurityResult
+OBJC_PROP_NAME_ATTR_
+OBJC_PROP_NAME_ATTR_.107
+OBJC_PROP_NAME_ATTR_.108
+OBJC_PROP_NAME_ATTR_.109
+OBJC_PROP_NAME_ATTR_.110
+OBJC_PROP_NAME_ATTR_.111
+OBJC_PROP_NAME_ATTR_.112
+l_OBJC_$_PROP_LIST_CocoaSecurityResult
+l_OBJC_CLASS_RO_$_CocoaSecurityResult
+hex:useLower:.HexEncodeCharsLower
+hex:useLower:.HexEncodeChars
+OBJC_METH_VAR_NAME_.113
+OBJC_SELECTOR_REFERENCES_.114
+OBJC_CLASS_NAME_.115
+l_OBJC_METACLASS_RO_$_CocoaSecurityEncoder
+OBJC_METH_VAR_TYPE_.116
+l_OBJC_$_INSTANCE_METHODS_CocoaSecurityEncoder
+l_OBJC_CLASS_RO_$_CocoaSecurityEncoder
+OBJC_METH_VAR_NAME_.117
+OBJC_SELECTOR_REFERENCES_.118
+hex:.HexDecodeChars
+OBJC_CLASS_NAME_.119
+l_OBJC_METACLASS_RO_$_CocoaSecurityDecoder
+l_OBJC_$_INSTANCE_METHODS_CocoaSecurityDecoder
+l_OBJC_CLASS_RO_$_CocoaSecurityDecoder
+OBJC_LABEL_CLASS_$
+Apple LLVM version 7.3.0 (clang-703.0.31)
+NSMakeRange
+/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS9.3.sdk/System/Library/Frameworks/Foundation.framework/Headers/NSRange.h
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent
+-[CocoaSecurityDecoder hex:]
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/PopcornTorrent/Source/Security/CocoaSecurity.m
+-[CocoaSecurityDecoder base64:]
+-[CocoaSecurityEncoder hex:useLower:]
+-[CocoaSecurityEncoder base64:]
+-[CocoaSecurityResult .cxx_destruct]
+-[CocoaSecurityResult data]
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/PopcornTorrent/Source/Security/CocoaSecurity.h
+-[CocoaSecurityResult base64]
+-[CocoaSecurityResult hexLower]
+-[CocoaSecurityResult hex]
+-[CocoaSecurityResult utf8String]
+-[CocoaSecurityResult initWithBytes:length:]
++[CocoaSecurity hmacSha512WithData:hmacKey:]
++[CocoaSecurity hmacSha512:hmacKey:]
++[CocoaSecurity hmacSha384WithData:hmacKey:]
++[CocoaSecurity hmacSha384:hmacKey:]
++[CocoaSecurity hmacSha256WithData:hmacKey:]
++[CocoaSecurity hmacSha256:hmacKey:]
++[CocoaSecurity hmacSha224WithData:hmacKey:]
++[CocoaSecurity hmacSha224:hmacKey:]
++[CocoaSecurity hmacSha1WithData:hmacKey:]
++[CocoaSecurity hmacSha1:hmacKey:]
++[CocoaSecurity sha512WithData:]
++[CocoaSecurity sha512:]
++[CocoaSecurity sha384WithData:]
++[CocoaSecurity sha384:]
++[CocoaSecurity sha256WithData:]
++[CocoaSecurity sha256:]
++[CocoaSecurity sha224WithData:]
++[CocoaSecurity sha224:]
++[CocoaSecurity sha1WithData:]
++[CocoaSecurity sha1:]
++[CocoaSecurity hmacMd5WithData:hmacKey:]
++[CocoaSecurity hmacMd5:hmacKey:]
++[CocoaSecurity md5WithData:]
++[CocoaSecurity md5:]
++[CocoaSecurity aesDecryptWithData:key:iv:]
++[CocoaSecurity aesDecryptWithBase64:key:iv:]
++[CocoaSecurity aesDecryptWithBase64:hexKey:hexIv:]
++[CocoaSecurity aesDecryptWithBase64:key:]
++[CocoaSecurity aesEncryptWithData:key:iv:]
++[CocoaSecurity aesEncrypt:key:iv:]
++[CocoaSecurity aesEncrypt:hexKey:hexIv:]
++[CocoaSecurity aesEncrypt:key:]
++[PTTorrentStreamer sharedStreamer]
+__35+[PTTorrentStreamer sharedStreamer]_block_invoke
+-[PTTorrentStreamer init]
++[PTTorrentStreamer downloadsDirectory]
+-[PTTorrentStreamer setupSession]
+__33-[PTTorrentStreamer setupSession]_block_invoke
+__copy_helper_block_
+__destroy_helper_block_
+-[PTTorrentStreamer startStreamingFromFileOrMagnetLink:progress:readyToPlay:failure:]
+__85-[PTTorrentStreamer startStreamingFromFileOrMagnetLink:progress:readyToPlay:failure:]_block_invoke
+__copy_helper_block_.64
+__destroy_helper_block_.65
+-[PTTorrentStreamer fastForwardTorrentForRange:]
+-[PTTorrentStreamer cancelStreaming]
+-[PTTorrentStreamer alertsLoop]
+-[PTTorrentStreamer prioritizeNextPieces:]
+-[PTTorrentStreamer processTorrent:]
+__36-[PTTorrentStreamer processTorrent:]_block_invoke
+__copy_helper_block_.163
+__destroy_helper_block_.164
+__36-[PTTorrentStreamer processTorrent:]_block_invoke.171
+__copy_helper_block_.174
+__destroy_helper_block_.175
+-[PTTorrentStreamer indexOfLargestFileInTorrent:]
+-[PTTorrentStreamer logPiecesStatus:]
+-[PTTorrentStreamer logTorrentStatus:]
+-[PTTorrentStreamer metadataReceivedAlert:]
+-[PTTorrentStreamer pieceFinishedAlert:]
+__40-[PTTorrentStreamer pieceFinishedAlert:]_block_invoke
+__copy_helper_block_.192
+__destroy_helper_block_.193
+-[PTTorrentStreamer torrentFinishedAlert:]
+-[PTTorrentStreamer requestedRangeInfo]
+-[PTTorrentStreamer setRequestedRangeInfo:]
+-[PTTorrentStreamer alertsQueue]
+-[PTTorrentStreamer setAlertsQueue:]
+-[PTTorrentStreamer isAlertsLoopActive]
+-[PTTorrentStreamer setAlertsLoopActive:]
+-[PTTorrentStreamer savePath]
+-[PTTorrentStreamer setSavePath:]
+-[PTTorrentStreamer isDownloading]
+-[PTTorrentStreamer setDownloading:]
+-[PTTorrentStreamer isStreaming]
+-[PTTorrentStreamer setStreaming:]
+-[PTTorrentStreamer progressBlock]
+-[PTTorrentStreamer setProgressBlock:]
+-[PTTorrentStreamer readyToPlayBlock]
+-[PTTorrentStreamer setReadyToPlayBlock:]
+-[PTTorrentStreamer failureBlock]
+-[PTTorrentStreamer setFailureBlock:]
+-[PTTorrentStreamer mediaServer]
+-[PTTorrentStreamer setMediaServer:]
+-[PTTorrentStreamer .cxx_destruct]
+-[PTTorrentStreamer .cxx_construct]
+__cxx_global_var_init.267
+_ZN5boost4asio6detail7tss_ptrINS1_10call_stackINS1_15task_io_serviceENS1_27task_io_service_thread_infoEE7contextEED1Ev
+_ZN10libtorrent7sessionC2ERKNS_11fingerprintEij
+__clang_call_terminate
+_ZN5boost6detail12shared_countD2Ev
+_ZN10libtorrent18add_torrent_paramsC2EN5boost8functionIFPNS_17storage_interfaceERKNS_12file_storageEPS6_RKNSt3__112basic_stringIcNS9_11char_traitsIcEENS9_9allocatorIcEEEERNS_9file_poolERKNS9_6vectorIhNSD_IhEEEEEEE
+_ZN5boost9function2INS_10shared_ptrIN10libtorrent14torrent_pluginEEEPNS2_7torrentEPvED2Ev
+_ZN10libtorrent21intrusive_ptr_releaseEPKNS_18intrusive_ptr_baseINS_12torrent_infoEEE
+_ZN5boost9function5IPN10libtorrent17storage_interfaceERKNS1_12file_storageEPS5_RKNSt3__112basic_stringIcNS8_11char_traitsIcEENS8_9allocatorIcEEEERNS1_9file_poolERKNS8_6vectorIhNSC_IhEEEEED2Ev
+_ZN5boost6detail10weak_countD2Ev
+_ZN5boost4asio6detail13posix_tss_ptrINS1_10call_stackINS1_15task_io_serviceENS1_27task_io_service_thread_infoEE7contextEED2Ev
+_GLOBAL__sub_I_PTTorrentStreamer.mm
+_ZN5boost6systemL14posix_categoryE
+_ZN5boost6systemL10errno_ecatE
+_ZN5boost6systemL11native_ecatE
+_ZN5boost4asio5errorL15system_categoryE
+_ZN5boost4asio5errorL14netdb_categoryE
+_ZN5boost4asio5errorL17addrinfo_categoryE
+_ZN5boost4asio5errorL13misc_categoryE
+_ZZ35+[PTTorrentStreamer sharedStreamer]E9onceToken
+_ZZ35+[PTTorrentStreamer sharedStreamer]E14sharedStreamer
+OBJC_METH_VAR_NAME_.17
+OBJC_SELECTOR_REFERENCES_.18
+.str.19
+__block_descriptor_tmp
+__block_literal_global
+OBJC_CLASSLIST_REFERENCES_$_.22
+OBJC_METH_VAR_NAME_.23
+OBJC_SELECTOR_REFERENCES_.24
+.str.25
+OBJC_METH_VAR_NAME_.26
+OBJC_SELECTOR_REFERENCES_.27
+.str.28
+_unnamed_cfstring_.29
+.str.30
+_unnamed_cfstring_.31
+OBJC_METH_VAR_NAME_.32
+OBJC_SELECTOR_REFERENCES_.33
+OBJC_METH_VAR_NAME_.34
+OBJC_SELECTOR_REFERENCES_.35
+.str.36
+_unnamed_cfstring_.37
+OBJC_METH_VAR_NAME_.38
+OBJC_SELECTOR_REFERENCES_.39
+OBJC_IVAR_$_PTTorrentStreamer._session
+.str.41
+_unnamed_cfstring_.42
+OBJC_CLASSLIST_REFERENCES_$_.43
+OBJC_IVAR_$_PTTorrentStreamer.requestedRangeInfo
+OBJC_CLASSLIST_REFERENCES_$_.44
+OBJC_CLASSLIST_REFERENCES_$_.47
+OBJC_IVAR_$_PTTorrentStreamer._mediaServer
+__block_descriptor_tmp.48
+.str.55
+OBJC_METH_VAR_NAME_.56
+OBJC_SELECTOR_REFERENCES_.57
+OBJC_METH_VAR_NAME_.58
+OBJC_SELECTOR_REFERENCES_.59
+OBJC_METH_VAR_NAME_.60
+OBJC_SELECTOR_REFERENCES_.61
+OBJC_METH_VAR_NAME_.62
+OBJC_SELECTOR_REFERENCES_.63
+__block_descriptor_tmp.66
+.str.67
+_unnamed_cfstring_.68
+OBJC_METH_VAR_NAME_.69
+OBJC_SELECTOR_REFERENCES_.70
+.str.71
+_unnamed_cfstring_.72
+OBJC_METH_VAR_NAME_.73
+OBJC_SELECTOR_REFERENCES_.74
+OBJC_SELECTOR_REFERENCES_.76
+OBJC_CLASSLIST_REFERENCES_$_.77
+OBJC_SELECTOR_REFERENCES_.79
+OBJC_SELECTOR_REFERENCES_.81
+OBJC_CLASSLIST_REFERENCES_$_.82
+OBJC_SELECTOR_REFERENCES_.84
+OBJC_METH_VAR_NAME_.85
+OBJC_SELECTOR_REFERENCES_.86
+.str.87
+_unnamed_cfstring_.88
+.str.89
+_unnamed_cfstring_.90
+OBJC_METH_VAR_NAME_.91
+OBJC_SELECTOR_REFERENCES_.92
+OBJC_METH_VAR_NAME_.95
+OBJC_SELECTOR_REFERENCES_.96
+OBJC_METH_VAR_NAME_.97
+OBJC_SELECTOR_REFERENCES_.98
+.str.99
+_unnamed_cfstring_.100
+OBJC_SELECTOR_REFERENCES_.102
+OBJC_IVAR_$_PTTorrentStreamer.required_pieces
+OBJC_SELECTOR_REFERENCES_.104
+.str.105
+_unnamed_cfstring_.106
+OBJC_METH_VAR_NAME_.107
+OBJC_SELECTOR_REFERENCES_.108
+OBJC_METH_VAR_NAME_.109
+OBJC_SELECTOR_REFERENCES_.110
+OBJC_METH_VAR_NAME_.111
+OBJC_SELECTOR_REFERENCES_.112
+OBJC_METH_VAR_NAME_.115
+OBJC_SELECTOR_REFERENCES_.116
+OBJC_METH_VAR_NAME_.119
+OBJC_SELECTOR_REFERENCES_.120
+OBJC_METH_VAR_NAME_.121
+OBJC_SELECTOR_REFERENCES_.122
+OBJC_METH_VAR_NAME_.123
+OBJC_SELECTOR_REFERENCES_.124
+OBJC_METH_VAR_NAME_.125
+OBJC_SELECTOR_REFERENCES_.126
+OBJC_METH_VAR_NAME_.127
+OBJC_SELECTOR_REFERENCES_.128
+OBJC_METH_VAR_NAME_.129
+OBJC_SELECTOR_REFERENCES_.130
+OBJC_CLASSLIST_REFERENCES_$_.131
+OBJC_METH_VAR_NAME_.132
+OBJC_SELECTOR_REFERENCES_.133
+OBJC_CLASSLIST_REFERENCES_$_.134
+OBJC_METH_VAR_NAME_.135
+OBJC_SELECTOR_REFERENCES_.136
+.str.137
+_unnamed_cfstring_.138
+OBJC_CLASSLIST_REFERENCES_$_.139
+OBJC_METH_VAR_NAME_.140
+OBJC_SELECTOR_REFERENCES_.141
+OBJC_METH_VAR_NAME_.142
+OBJC_SELECTOR_REFERENCES_.143
+OBJC_CLASSLIST_REFERENCES_$_.144
+OBJC_METH_VAR_NAME_.145
+OBJC_SELECTOR_REFERENCES_.146
+OBJC_METH_VAR_NAME_.147
+OBJC_SELECTOR_REFERENCES_.148
+OBJC_METH_VAR_NAME_.149
+OBJC_SELECTOR_REFERENCES_.150
+OBJC_METH_VAR_NAME_.151
+OBJC_SELECTOR_REFERENCES_.152
+OBJC_METH_VAR_NAME_.153
+OBJC_SELECTOR_REFERENCES_.154
+.str.155
+_unnamed_cfstring_.156
+OBJC_METH_VAR_NAME_.157
+OBJC_SELECTOR_REFERENCES_.158
+.str.159
+_unnamed_cfstring_.160
+OBJC_METH_VAR_NAME_.161
+OBJC_SELECTOR_REFERENCES_.162
+.str.165
+__block_descriptor_tmp.166
+OBJC_METH_VAR_NAME_.167
+OBJC_SELECTOR_REFERENCES_.168
+OBJC_METH_VAR_NAME_.169
+OBJC_SELECTOR_REFERENCES_.170
+OBJC_METH_VAR_NAME_.172
+OBJC_SELECTOR_REFERENCES_.173
+__block_descriptor_tmp.176
+.str.177
+_unnamed_cfstring_.178
+.str.179
+_unnamed_cfstring_.180
+OBJC_METH_VAR_NAME_.181
+OBJC_SELECTOR_REFERENCES_.182
+OBJC_CLASSLIST_REFERENCES_$_.183
+OBJC_METH_VAR_NAME_.184
+OBJC_SELECTOR_REFERENCES_.185
+.str.186
+_unnamed_cfstring_.187
+OBJC_METH_VAR_NAME_.188
+OBJC_SELECTOR_REFERENCES_.189
+OBJC_METH_VAR_NAME_.190
+OBJC_SELECTOR_REFERENCES_.191
+__block_descriptor_tmp.194
+OBJC_METH_VAR_NAME_.195
+OBJC_SELECTOR_REFERENCES_.196
+OBJC_METH_VAR_NAME_.197
+OBJC_SELECTOR_REFERENCES_.198
+OBJC_METH_VAR_NAME_.199
+OBJC_SELECTOR_REFERENCES_.200
+OBJC_METH_VAR_NAME_.201
+OBJC_SELECTOR_REFERENCES_.202
+OBJC_IVAR_$_PTTorrentStreamer._alertsQueue
+OBJC_IVAR_$_PTTorrentStreamer._alertsLoopActive
+OBJC_IVAR_$_PTTorrentStreamer._savePath
+OBJC_IVAR_$_PTTorrentStreamer._downloading
+OBJC_IVAR_$_PTTorrentStreamer._streaming
+OBJC_IVAR_$_PTTorrentStreamer._progressBlock
+OBJC_IVAR_$_PTTorrentStreamer._readyToPlayBlock
+OBJC_IVAR_$_PTTorrentStreamer._failureBlock
+OBJC_METH_VAR_NAME_.203
+l_OBJC_$_CLASS_METHODS_PTTorrentStreamer
+l_OBJC_METACLASS_RO_$_PTTorrentStreamer
+OBJC_CLASS_NAME_.204
+OBJC_METH_VAR_TYPE_.205
+OBJC_METH_VAR_NAME_.206
+OBJC_METH_VAR_TYPE_.207
+OBJC_METH_VAR_TYPE_.208
+OBJC_METH_VAR_NAME_.209
+OBJC_METH_VAR_TYPE_.210
+OBJC_METH_VAR_TYPE_.211
+OBJC_METH_VAR_NAME_.212
+OBJC_METH_VAR_NAME_.213
+OBJC_METH_VAR_TYPE_.214
+OBJC_METH_VAR_TYPE_.215
+OBJC_METH_VAR_TYPE_.216
+OBJC_METH_VAR_TYPE_.217
+OBJC_METH_VAR_NAME_.218
+OBJC_METH_VAR_NAME_.219
+OBJC_METH_VAR_NAME_.220
+OBJC_METH_VAR_TYPE_.221
+OBJC_METH_VAR_TYPE_.222
+OBJC_METH_VAR_TYPE_.223
+OBJC_METH_VAR_TYPE_.224
+OBJC_METH_VAR_TYPE_.225
+OBJC_METH_VAR_NAME_.226
+OBJC_METH_VAR_NAME_.227
+OBJC_METH_VAR_NAME_.228
+l_OBJC_$_INSTANCE_METHODS_PTTorrentStreamer
+OBJC_METH_VAR_NAME_.229
+OBJC_METH_VAR_TYPE_.230
+OBJC_METH_VAR_NAME_.231
+OBJC_METH_VAR_TYPE_.232
+OBJC_METH_VAR_NAME_.233
+OBJC_METH_VAR_TYPE_.234
+OBJC_METH_VAR_NAME_.235
+OBJC_METH_VAR_NAME_.236
+OBJC_METH_VAR_TYPE_.237
+OBJC_METH_VAR_NAME_.238
+OBJC_METH_VAR_TYPE_.239
+OBJC_METH_VAR_NAME_.240
+OBJC_METH_VAR_TYPE_.241
+OBJC_METH_VAR_NAME_.242
+OBJC_METH_VAR_TYPE_.243
+OBJC_METH_VAR_NAME_.244
+OBJC_METH_VAR_NAME_.245
+OBJC_METH_VAR_NAME_.246
+OBJC_METH_VAR_TYPE_.247
+l_OBJC_$_INSTANCE_VARIABLES_PTTorrentStreamer
+OBJC_PROP_NAME_ATTR_.248
+OBJC_PROP_NAME_ATTR_.249
+OBJC_PROP_NAME_ATTR_.250
+OBJC_PROP_NAME_ATTR_.251
+OBJC_PROP_NAME_ATTR_.252
+OBJC_PROP_NAME_ATTR_.253
+OBJC_PROP_NAME_ATTR_.254
+OBJC_PROP_NAME_ATTR_.255
+OBJC_PROP_NAME_ATTR_.256
+OBJC_PROP_NAME_ATTR_.257
+OBJC_PROP_NAME_ATTR_.258
+OBJC_PROP_NAME_ATTR_.259
+OBJC_PROP_NAME_ATTR_.260
+OBJC_PROP_NAME_ATTR_.261
+OBJC_PROP_NAME_ATTR_.262
+OBJC_PROP_NAME_ATTR_.263
+OBJC_PROP_NAME_ATTR_.264
+OBJC_PROP_NAME_ATTR_.265
+OBJC_PROP_NAME_ATTR_.266
+l_OBJC_$_PROP_LIST_PTTorrentStreamer
+l_OBJC_CLASS_RO_$_PTTorrentStreamer
+.str.268
+__func__._ZNK5boost13intrusive_ptrIKN10libtorrent12torrent_infoEEptEv
+.str.269
+.str.270
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/PopcornTorrent/Source/Client/PTTorrentStreamer.mm
+allocator
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/memory
+__libcpp_compressed_pair_imp
+__compressed_pair
+__vector_base
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/vector
+vector
+clear
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/deque
+get
+first
+operator->
+operator()
+second
+reset
+~unique_ptr
+forward<libtorrent::alert *>
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/type_traits
+move<libtorrent::alert *&>
+unique_ptr
+operator*
+operator++
+operator==
+operator!=
+end
+begin
+forward<unsigned long>
+forward<libtorrent::alert ***>
+__split_buffer
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/__split_buffer
+__deque_base
+deque
+__annotate_shrink
+operator[]
+size
+move<std::__1::allocator<int> &>
+__move_assign_alloc
+deallocate
+__move_assign
+operator=
+__push_back_slow_path<int>
+move<int &>
+construct<int, int>
+__construct<int, int>
+push_back
+__end_cap
+capacity
+__destruct_at_end
+~__split_buffer
+__invalidate_all_iterators
+__annotate_new
+move<int *&>
+swap<int *>
+__construct_backward<int>
+data
+__annotate_contiguous_container
+__annotate_delete
+__swap_out_circular_buffer
+__alloc
+__allocate
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/new
+allocate
+forward<std::__1::allocator<int> &>
+forward<int *>
+max<unsigned long, std::__1::__less<unsigned long, unsigned long> >
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/algorithm
+max<unsigned long>
+max
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/limits
+max_size
+__max_size
+min<unsigned long, std::__1::__less<unsigned long, unsigned long> >
+min<unsigned long>
+__recommend
+__push_back_slow_path<const int &>
+__done
+forward<const int &>
+construct<int, const int &>
+__construct<int, const int &>
+__RAII_IncreaseAnnotator
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/smart_ptr/intrusive_ptr.hpp
+~intrusive_ptr
+base
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/iterator
+operator-<int *, int *>
+__convert_to_integral
+__fill_n<std::__1::__wrap_iter<int *>, int, int>
+fill_n<std::__1::__wrap_iter<int *>, int, int>
+__fill<std::__1::__wrap_iter<int *>, int>
+fill<std::__1::__wrap_iter<int *>, int>
+__wrap_iter
+__make_iter
+swap
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/smart_ptr/detail/atomic_count_sync.hpp
+intrusive_ptr_add_ref
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/intrusive_ptr_base.hpp
+intrusive_ptr
+move<std::__1::allocator<char> &>
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/string
+shrink_to_fit
+__set_short_size
+addressof<char>
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/__functional_base
+pointer_to
+__get_short_pointer
+__set_long_size
+__get_long_pointer
+assign
+pair<int, int, void>
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/utility
+forward<int>
+make_pair<int, int>
+assign_to<libtorrent::storage_interface *(*)(const libtorrent::file_storage &, const libtorrent::file_storage *, const std::__1::basic_string<char> &, libtorrent::file_pool &, const std::__1::vector<unsigned char, std::__1::allocator<unsigned char> > &)>
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/function/function_template.hpp
+forward<const std::__1::vector<unsigned char, std::__1::allocator<unsigned char> > &>
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/move/utility_core.hpp
+forward<libtorrent::file_pool &>
+forward<const std::__1::basic_string<char> &>
+forward<const libtorrent::file_storage *>
+forward<const libtorrent::file_storage &>
+invoke
+name
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/typeinfo
+manage_ptr
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/function/function_base.hpp
+manager
+manage
+function5<libtorrent::storage_interface *(*)(const libtorrent::file_storage &, const libtorrent::file_storage *, const std::__1::basic_string<char> &, libtorrent::file_pool &, const std::__1::vector<unsigned char, std::__1::allocator<unsigned char> > &)>
+function<libtorrent::storage_interface *(*)(const libtorrent::file_storage &, const libtorrent::file_storage *, const std::__1::basic_string<char> &, libtorrent::file_pool &, const std::__1::vector<unsigned char, std::__1::allocator<unsigned char> > &)>
+arg
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/bind/arg.hpp
+append
+operator+=
+__get_short_size
+__get_long_size
+empty
+~posix_tss_ptr
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/asio/detail/posix_tss_ptr.hpp
+~tss_ptr
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/asio/detail/tss_ptr.hpp
+~noncopyable
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/asio/detail/noncopyable.hpp
+noncopyable
+posix_tss_ptr
+tss_ptr
+addressof<const char>
+__is_long
+__get_pointer
+__to_raw_pointer<const char>
+c_str
+length
+basic_string
+~system_error
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/system/system_error.hpp
+num_files
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/file_storage.hpp
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/torrent_info.hpp
+__to_raw_pointer<libtorrent::alert **>
+destroy
+__destroy<libtorrent::alert **>
+destroy<libtorrent::alert **>
+__destruct_at_begin
+pop_front
+front
+addressof<libtorrent::alert *>
+__destroy<libtorrent::alert *>
+destroy<libtorrent::alert *>
+__deque_iterator
+~__deque_base
+~deque
+time_duration
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/ptime.hpp
+milliseconds
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/time.hpp
+__to_raw_pointer<libtorrent::torrent_handle>
+__destroy<libtorrent::torrent_handle>
+destroy<libtorrent::torrent_handle>
+~__vector_base
+~vector
+num_pieces
+piece_length
+~add_torrent_params
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/add_torrent_params.hpp
+__to_raw_pointer<int>
+__destroy<int>
+destroy<int>
+file_at
+map_file
+~weak_count
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/smart_ptr/detail/shared_count.hpp
+~weak_ptr
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/smart_ptr/shared_ptr.hpp
+~torrent_handle
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/torrent_handle.hpp
+atomic_increment
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/smart_ptr/detail/sp_counted_base_clang.hpp
+weak_add_ref
+weak_count
+weak_ptr
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/smart_ptr/weak_ptr.hpp
+torrent_handle
+~function5
+~function
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/function/function_fwd.hpp
+checked_delete<const libtorrent::torrent_info>
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/core/checked_delete.hpp
+operator--
+intrusive_ptr_release
+__to_raw_pointer<std::__1::basic_string<char> >
+__destroy<std::__1::basic_string<char> >
+destroy<std::__1::basic_string<char> >
+__to_raw_pointer<std::__1::pair<std::__1::basic_string<char>, int> >
+~pair
+__destroy<std::__1::pair<std::__1::basic_string<char>, int> >
+destroy<std::__1::pair<std::__1::basic_string<char>, int> >
+__to_raw_pointer<char>
+__destroy<char>
+destroy<char>
+__to_raw_pointer<unsigned char>
+__destroy<unsigned char>
+destroy<unsigned char>
+__deallocate
+__to_raw_pointer<boost::function<boost::shared_ptr<libtorrent::torrent_plugin> (libtorrent::torrent *, void *)> >
+get_vtable
+~function2
+__destroy<boost::function<boost::shared_ptr<libtorrent::torrent_plugin> (libtorrent::torrent *, void *)> >
+destroy<boost::function<boost::shared_ptr<libtorrent::torrent_plugin> (libtorrent::torrent *, void *)> >
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/sha1_hash.hpp
+sha1_hash
+forward<boost::function<boost::shared_ptr<libtorrent::torrent_plugin> (libtorrent::torrent *, void *)> *>
+forward<unsigned char *>
+has_trivial_copy_and_destroy
+assign_to_own
+function_base
+function5
+function
+forward<char *>
+__zero
+forward<std::__1::pair<std::__1::basic_string<char>, int> *>
+forward<std::__1::basic_string<char> *>
+__vector_base_common
+add_torrent_params
+dispatch_get_main_queue
+/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS9.3.sdk/usr/include/dispatch/queue.h
+unspecified_bool_true
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/system/error_code.hpp
+operator void (*)()
+weak_release
+atomic_decrement
+release
+~shared_count
+~shared_ptr
+shared_count
+shared_ptr
+session
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/session.hpp
+fingerprint
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/libtorrent/fingerprint.hpp
+error_code
+_dispatch_once
+/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS9.3.sdk/usr/include/dispatch/once.h
+get_system_category
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/asio/error.hpp
+value
+message
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/asio/detail/call_stack.hpp
+-[PTTorrentStreamer .cxx_construct]
+-[PTTorrentStreamer .cxx_destruct]
+-[PTTorrentStreamer setMediaServer:]
+-[PTTorrentStreamer mediaServer]
+-[PTTorrentStreamer setFailureBlock:]
+-[PTTorrentStreamer failureBlock]
+-[PTTorrentStreamer setReadyToPlayBlock:]
+-[PTTorrentStreamer readyToPlayBlock]
+-[PTTorrentStreamer setProgressBlock:]
+-[PTTorrentStreamer progressBlock]
+-[PTTorrentStreamer setStreaming:]
+-[PTTorrentStreamer isStreaming]
+-[PTTorrentStreamer setDownloading:]
+-[PTTorrentStreamer isDownloading]
+-[PTTorrentStreamer setSavePath:]
+-[PTTorrentStreamer savePath]
+-[PTTorrentStreamer setAlertsLoopActive:]
+-[PTTorrentStreamer isAlertsLoopActive]
+-[PTTorrentStreamer setAlertsQueue:]
+-[PTTorrentStreamer alertsQueue]
+-[PTTorrentStreamer setRequestedRangeInfo:]
+-[PTTorrentStreamer requestedRangeInfo]
+-[PTTorrentStreamer torrentFinishedAlert:]
+-[PTTorrentStreamer pieceFinishedAlert:]
+-[PTTorrentStreamer metadataReceivedAlert:]
+-[PTTorrentStreamer logTorrentStatus:]
+-[PTTorrentStreamer logPiecesStatus:]
+-[PTTorrentStreamer indexOfLargestFileInTorrent:]
+-[PTTorrentStreamer processTorrent:]
+-[PTTorrentStreamer prioritizeNextPieces:]
+-[PTTorrentStreamer alertsLoop]
+-[PTTorrentStreamer cancelStreaming]
+-[PTTorrentStreamer fastForwardTorrentForRange:]
+-[PTTorrentStreamer startStreamingFromFileOrMagnetLink:progress:readyToPlay:failure:]
+-[PTTorrentStreamer setupSession]
++[PTTorrentStreamer downloadsDirectory]
+-[PTTorrentStreamer init]
++[PTTorrentStreamer sharedStreamer]
+__cxx_global_var_init.16
+__cxx_global_var_init.15
+/Users/aggelospapageorgiou/Downloads/PopCorn/PopcornTorrent/include/boost/bind/placeholders.hpp
+__cxx_global_var_init.14
+__cxx_global_var_init.13
+__cxx_global_var_init.12
+__cxx_global_var_init.11
+__cxx_global_var_init.10
+__cxx_global_var_init.9
+__cxx_global_var_init.8
+__cxx_global_var_init.7
+__cxx_global_var_init.6
+__cxx_global_var_init.5
+__cxx_global_var_init.4
+__cxx_global_var_init.3
+what
+__cxx_global_var_init.2
+__cxx_global_var_init.1
+__cxx_global_var_init
+/Users/aggelospapageorgiou/Library/Developer/Xcode/DerivedData/PopcornTorrent-epdvdyceontpjyfohcmtqtohgbbg/Build/Intermediates/PopcornTorrent.build/Release-iphoneos/PopcornTorrent-iOS.build/DerivedSources/PopcornTorrent_vers.c
+_ZN5boost6system12_GLOBAL__N_121system_error_categoryD1Ev
+_ZN5boost6system12_GLOBAL__N_122generic_error_categoryD1Ev
+_ZN5boost6system12_GLOBAL__N_121system_error_categoryD0Ev
+_ZNK5boost6system12_GLOBAL__N_121system_error_category4nameEv
+_ZNK5boost6system12_GLOBAL__N_121system_error_category7messageEi
+_ZNK5boost6system12_GLOBAL__N_121system_error_category23default_error_conditionEi
+_ZN5boost6system12_GLOBAL__N_122generic_error_categoryD0Ev
+_ZNK5boost6system12_GLOBAL__N_122generic_error_category4nameEv
+_ZNK5boost6system12_GLOBAL__N_122generic_error_category7messageEi
+_GLOBAL__sub_I_error_code.cpp
+_ZZN5boost6system15system_categoryEvE21system_category_const
+_ZGVZN5boost6system15system_categoryEvE21system_category_const
+_ZZN5boost6system16generic_categoryEvE22generic_category_const
+_ZGVZN5boost6system16generic_categoryEvE22generic_category_const
+_ZTVN5boost6system12_GLOBAL__N_121system_error_categoryE
+_ZTSN5boost6system12_GLOBAL__N_121system_error_categoryE
+_ZTIN5boost6system12_GLOBAL__N_121system_error_categoryE
+_ZTVN5boost6system12_GLOBAL__N_122generic_error_categoryE
+_ZTSN5boost6system12_GLOBAL__N_122generic_error_categoryE
+_ZTIN5boost6system12_GLOBAL__N_122generic_error_categoryE
+.str.4
+_ZZNK5boost6system12_GLOBAL__N_122generic_error_category7messageEiE11unknown_err
+_ZGVZNK5boost6system12_GLOBAL__N_122generic_error_category7messageEiE11unknown_err
+.str.5
+.str.6
+_ZN12_GLOBAL__N_114parse_az_styleERKN10libtorrent9sha1_hashE
+_ZN12_GLOBAL__N_118parse_shadow_styleERKN10libtorrent9sha1_hashE
+_ZN12_GLOBAL__N_120parse_mainline_styleERKN10libtorrent9sha1_hashE
+_ZN12_GLOBAL__N_111find_stringEPKhPKc
+_ZN12_GLOBAL__N_16lookupERKN10libtorrent11fingerprintE
+_GLOBAL__sub_I_identify_client.cpp
+_ZN12_GLOBAL__N_116generic_mappingsE
+.str.3
+.str.7
+.str.8
+.str.9
+.str.10
+.str.11
+.str.12
+.str.13
+.str.14
+.str.15
+.str.17
+.str.20
+.str.21
+.str.23
+.str.24
+.str.26
+.str.27
+.str.29
+.str.32
+.str.33
+.str.34
+.str.35
+.str.37
+.str.38
+.str.40
+.str.42
+.str.43
+.str.44
+.str.45
+.str.46
+.str.47
+.str.48
+.str.49
+.str.50
+.str.51
+.str.52
+.str.53
+.str.54
+.str.56
+.str.57
+.str.58
+.str.59
+.str.60
+.str.61
+.str.62
+.str.63
+.str.64
+.str.65
+.str.66
+.str.68
+.str.69
+.str.70
+.str.72
+.str.73
+.str.74
+.str.75
+.str.76
+.str.77
+.str.78
+.str.79
+.str.80
+.str.81
+.str.82
+.str.83
+.str.84
+.str.85
+.str.86
+_ZN12_GLOBAL__N_18name_mapE
+.str.88
+.str.90
+.str.91
+.str.92
+.str.93
+.str.94
+.str.95
+.str.96
+.str.97
+.str.98
+.str.100
+.str.101
+.str.102
+.str.103
+.str.104
+.str.106
+.str.107
+.str.108
+.str.109
+.str.110
+.str.111
+.str.112
+.str.113
+.str.114
+.str.115
+.str.116
+.str.117
+.str.118
+.str.119
+.str.120
+.str.121
+.str.122
+.str.123
+.str.124
+.str.125
+.str.126
+.str.127
+.str.128
+.str.129
+.str.130
+.str.131
+.str.132
+.str.133
+.str.134
+.str.135
+.str.136
+.str.138
+.str.139
+.str.140
+.str.141
+.str.142
+.str.143
+.str.144
+.str.145
+.str.146
+.str.147
+.str.148
+.str.149
+.str.150
+.str.151
+.str.152
+.str.153
+.str.154
+.str.156
+.str.157
+.str.158
+.str.160
+.str.161
+.str.162
+.str.163
+.str.164
+.str.166
+.str.167
+.str.168
+.str.169
+.str.170
+.str.171
+.str.172
+.str.173
+.str.174
+.str.175
+.str.176
+.str.178
+.str.180
+.str.181
+.str.182
+.str.183
+.str.184
+.str.185
+.str.187
+.str.188
+.str.189
+.str.190
+.str.191
+.str.192
+.str.193
+.str.194
+.str.195
+.str.196
+.str.197
+.str.198
+.str.199
+.str.200
+.str.201
+.str.202
+.str.203
+.str.204
+.str.205
+.str.206
+.str.207
+.str.208
+.str.209
+.str.210
+.str.211
+.str.212
+.str.213
+.str.214
+.str.215
+.str.216
+.str.217
+.str.218
+.str.219
+.str.220
+.str.221
+.str.222
+.str.223
+.str.224
+.str.225
+.str.226
+.str.227
+.str.228
+.str.229
+.str.230
+.str.231
+.str.232
+.str.233
+.str.234
+.str.235
+.str.236
+.str.237
+.str.238
+.str.239
+.str.240
+.str.241
+.str.242
+.str.243
+.str.244
+.str.245
+.str.246
+.str.247
+.str.248
+.str.249
+.str.250
+.str.251
+.str.252
+.str.253
+.str.254
+.str.255
+.str.256
+.str.257
+.str.258
+.str.259
+.str.260
+.str.261
+.str.262
+.str.263
+.str.264
+.str.265
+.str.266
+.str.267
+_GLOBAL__sub_I_gzip.cpp
+_ZZNK10libtorrent19gzip_error_category7messageEiE4msgs
+.str.16
+_ZZN10libtorrent17get_gzip_categoryEvE13gzip_category
+_ZGVZN10libtorrent17get_gzip_categoryEvE13gzip_category
+_check_mtime
+_setup_segments
+_get_region
+_get_name
+.str.1
+.str.2
+.str.271
+.str.272
+.str.273
+.str.274
+.str.275
+.str.276
+_GLOBAL__sub_I_file_pool.cpp
+__func__._ZNK5boost13intrusive_ptrIN10libtorrent4fileEEptEv
+_GLOBAL__sub_I_ip_voter.cpp
+__cxx_global_var_init.23
+__cxx_global_var_init.24
+__cxx_global_var_init.25
+_GLOBAL__sub_I_socket_type.cpp
+_ZZNK10libtorrent11socket_type9type_nameEvE5names
+__cxx_global_var_init.26
+__cxx_global_var_init.27
+__cxx_global_var_init.28
+__cxx_global_var_init.29
+_GLOBAL__sub_I_lsd.cpp
+_ZL2ec
+_GLOBAL__sub_I_node_id.cpp
+_ZZN10libtorrent3dht16generate_id_implERKN5boost4asio2ip7addressEjE6v4mask
+_ZZN10libtorrent3dht16generate_id_implERKN5boost4asio2ip7addressEjE6v6mask
+_ZN10libtorrent3dhtL6secretE
+_ZN10libtorrent12_GLOBAL__N_11xE
+_ZZN10libtorrent6randomEvE1y
+_ZZN10libtorrent6randomEvE1z
+_ZZN10libtorrent6randomEvE1w
+_ZL15sha512_compressP15sha512_context_Ph
+_ZL1K
+__cxx_global_var_init.30
+__cxx_global_var_init.31
+__cxx_global_var_init.32
+_GLOBAL__sub_I_bt_peer_connection.cpp
+_ZZN10libtorrent18bt_peer_connection14write_dht_portEiE3msg
+_ZZN10libtorrent18bt_peer_connection14write_have_allEvE3msg
+_ZZN10libtorrent18bt_peer_connection15write_have_noneEvE3msg
+_ZZN10libtorrent18bt_peer_connection20write_reject_requestERKNS_12peer_requestEE3msg
+_ZZN10libtorrent18bt_peer_connection16write_allow_fastEiE3msg
+_ZZN10libtorrent18bt_peer_connection13write_suggestEiE3msg
+_ZZN10libtorrent18bt_peer_connection19init_pe_rc4_handlerEPKcRKNS_9sha1_hashEE4keyA
+_ZZN10libtorrent18bt_peer_connection19init_pe_rc4_handlerEPKcRKNS_9sha1_hashEE4keyB
+_ZZN10libtorrent18bt_peer_connection15write_handshakeEvE14version_string
+_ZZN10libtorrent18bt_peer_connection16write_share_modeEvE3msg
+_ZZN10libtorrent18bt_peer_connection12write_cancelERKNS_12peer_requestEE3msg
+_ZZN10libtorrent18bt_peer_connection13write_requestERKNS_12peer_requestEE3msg
+_ZZN10libtorrent18bt_peer_connection11write_chokeEvE3msg
+_ZZN10libtorrent18bt_peer_connection13write_unchokeEvE3msg
+_ZZN10libtorrent18bt_peer_connection16write_interestedEvE3msg
+_ZZN10libtorrent18bt_peer_connection20write_not_interestedEvE3msg
+_ZZN10libtorrent18bt_peer_connection10write_haveEiE3msg
+_ZZN10libtorrent18bt_peer_connection10on_receiveERKN5boost6system10error_codeEmE5sh_vc
+_ZZN10libtorrent18bt_peer_connection10on_receiveERKN5boost6system10error_codeEmE15protocol_string
+__func__._ZNK5boost13intrusive_ptrIN10libtorrent12torrent_infoEEdeEv
+__func__._ZNK5boost13intrusive_ptrIN10libtorrent12torrent_infoEEptEv
+__func__._ZN5boost10scoped_ptrIN10libtorrent15dh_key_exchangeEE5resetEPS2_
+__cxx_global_var_init.17
+__cxx_global_var_init.18
+_ZN10libtorrent12_GLOBAL__N_116smart_ban_pluginD1Ev
+_ZN10libtorrent12_GLOBAL__N_116smart_ban_pluginD0Ev
+_ZN10libtorrent12_GLOBAL__N_116smart_ban_plugin13on_piece_passEi
+_ZN10libtorrent12_GLOBAL__N_116smart_ban_plugin15on_piece_failedEi
+_ZNSt3__16__treeINS_12__value_typeIN10libtorrent11piece_blockENS2_12_GLOBAL__N_116smart_ban_plugin11block_entryEEENS_19__map_value_compareIS3_S7_NS_4lessIS3_EELb1EEENS_9allocatorIS7_EEE7destroyEPNS_11__tree_nodeIS7_PvEE
+_ZN10libtorrent12_GLOBAL__N_116smart_ban_plugin16on_read_ok_blockENSt3__14pairINS_11piece_blockENS1_11block_entryEEEiRKNS_11disk_io_jobE
+_ZN5boost23enable_shared_from_thisIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEE16shared_from_thisEv
+_ZN5boost6detail8function15functor_managerINS_3_bi6bind_tIvNS_4_mfi3mf3IvN10libtorrent12_GLOBAL__N_116smart_ban_pluginENSt3__14pairINS7_11piece_blockENS9_11block_entryEEEiRKNS7_11disk_io_jobEEENS3_5list4INS3_5valueINS_10shared_ptrIS9_EEEENSK_INSB_IKSC_SD_EEEENS_3argILi1EEENSR_ILi2EEEEEEEE6manageERKNS1_15function_bufferERSX_NS1_30functor_manager_operation_typeE
+_ZN5boost6detail8function26void_function_obj_invoker2INS_3_bi6bind_tIvNS_4_mfi3mf3IvN10libtorrent12_GLOBAL__N_116smart_ban_pluginENSt3__14pairINS7_11piece_blockENS9_11block_entryEEEiRKNS7_11disk_io_jobEEENS3_5list4INS3_5valueINS_10shared_ptrIS9_EEEENSK_INSB_IKSC_SD_EEEENS_3argILi1EEENSR_ILi2EEEEEEEviSH_E6invokeERNS1_15function_bufferEiSH_
+_ZN10libtorrent12_GLOBAL__N_116smart_ban_plugin20on_read_failed_blockENS_11piece_blockEN5boost4asio2ip7addressEiRKNS_11disk_io_jobE
+_ZNSt3__16__treeINS_12__value_typeIN10libtorrent11piece_blockENS2_12_GLOBAL__N_116smart_ban_plugin11block_entryEEENS_19__map_value_compareIS3_S7_NS_4lessIS3_EELb1EEENS_9allocatorIS7_EEE12__find_equalIS7_EERPNS_16__tree_node_baseIPvEESK_RKT_
+_ZN5boost6detail8function15functor_managerINS_3_bi6bind_tIvNS_4_mfi3mf4IvN10libtorrent12_GLOBAL__N_116smart_ban_pluginENS7_11piece_blockENS_4asio2ip7addressEiRKNS7_11disk_io_jobEEENS3_5list5INS3_5valueINS_10shared_ptrIS9_EEEENSJ_ISA_EENSJ_ISD_EENS_3argILi1EEENSP_ILi2EEEEEEEE6manageERKNS1_15function_bufferERSV_NS1_30functor_manager_operation_typeE
+_ZN5boost6detail8function26void_function_obj_invoker2INS_3_bi6bind_tIvNS_4_mfi3mf4IvN10libtorrent12_GLOBAL__N_116smart_ban_pluginENS7_11piece_blockENS_4asio2ip7addressEiRKNS7_11disk_io_jobEEENS3_5list5INS3_5valueINS_10shared_ptrIS9_EEEENSJ_ISA_EENSJ_ISD_EENS_3argILi1EEENSP_ILi2EEEEEEEviSG_E6invokeERNS1_15function_bufferEiSG_
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEED1Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEED0Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEE7disposeEv
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEE11get_deleterERKSt9type_info
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEE19get_untyped_deleterEv
+_GLOBAL__sub_I_smart_ban.cpp
+_ZTVN10libtorrent12_GLOBAL__N_116smart_ban_pluginE
+_ZTSN10libtorrent12_GLOBAL__N_116smart_ban_pluginE
+_ZTSN5boost23enable_shared_from_thisIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEEE
+_ZTIN5boost23enable_shared_from_thisIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEEE
+_ZTIN10libtorrent12_GLOBAL__N_116smart_ban_pluginE
+__func__._ZN5boost23enable_shared_from_thisIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEE16shared_from_thisEv
+_ZZN5boost9function2IviRKN10libtorrent11disk_io_jobEE9assign_toINS_3_bi6bind_tIvNS_4_mfi3mf3IvNS1_12_GLOBAL__N_116smart_ban_pluginENSt3__14pairINS1_11piece_blockENSC_11block_entryEEEiS4_EENS7_5list4INS7_5valueINS_10shared_ptrISC_EEEENSK_INSE_IKSF_SG_EEEENS_3argILi1EEENSR_ILi2EEEEEEEEEvT_E13stored_vtable
+_ZTSN5boost3_bi6bind_tIvNS_4_mfi3mf3IvN10libtorrent12_GLOBAL__N_116smart_ban_pluginENSt3__14pairINS4_11piece_blockENS6_11block_entryEEEiRKNS4_11disk_io_jobEEENS0_5list4INS0_5valueINS_10shared_ptrIS6_EEEENSH_INS8_IKS9_SA_EEEENS_3argILi1EEENSO_ILi2EEEEEEE
+_ZTIN5boost3_bi6bind_tIvNS_4_mfi3mf3IvN10libtorrent12_GLOBAL__N_116smart_ban_pluginENSt3__14pairINS4_11piece_blockENS6_11block_entryEEEiRKNS4_11disk_io_jobEEENS0_5list4INS0_5valueINS_10shared_ptrIS6_EEEENSH_INS8_IKS9_SA_EEEENS_3argILi1EEENSO_ILi2EEEEEEE
+_ZZN5boost9function2IviRKN10libtorrent11disk_io_jobEE9assign_toINS_3_bi6bind_tIvNS_4_mfi3mf4IvNS1_12_GLOBAL__N_116smart_ban_pluginENS1_11piece_blockENS_4asio2ip7addressEiS4_EENS7_5list5INS7_5valueINS_10shared_ptrISC_EEEENSJ_ISD_EENSJ_ISG_EENS_3argILi1EEENSP_ILi2EEEEEEEEEvT_E13stored_vtable
+_ZTSN5boost3_bi6bind_tIvNS_4_mfi3mf4IvN10libtorrent12_GLOBAL__N_116smart_ban_pluginENS4_11piece_blockENS_4asio2ip7addressEiRKNS4_11disk_io_jobEEENS0_5list5INS0_5valueINS_10shared_ptrIS6_EEEENSG_IS7_EENSG_ISA_EENS_3argILi1EEENSM_ILi2EEEEEEE
+_ZTIN5boost3_bi6bind_tIvNS_4_mfi3mf4IvN10libtorrent12_GLOBAL__N_116smart_ban_pluginENS4_11piece_blockENS_4asio2ip7addressEiRKNS4_11disk_io_jobEEENS0_5list5INS0_5valueINS_10shared_ptrIS6_EEEENSG_IS7_EENSG_ISA_EENS_3argILi1EEENSM_ILi2EEEEEEE
+_ZTVN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEEE
+_ZTSN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEEE
+_ZTIN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_116smart_ban_pluginEEE
+_ZN10libtorrent3dht12_GLOBAL__N_112announce_funERKNSt3__16vectorINS2_4pairINS0_10node_entryENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEEENS9_ISC_EEEERNS0_9node_implEiRKNS_9sha1_hashEi
+__cxx_global_var_init.64
+__cxx_global_var_init.65
+__cxx_global_var_init.66
+_GLOBAL__sub_I_node.cpp
+_ZZN10libtorrent3dht9node_impl16incoming_requestERKNS0_3msgERNS_5entryEE8top_desc
+_ZZN10libtorrent3dht9node_impl16incoming_requestERKNS0_3msgERNS_5entryEE8msg_desc
+_ZZN10libtorrent3dht9node_impl16incoming_requestERKNS0_3msgERNS_5entryEE8msg_desc_0
+_ZZN10libtorrent3dht9node_impl16incoming_requestERKNS0_3msgERNS_5entryEE8msg_desc_1
+_ZZN10libtorrent3dht9node_impl16incoming_requestERKNS0_3msgERNS_5entryEE8msg_desc_2
+_ZZN10libtorrent3dht9node_impl16incoming_requestERKNS0_3msgERNS_5entryEE8msg_desc_3
+_GLOBAL__sub_I_connection_queue.cpp
+_ZZN10libtorrent9page_sizeEvE1s
+__cxx_global_var_init.20
+_GLOBAL__sub_I_find_data.cpp
+__func__._ZNK5boost13intrusive_ptrIN10libtorrent3dht8observerEEptEv
+__cxx_global_var_init.33
+__cxx_global_var_init.34
+__cxx_global_var_init.35
+__cxx_global_var_init.36
+_GLOBAL__sub_I_natpmp.cpp
+_ZZN10libtorrent6natpmp8on_replyERKN5boost6system10error_codeEmE6errors
+_ZN10libtorrentL18escape_string_implEPKcii
+_GLOBAL__sub_I_escape_string.cpp
+_ZN10libtorrentL16unreserved_charsE
+_ZZN10libtorrent12base64encodeERKNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEEE12base64_table
+_ZZN10libtorrent12base32encodeERKNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEEE12base32_table
+_ZZN10libtorrent12base32encodeERKNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEEE20input_output_mapping
+_ZZN10libtorrent12base32decodeERKNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEEE20input_output_mapping
+_ZN10libtorrentL9hex_charsE
+_ZN10libtorrent12_GLOBAL__N_115find_ip_addressEiPKcRNS0_22ip_address_parse_stateE
+_ZN10libtorrent12_GLOBAL__N_115find_error_codeEiPKcRNS0_22error_code_parse_stateE
+__cxx_global_var_init.99
+__cxx_global_var_init.100
+__cxx_global_var_init.101
+__cxx_global_var_init.102
+__cxx_global_var_init.103
+_ZN5boost6detail8function15functor_managerINS_3_bi6bind_tIvPFviPKcRN10libtorrent12_GLOBAL__N_122ip_address_parse_stateEENS3_5list3INS_3argILi1EEENSE_ILi2EEENS_17reference_wrapperIS9_EEEEEEE6manageERKNS1_15function_bufferERSM_NS1_30functor_manager_operation_typeE
+_ZN5boost6detail8function26void_function_obj_invoker3INS_3_bi6bind_tIvPFviPKcRN10libtorrent12_GLOBAL__N_122ip_address_parse_stateEENS3_5list3INS_3argILi1EEENSE_ILi2EEENS_17reference_wrapperIS9_EEEEEEviS6_S6_E6invokeERNS1_15function_bufferEiS6_S6_
+_ZN5boost6detail8function15functor_managerINS_3_bi6bind_tIvPFviPKcRN10libtorrent12_GLOBAL__N_122error_code_parse_stateEENS3_5list3INS_3argILi1EEENSE_ILi2EEENS_17reference_wrapperIS9_EEEEEEE6manageERKNS1_15function_bufferERSM_NS1_30functor_manager_operation_typeE
+_ZN5boost6detail8function26void_function_obj_invoker3INS_3_bi6bind_tIvPFviPKcRN10libtorrent12_GLOBAL__N_122error_code_parse_stateEENS3_5list3INS_3argILi1EEENSE_ILi2EEENS_17reference_wrapperIS9_EEEEEEviS6_S6_E6invokeERNS1_15function_bufferEiS6_S6_
+_GLOBAL__sub_I_upnp.cpp
+_ZN10libtorrentL2ecE
+_ZZN10libtorrent4upnp20discover_device_implERN5boost4asio6detail11scoped_lockINS3_11posix_mutexEEEE7msearch
+_ZZN10libtorrent17get_upnp_categoryEvE3cat
+_ZGVZN10libtorrent17get_upnp_categoryEvE3cat
+_ZN10libtorrent12_GLOBAL__N_111error_codesE
+__func__._ZNK5boost10shared_ptrIN10libtorrent15http_connectionEEptEv
+__func__._ZN5boost10shared_ptrIN10libtorrent15http_connectionEE5resetIS2_EEvPT_
+_ZZN5boost9function3IviPKcS2_E9assign_toINS_3_bi6bind_tIvPFviS2_RN10libtorrent12_GLOBAL__N_122ip_address_parse_stateEENS5_5list3INS_3argILi1EEENSE_ILi2EEENS_17reference_wrapperIS9_EEEEEEEEvT_E13stored_vtable
+_ZTSN5boost3_bi6bind_tIvPFviPKcRN10libtorrent12_GLOBAL__N_122ip_address_parse_stateEENS0_5list3INS_3argILi1EEENSB_ILi2EEENS_17reference_wrapperIS6_EEEEEE
+_ZTIN5boost3_bi6bind_tIvPFviPKcRN10libtorrent12_GLOBAL__N_122ip_address_parse_stateEENS0_5list3INS_3argILi1EEENSB_ILi2EEENS_17reference_wrapperIS6_EEEEEE
+_ZZN5boost9function3IviPKcS2_E9assign_toINS_3_bi6bind_tIvPFviS2_RN10libtorrent12_GLOBAL__N_122error_code_parse_stateEENS5_5list3INS_3argILi1EEENSE_ILi2EEENS_17reference_wrapperIS9_EEEEEEEEvT_E13stored_vtable
+_ZTSN5boost3_bi6bind_tIvPFviPKcRN10libtorrent12_GLOBAL__N_122error_code_parse_stateEENS0_5list3INS_3argILi1EEENSB_ILi2EEENS_17reference_wrapperIS6_EEEEEE
+_ZTIN5boost3_bi6bind_tIvPFviPKcRN10libtorrent12_GLOBAL__N_122error_code_parse_stateEENS0_5list3INS_3argILi1EEENSB_ILi2EEENS_17reference_wrapperIS6_EEEEEE
+_ZN10libtorrent3dht12_GLOBAL__N_116canonical_stringENSt3__14pairIPKciEEyS6_Pc
+_GLOBAL__sub_I_item.cpp
+_GLOBAL__sub_I_socks5_stream.cpp
+_ZZN10libtorrent18get_socks_categoryEvE14socks_category
+_ZGVZN10libtorrent18get_socks_categoryEvE14socks_category
+__func__._ZNK5boost10shared_ptrINS_8functionIFvRKNS_6system10error_codeEEEEEdeEv
+switch.table
+__cxx_global_var_init.40
+__cxx_global_var_init.41
+__cxx_global_var_init.42
+_GLOBAL__sub_I_i2p_stream.cpp
+_ZZN10libtorrent16get_i2p_categoryEvE12i2p_category
+_ZGVZN10libtorrent16get_i2p_categoryEvE12i2p_category
+_ZZN10libtorrent10i2p_stream9connectedERKN5boost6system10error_codeENS1_10shared_ptrINS1_8functionIFvS5_EEEEEE3cmd
+__func__._ZNK5boost10shared_ptrIN10libtorrent10i2p_streamEEptEv
+__func__._ZN5boost10shared_ptrIN10libtorrent10i2p_streamEE5resetIS2_EEvPT_
+switch.table.57
+_GLOBAL__sub_I_entry.cpp
+_ZNSt3__116__pad_and_outputIcNS_11char_traitsIcEEEENS_19ostreambuf_iteratorIT_T0_EES6_PKS4_S8_S8_RNS_8ios_baseES4_
+_GLOBAL__sub_I_asio.cpp
+_ZZN5boost4asio5error18get_netdb_categoryEvE8instance
+_ZGVZN5boost4asio5error18get_netdb_categoryEvE8instance
+_ZZN5boost4asio5error21get_addrinfo_categoryEvE8instance
+_ZGVZN5boost4asio5error21get_addrinfo_categoryEvE8instance
+_ZZN5boost4asio5error17get_misc_categoryEvE8instance
+_ZGVZN5boost4asio5error17get_misc_categoryEvE8instance
+_ZZN5boost4asio6detail14kqueue_reactor8start_opEiiRPNS2_16descriptor_stateEPNS1_10reactor_opEbbE11num_kevents
+_ZZN5boost4asio6detail14kqueue_reactor3runEbRNS1_8op_queueINS1_25task_io_service_operationEEEE6filter
+_ZZN5boost4asio6detail16get_signal_stateEvE5state
+_ZZN5boost4asio6detail10socket_ops9inet_ntopEiPKvPcmmRNS_6system10error_codeEE7if_name
+__func__._ZN5boost4asio6detail10socket_ops21translate_netdb_errorEi
+__func__._ZN5boost4asio6detail11posix_event21unlock_and_signal_oneINS1_11scoped_lockINS1_11posix_mutexEEEEEvRT_
+__func__._ZN5boost4asio6detail11posix_event5clearINS1_11scoped_lockINS1_11posix_mutexEEEEEvRT_
+__func__._ZN5boost4asio6detail11posix_event4waitINS1_11scoped_lockINS1_11posix_mutexEEEEEvRT_
+__func__._ZN5boost4asio6detail11posix_event27maybe_unlock_and_signal_oneINS1_11scoped_lockINS1_11posix_mutexEEEEEbRT_
+__func__._ZN5boost4asio6detail11posix_event10signal_allINS1_11scoped_lockINS1_11posix_mutexEEEEEvRT_
+_GLOBAL__sub_I_xml_parse.cpp
+_GLOBAL__sub_I_alert_manager.cpp
+__func__._ZNK5boost10shared_ptrIN10libtorrent6pluginEEptEv
+__cxx_global_var_init.43
+__cxx_global_var_init.44
+__cxx_global_var_init.45
+_GLOBAL__sub_I_rss.cpp
+__func__._ZN5boost23enable_shared_from_thisIN10libtorrent4feedEE16shared_from_thisEv
+_GLOBAL__sub_I_socket_io.cpp
+_GLOBAL__sub_I_policy.cpp
+_ZZN10libtorrent13peer_priorityEN5boost4asio2ip14basic_endpointINS2_3tcpEEES5_E6v6mask
+_ZZN10libtorrent13peer_priorityEN5boost4asio2ip14basic_endpointINS2_3tcpEEES5_E6v4mask
+__func__._ZNK5boost10scoped_ptrIN10libtorrent12piece_pickerEEptEv
+__func__._ZNK5boost10scoped_ptrIN10libtorrent12piece_pickerEEdeEv
+__func__._ZNK5boost4poolINS_33default_user_allocator_new_deleteEE10alloc_sizeEv
+_ZZN10libtorrent10url_randomEPcS0_E9printable
+_ZZN10libtorrent15time_now_stringEvE5start
+_ZGVZN10libtorrent15time_now_stringEvE5start
+_ZZN10libtorrent15time_now_stringEvE3ret
+_ZZN10libtorrent8log_timeEvE5start
+_ZGVZN10libtorrent8log_timeEvE5start
+_ZZN10libtorrent14time_now_hiresEvE13timebase_info
+_GLOBAL__sub_I_instantiate_connection.cpp
+_ZZNK10libtorrent25libtorrent_error_category7messageEiE4msgs
+_ZZN10libtorrent23get_libtorrent_categoryEvE19libtorrent_category
+_ZGVZN10libtorrent23get_libtorrent_categoryEvE19libtorrent_category
+_ZZN10libtorrent17get_http_categoryEvE13http_category
+_ZGVZN10libtorrent17get_http_categoryEvE13http_category
+_GLOBAL__sub_I_http_parser.cpp
+_GLOBAL__sub_I_file_storage.cpp
+_GLOBAL__sub_I_magnet_uri.cpp
+__cxx_global_var_init.19
+_GLOBAL__sub_I_udp_socket.cpp
+__cxx_global_var_init.37
+__cxx_global_var_init.38
+_GLOBAL__sub_I_http_connection.cpp
+__func__._ZN5boost23enable_shared_from_thisIN10libtorrent15http_connectionEE16shared_from_thisEv
+_GLOBAL__sub_I_utp_socket_manager.cpp
+__func__._ZNK5boost10shared_ptrIN10libtorrent11socket_typeEEptEv
+_GLOBAL__sub_I_disk_io_thread.cpp
+__func__._ZNK5boost10scoped_ptrIN10libtorrent17storage_interfaceEEptEv
+__func__._ZNK5boost13intrusive_ptrIKN10libtorrent12torrent_infoEEdeEv
+__func__._ZNK5boost12shared_arrayIN10libtorrent14disk_io_thread18cached_block_entryEEixEi
+__func__._ZN5boost12scoped_arrayIcE5resetEPc
+__cxx_global_var_init.325
+__cxx_global_var_init.326
+__cxx_global_var_init.327
+__cxx_global_var_init.328
+__cxx_global_var_init.329
+_GLOBAL__sub_I_torrent.cpp
+_ZZNK10libtorrent7torrent17on_country_lookupERKN5boost6system10error_codeENS1_4asio2ip23basic_resolver_iteratorINS7_3tcpEEENS1_13intrusive_ptrINS_15peer_connectionEEEE11country_map
+.str.277
+.str.278
+.str.279
+.str.280
+.str.281
+.str.282
+.str.284
+.str.285
+.str.286
+.str.287
+.str.288
+.str.289
+.str.290
+.str.291
+.str.292
+.str.293
+.str.294
+.str.295
+.str.296
+.str.297
+.str.298
+.str.299
+.str.300
+.str.301
+.str.302
+.str.303
+.str.304
+.str.305
+.str.306
+.str.307
+.str.308
+.str.309
+.str.310
+.str.311
+.str.312
+.str.313
+.str.314
+.str.315
+.str.316
+.str.317
+.str.318
+.str.319
+.str.320
+.str.321
+.str.322
+.str.323
+.str.324
+.str.330
+.str.331
+.str.332
+.str.333
+__func__._ZN5boost10scoped_ptrINSt3__112basic_stringIcNS1_11char_traitsIcEENS1_9allocatorIcEEEEE5resetEPS7_
+.str.334
+__func__._ZN5boost23enable_shared_from_thisIN10libtorrent7torrentEE16shared_from_thisEv
+.str.335
+.str.336
+.str.337
+.str.338
+.str.339
+.str.340
+.str.341
+__func__._ZNK5boost12shared_arrayIcEixEi
+_GLOBAL__sub_I_web_connection_base.cpp
+__func__._ZNK5boost10shared_ptrIN10libtorrent7torrentEEptEv
+_GLOBAL__sub_I_utp_stream.cpp
+__cxx_global_var_init.21
+__cxx_global_var_init.22
+_GLOBAL__sub_I_dht_tracker.cpp
+_ZZN10libtorrent3dht11dht_tracker15incoming_packetERKN5boost6system10error_codeERKNS2_4asio2ip14basic_endpointINS8_3udpEEEPKciE7class_a
+_ZZN10libtorrent3dht11dht_tracker11send_packetERNS_5entryERKN5boost4asio2ip14basic_endpointINS6_3udpEEEiE11version_str
+_GLOBAL__sub_I_session.cpp
+__func__._ZN5boost10shared_ptrIN10libtorrent3aux12session_implEE5resetIS3_EEvPT_
+__func__._ZNK5boost10shared_ptrIN10libtorrent3aux12session_implEEptEv
+_ZL5slidePaPKh
+_ZL6selectP10ge_precompia
+_ZL4cmovP10ge_precompS0_h
+_ZL2Bi
+_ZL1d
+_ZL6sqrtm1
+_ZL2d2
+_ZL4base
+_GLOBAL__sub_I_disk_buffer_holder.cpp
+_GLOBAL__sub_I_storage.cpp
+__func__._ZNK5boost10scoped_ptrIN10libtorrent12file_storageEEdeEv
+__func__._ZN5boost10scoped_ptrIN10libtorrent12file_storageEE5resetEPS2_
+_ZN10libtorrent12_GLOBAL__N_14failEPiRNSt3__16vectorIPNS_10lazy_entryENS2_9allocatorIS5_EEEEPKcSB_
+_GLOBAL__sub_I_lazy_bdecode.cpp
+_ZZNK10libtorrent22bdecode_error_category7messageEiE4msgs
+_ZZN10libtorrent20get_bdecode_categoryEvE16bdecode_category
+_ZGVZN10libtorrent20get_bdecode_categoryEvE16bdecode_category
+_GLOBAL__sub_I_traversal_algorithm.cpp
+__func__._ZNK5boost13intrusive_ptrIN10libtorrent3dht8observerEEdeEv
+_GLOBAL__sub_I_http_seed_connection.cpp
+_GLOBAL__sub_I_disk_buffer_pool.cpp
+__func__._ZNK5boost4poolIN10libtorrent22page_aligned_allocatorEE10alloc_sizeEv
+__cxx_global_var_init.60
+_GLOBAL__sub_I_torrent_info.cpp
+__func__._ZN5boost12shared_arrayIcE5resetIcEEvPT_
+_GLOBAL__sub_I_pe_crypto.cpp
+_ZN10libtorrent12_GLOBAL__N_1L8dh_primeE
+__cxx_global_var_init.147
+_GLOBAL__sub_I_alert.cpp
+_ZZNK10libtorrent17performance_alert7messageEvE11warning_str
+_ZZNK10libtorrent19state_changed_alert7messageEvE9state_str
+_ZZNK10libtorrent22tracker_announce_alert7messageEvE9event_str
+_ZZNK10libtorrent19listen_failed_alert7messageEvE6op_str
+_ZZNK10libtorrent19listen_failed_alert7messageEvE8type_str
+_ZZNK10libtorrent22listen_succeeded_alert7messageEvE8type_str
+_ZZNK10libtorrent17portmap_log_alert7messageEvE8type_str
+_ZZNK10libtorrent18peer_blocked_alert7messageEvE10reason_str
+_ZZNK10libtorrent9rss_alert7messageEvE9state_msg
+_ZN10libtorrentL8type_strE
+_ZZNK10libtorrent15dht_error_alert7messageEvE15operation_names
+_ZN10libtorrent12_GLOBAL__N_113SHA1transformINS0_18little_endian_blk0EEEvPjPKh
+_GLOBAL__sub_I_get_item.cpp
+_GLOBAL__sub_I_bandwidth_manager.cpp
+__func__._ZNK5boost13intrusive_ptrIN10libtorrent16bandwidth_socketEEptEv
+__cxx_global_var_init.49
+__cxx_global_var_init.50
+__cxx_global_var_init.51
+_GLOBAL__sub_I_http_tracker_connection.cpp
+_ZZN10libtorrent23http_tracker_connection5startEvE12event_string
+_GLOBAL__sub_I_peer_connection.cpp
+__func__._ZN10libtorrent15peer_connection15superseed_pieceEii
+_ZN10libtorrent12_GLOBAL__N_119sockaddr_to_addressEPK8sockaddri
+_GLOBAL__sub_I_enum_net.cpp
+_GLOBAL__sub_I_parse_url.cpp
+_GLOBAL__sub_I_udp_tracker_connection.cpp
+__func__._ZNK5boost10shared_ptrIN10libtorrent16request_callbackEEptEv
+_ZN10libtorrent12_GLOBAL__N_113append_blocksERNSt3__16vectorINS_11piece_blockENS1_9allocatorIS3_EEEES7_i
+_GLOBAL__sub_I_piece_picker.cpp
+_ZN10libtorrent3auxL22set_socket_buffer_sizeINS_23rate_limited_udp_socketEEEvRT_RKNS_16session_settingsERN5boost6system10error_codeE
+__cxx_global_var_init.218
+__cxx_global_var_init.219
+__cxx_global_var_init.220
+__cxx_global_var_init.221
+__cxx_global_var_init.222
+__cxx_global_var_init.223
+_GLOBAL__sub_I_session_impl.cpp
+_ZZN10libtorrent3aux12session_implC1ENSt3__14pairIiiEERKNS_11fingerprintEPKcjE6seeder
+_ZGVZN10libtorrent3aux12session_implC1ENSt3__14pairIiiEERKNS_11fingerprintEPKcjE6seeder
+__func__._ZN10libtorrent3aux12session_impl22on_trigger_auto_manageEv
+__func__._ZN5boost10scoped_ptrINS_4asio6detail12posix_threadEE5resetEPS3_
+_GLOBAL__sub_I_broadcast_socket.cpp
+__func__._ZNK5boost10shared_ptrINS_4asio21basic_datagram_socketINS1_2ip3udpENS1_23datagram_socket_serviceIS4_EEEEEptEv
+_GLOBAL__sub_I_get_peers.cpp
+_ZNKSt3__111__wrap_iterIPN10libtorrent3dht10node_entryEEdeEv
+_GLOBAL__sub_I_routing_table.cpp
+_ZZNK10libtorrent3dht13routing_table12bucket_limitEiE15size_exceptions
+_ZN10libtorrent12_GLOBAL__N_113ut_pex_pluginD1Ev
+_ZN10libtorrent12_GLOBAL__N_113ut_pex_pluginD0Ev
+_ZN10libtorrent12_GLOBAL__N_113ut_pex_plugin14new_connectionEPNS_15peer_connectionE
+_ZN10libtorrent12_GLOBAL__N_113ut_pex_plugin4tickEv
+_ZN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginD1Ev
+_ZN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginD0Ev
+_ZNK10libtorrent12_GLOBAL__N_118ut_pex_peer_plugin4typeEv
+_ZN10libtorrent12_GLOBAL__N_118ut_pex_peer_plugin13add_handshakeERNS_5entryE
+_ZN10libtorrent12_GLOBAL__N_118ut_pex_peer_plugin22on_extension_handshakeERKNS_10lazy_entryE
+_ZN10libtorrent12_GLOBAL__N_118ut_pex_peer_plugin11on_extendedEiiNS_6buffer14const_intervalE
+_ZN10libtorrent12_GLOBAL__N_118ut_pex_peer_plugin4tickEv
+_ZN10libtorrent12_GLOBAL__N_19send_peerERKNS_15peer_connectionE
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginEED1Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginEED0Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginEE7disposeEv
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginEE11get_deleterERKSt9type_info
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginEE19get_untyped_deleterEv
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_113ut_pex_pluginEED1Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_113ut_pex_pluginEED0Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_113ut_pex_pluginEE7disposeEv
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_113ut_pex_pluginEE11get_deleterERKSt9type_info
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_113ut_pex_pluginEE19get_untyped_deleterEv
+_GLOBAL__sub_I_ut_pex.cpp
+_ZTVN10libtorrent12_GLOBAL__N_113ut_pex_pluginE
+_ZTSN10libtorrent12_GLOBAL__N_113ut_pex_pluginE
+_ZTIN10libtorrent12_GLOBAL__N_113ut_pex_pluginE
+_ZTVN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginE
+_ZTSN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginE
+_ZTIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginE
+_ZZN10libtorrent12_GLOBAL__N_118ut_pex_peer_plugin4tickEvE11global_last
+_ZGVZN10libtorrent12_GLOBAL__N_118ut_pex_peer_plugin4tickEvE11global_last
+_ZTVN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginEEE
+_ZTSN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginEEE
+_ZTIN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_pex_peer_pluginEEE
+_ZTVN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_113ut_pex_pluginEEE
+_ZTSN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_113ut_pex_pluginEEE
+_ZTIN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_113ut_pex_pluginEEE
+_GLOBAL__sub_I_file.cpp
+_ZZN10libtorrent4file4openERKNSt3__112basic_stringIcNS1_11char_traitsIcEENS1_9allocatorIcEEEEiRN5boost6system10error_codeEE10mode_array
+_ZZN10libtorrent4file4openERKNSt3__112basic_stringIcNS1_11char_traitsIcEENS1_9allocatorIcEEEEiRN5boost6system10error_codeEE14no_buffer_flag
+_GLOBAL__sub_I_ip_filter.cpp
+_GLOBAL__sub_I_http_stream.cpp
+_GLOBAL__sub_I_torrent_handle.cpp
+_ZZNK10libtorrent14torrent_handle9info_hashEvE5empty
+_ZGVZNK10libtorrent14torrent_handle9info_hashEvE5empty
+_ZZNK10libtorrent14torrent_handle8trackersEvE5empty
+_ZGVZNK10libtorrent14torrent_handle8trackersEvE5empty
+_ZZNK10libtorrent14torrent_handle9url_seedsEvE5empty
+_ZGVZNK10libtorrent14torrent_handle9url_seedsEvE5empty
+_ZZNK10libtorrent14torrent_handle10http_seedsEvE5empty
+_ZGVZNK10libtorrent14torrent_handle10http_seedsEvE5empty
+_GLOBAL__sub_I_web_peer_connection.cpp
+_ZL4bitsP5statei
+_ZL9constructP7huffmanPsi
+_ZL5codesP5stateP7huffmanS2_
+_ZL6decodeP5stateP7huffman
+_ZZL5fixedP5stateE6virgin
+_ZZL5fixedP5stateE6lencnt
+_ZZL5fixedP5stateE6lensym
+_ZZL5fixedP5stateE7distcnt
+_ZZL5fixedP5stateE7distsym
+_ZZL5fixedP5stateE7lencode
+_ZZL5fixedP5stateE8distcode
+_ZZL5codesP5stateP7huffmanS2_E4lens
+_ZZL5codesP5stateP7huffmanS2_E4lext
+_ZZL5codesP5stateP7huffmanS2_E5dists
+_ZZL5codesP5stateP7huffmanS2_E4dext
+_ZZL7dynamicP5stateE5order
+.memset_pattern
+.memset_pattern.2
+.memset_pattern.3
+.memset_pattern.4
+_ZN10libtorrent12_GLOBAL__N_118ut_metadata_pluginD1Ev
+_ZN10libtorrent12_GLOBAL__N_118ut_metadata_pluginD0Ev
+_ZN10libtorrent12_GLOBAL__N_118ut_metadata_plugin14new_connectionEPNS_15peer_connectionE
+_ZN10libtorrent12_GLOBAL__N_118ut_metadata_plugin13on_piece_passEi
+_ZN10libtorrent12_GLOBAL__N_118ut_metadata_plugin16on_files_checkedEv
+_ZN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginD1Ev
+_ZN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginD0Ev
+_ZNK10libtorrent12_GLOBAL__N_123ut_metadata_peer_plugin4typeEv
+_ZN10libtorrent12_GLOBAL__N_123ut_metadata_peer_plugin13add_handshakeERNS_5entryE
+_ZN10libtorrent12_GLOBAL__N_123ut_metadata_peer_plugin22on_extension_handshakeERKNS_10lazy_entryE
+_ZN10libtorrent12_GLOBAL__N_123ut_metadata_peer_plugin11on_extendedEiiNS_6buffer14const_intervalE
+_ZN10libtorrent12_GLOBAL__N_123ut_metadata_peer_plugin4tickEv
+_ZNK10libtorrent12_GLOBAL__N_118ut_metadata_plugin8metadataEv
+_ZN10libtorrent12_GLOBAL__N_123ut_metadata_peer_plugin18maybe_send_requestEv
+_ZNSt3__16vectorIN10libtorrent12_GLOBAL__N_118ut_metadata_plugin14metadata_pieceENS_9allocatorIS4_EEE6resizeEm
+_ZN10libtorrent12_GLOBAL__N_123ut_metadata_peer_plugin21write_metadata_packetEii
+_ZN5boost8weak_ptrIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEEaSIS3_EERS4_RKNS_10shared_ptrIT_EE
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEED1Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEED0Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEE7disposeEv
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEE11get_deleterERKSt9type_info
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEE19get_untyped_deleterEv
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginEED1Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginEED0Ev
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginEE7disposeEv
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginEE11get_deleterERKSt9type_info
+_ZN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginEE19get_untyped_deleterEv
+_GLOBAL__sub_I_ut_metadata.cpp
+_ZTVN10libtorrent12_GLOBAL__N_118ut_metadata_pluginE
+_ZTSN10libtorrent12_GLOBAL__N_118ut_metadata_pluginE
+_ZTIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginE
+_ZTVN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginE
+_ZTSN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginE
+_ZTSN5boost23enable_shared_from_thisIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEEE
+_ZTIN5boost23enable_shared_from_thisIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEEE
+_ZTIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginE
+__func__._ZN5boost23enable_shared_from_thisIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEE16shared_from_thisEv
+_ZTVN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEEE
+_ZTSN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEEE
+_ZTIN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_123ut_metadata_peer_pluginEEE
+_ZTVN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginEEE
+_ZTSN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginEEE
+_ZTIN5boost6detail17sp_counted_impl_pIN10libtorrent12_GLOBAL__N_118ut_metadata_pluginEEE
+_GLOBAL__sub_I_refresh.cpp
+_GLOBAL__sub_I_rpc_manager.cpp
+__func__._ZNK5boost13intrusive_ptrIN10libtorrent3dht19traversal_algorithmEEptEv
+_GLOBAL__sub_I_hasher.cpp
+_GLOBAL__sub_I_bloom_filter.cpp
+_ZZN10libtorrent15count_zero_bitsEPKhiE8bitcount
+_GLOBAL__sub_I_tracker_manager.cpp
+_GLOBAL__sub_I_settings.cpp
+_ZL11isLegalUTF8PKhi
+_ZL13firstByteMark
+_ZL20trailingBytesForUTF8
+_ZL15offsetsFromUTF8

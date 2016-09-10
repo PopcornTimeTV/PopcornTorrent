@@ -22,6 +22,6 @@ typedef void (^PTTorrentStreamerFailure)(NSError *error);
                                readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
                                    failure:(PTTorrentStreamerFailure)failure;
 
-- (void)cancelStreaming;
+- (void)cancelStreamingAndDeleteData:(BOOL) deleteData;
 
 @end

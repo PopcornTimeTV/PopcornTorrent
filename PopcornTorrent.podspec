@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "PopcornTorrent"
-  s.version          = "1.1.1.0"
+  s.version          = "1.1.1.5"
   s.summary          = "Torrent client for iOS and tvOS (Used by PopcornTime)"
   s.homepage         = "https://github.com/PopcornTimeTV/PopcornTorrent"
   s.license          = 'MIT'
@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.source = { :git => "https://github.com/PopcornTimeTV/PopcornTorrent.git", :tag => s.version }
   s.ios.deployment_target = '9.0'
   s.tvos.deployment_target = '9.0'
-  s.dependency 'GCDWebServer', '~> 3.0'
+  s.dependency 'GCDWebServer', '~> 3.3.3'
   s.ios.vendored_frameworks = "PopcornTorrent/Build/iOS/PopcornTorrent.framework"
   s.tvos.vendored_frameworks = "PopcornTorrent/Build/tvOS/PopcornTorrent.framework"
 end

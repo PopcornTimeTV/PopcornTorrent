@@ -117,7 +117,7 @@ std::mutex mtx;
     self.readyToPlayBlock = readyToPlay;
     self.failureBlock = failure;
     
-    self.alertsQueue = dispatch_queue_create("com.popcorntime.ios.torrentstreamer.alerts", DISPATCH_QUEUE_SERIAL);
+    self.alertsQueue = dispatch_queue_create("com.popcorntimetv.popcorntorrent.alerts", DISPATCH_QUEUE_SERIAL);
     self.alertsLoopActive = YES;
     dispatch_async(self.alertsQueue, ^{
         [self alertsLoop];
@@ -130,8 +130,6 @@ std::mutex mtx;
     
     if ([filePathOrMagnetLink hasPrefix:@"magnet"]) {
         NSString *magnetLink = filePathOrMagnetLink;
-        magnetLink = [magnetLink stringByAppendingString:@"&tr=udp://open.demonii.com:1337"
-                      "&tr=udp://tracker.coppersurfer.tk:6969"];
         tp.url = std::string([magnetLink UTF8String]);
         
         MD5String = [CocoaSecurity md5:magnetLink].hexLower;
@@ -162,7 +160,7 @@ std::mutex mtx;
                                                     error:&error];
     if (error) {
         NSLog(@"Can't create directory at path: %@", self.savePath);
-        throw [[NSError alloc] initWithDomain:@"com.popcorntime.torrentstreamer.FileException" code:1 userInfo:nil];
+        throw [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:1 userInfo:nil];
         return;
     }
     
@@ -280,7 +278,7 @@ std::mutex mtx;
             _session->pop_alerts(&deque);
             for (std::deque<alert *>::iterator it=deque.begin(); it != deque.end(); ++it) {
                 std::unique_ptr<alert> alert(*it);
-                //                NSLog(@"type:%d msg:%s", alert->type(), alert->message().c_str());
+                // NSLog(@"type:%d msg:%s", alert->type(), alert->message().c_str());
                 switch (alert->type()) {
                     case metadata_received_alert::alert_type:
                         [self metadataReceivedAlert:(metadata_received_alert *)alert.get()];
@@ -447,7 +445,6 @@ std::mutex mtx;
         requiredPiecesDownloaded++;
     }
     mtx.unlock();
-    //    [self logPiecesStatus:th];
     
     int requiredPieces = (int)required_pieces.size();
     float bufferingProgress = 1.0 - (requiredPieces-requiredPiecesDownloaded)/(float)requiredPieces;
@@ -457,8 +454,7 @@ std::mutex mtx;
         status.upload_rate,
         status.num_seeds,
         status.num_peers};
-    //  [self logTorrentStatus:torrentStatus];
-    
+    self.torrentStatus = torrentStatus;
     if (self.progressBlock) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if([self isKindOfClass:[PTTorrentStreamer class]])self.progressBlock(torrentStatus);

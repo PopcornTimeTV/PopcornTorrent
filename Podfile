@@ -1,17 +1,17 @@
-
 use_frameworks!
 
-target "PopcornTorrent" do
-    platform :tvos ,'9.0'
-    pod "GCDWebServer", '~> 3.3.3'
+source 'https://github.com/CocoaPods/Specs'
+
+def pods
+    pod 'GCDWebServer', '~> 3.3.3'
 end
 
-target "PopcornTorrentTests" do
-    platform :tvos ,'9.0'
-    pod "GCDWebServer", '~> 3.3.3'
+target 'PopcornTorrent tvOS' do
+    platform :tvos, '9.0'
+    pods
 end
 
-target "PopcornTorrent-iOS" do
-    platform :ios, '7.0'
-    pod "GCDWebServer", '~> 3.3.3'
+target 'PopcornTorrent iOS' do
+    platform :ios, '9.0'
+    pods
 end

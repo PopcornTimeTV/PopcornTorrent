@@ -1,3 +1,4 @@
+
 #import <Foundation/Foundation.h>
 
 typedef struct {
@@ -9,9 +10,11 @@ typedef struct {
     int peers;
 } PTTorrentStatus;
 
+#pragma clang assume_nonnull begin
+
 typedef void (^PTTorrentStreamerProgress)(PTTorrentStatus status);
-typedef void (^PTTorrentStreamerReadyToPlay)(NSURL *videoFileURL,NSURL* videoFilePath);
-typedef void (^PTTorrentStreamerFailure)(NSError *error);
+typedef void (^PTTorrentStreamerReadyToPlay)(NSURL * _Nonnull videoFileURL, NSURL * _Nonnull videoFilePath);
+typedef void (^PTTorrentStreamerFailure)(NSError * _Nonnull error);
 
 @interface PTTorrentStreamer : NSObject
 
@@ -24,4 +27,8 @@ typedef void (^PTTorrentStreamerFailure)(NSError *error);
 
 - (void)cancelStreamingAndDeleteData:(BOOL) deleteData;
 
+@property (assign, nonatomic) PTTorrentStatus torrentStatus;
+
 @end
+
+#pragma clang assume_nonnull end

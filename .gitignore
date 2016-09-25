@@ -1,2 +1,8 @@
 Pods/
 Carthage/
+Podfile.lock
+xcuserdata/
+.DS_Store
+.Trashes
+DerivedData/
+*.xcworkspace

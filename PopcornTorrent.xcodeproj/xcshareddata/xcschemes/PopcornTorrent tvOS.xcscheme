@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "922F43311CA37CF800955B33"
+               BlueprintIdentifier = "4D97E8701D99C2EF009FEF7E"
                BuildableName = "PopcornTorrent.framework"
                BlueprintName = "PopcornTorrent tvOS"
                ReferencedContainer = "container:PopcornTorrent.xcodeproj">
@@ -32,7 +32,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4D0699E81D96F13D00D17065"
+               BlueprintIdentifier = "4D97E8781D99C2EF009FEF7E"
                BuildableName = "PopcornTorrent tvOSTests.xctest"
                BlueprintName = "PopcornTorrent tvOSTests"
                ReferencedContainer = "container:PopcornTorrent.xcodeproj">
@@ -42,7 +42,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "922F43311CA37CF800955B33"
+            BlueprintIdentifier = "4D97E8701D99C2EF009FEF7E"
             BuildableName = "PopcornTorrent.framework"
             BlueprintName = "PopcornTorrent tvOS"
             ReferencedContainer = "container:PopcornTorrent.xcodeproj">
@@ -52,7 +52,7 @@
       </AdditionalOptions>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -64,7 +64,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "922F43311CA37CF800955B33"
+            BlueprintIdentifier = "4D97E8701D99C2EF009FEF7E"
             BuildableName = "PopcornTorrent.framework"
             BlueprintName = "PopcornTorrent tvOS"
             ReferencedContainer = "container:PopcornTorrent.xcodeproj">
@@ -82,7 +82,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "922F43311CA37CF800955B33"
+            BlueprintIdentifier = "4D97E8701D99C2EF009FEF7E"
             BuildableName = "PopcornTorrent.framework"
             BlueprintName = "PopcornTorrent tvOS"
             ReferencedContainer = "container:PopcornTorrent.xcodeproj">

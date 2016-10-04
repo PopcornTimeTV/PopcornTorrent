@@ -4,13 +4,17 @@
 <dict>
 	<key>files</key>
 	<dict>
+		<key>Headers/PTTorrentStreamer.h</key>
+		<data>
+		pjePPgQorMX0nF2diJE/MsDZzZ8=
+		</data>
 		<key>Headers/PopcornTorrent.h</key>
 		<data>
 		84JN7TefJPnY5aODHS1MGuiYQEI=
 		</data>
 		<key>Info.plist</key>
 		<data>
-		/iYWz8Vo8koQobfcK2A9hgVdddU=
+		VcWHf5Bon7Hcn0erF6eO4mIn/zE=
 		</data>
 		<key>Modules/module.modulemap</key>
 		<data>
@@ -19,6 +23,17 @@
 	</dict>
 	<key>files2</key>
 	<dict>
+		<key>Headers/PTTorrentStreamer.h</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			pjePPgQorMX0nF2diJE/MsDZzZ8=
+			</data>
+			<key>hash2</key>
+			<data>
+			aUr7iuuf9kHtMElz3t2ANkFeluXZDcAgtncZlvaoAIk=
+			</data>
+		</dict>
 		<key>Headers/PopcornTorrent.h</key>
 		<dict>
 			<key>hash</key>

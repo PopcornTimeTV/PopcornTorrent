@@ -279,7 +279,7 @@
 		4D97E8FF1D99C450009FEF7E /* routing_table.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4D97E8431D99A56C009FEF7E /* routing_table.cpp */; };
 		4D97E9001D99C450009FEF7E /* rpc_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4D97E8441D99A56C009FEF7E /* rpc_manager.cpp */; };
 		4D97E9011D99C450009FEF7E /* traversal_algorithm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4D97E8451D99A56C009FEF7E /* traversal_algorithm.cpp */; };
-		4D97E9021D99C456009FEF7E /* PTTorrentStreamer.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */; };
+		4D97E9021D99C456009FEF7E /* PTTorrentStreamer.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4D97E9031D99C459009FEF7E /* PTTorrentStreamer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */; };
 		4D97E9041D99C45D009FEF7E /* CocoaSecurity.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43AE1CA37F0200955B33 /* CocoaSecurity.h */; };
 		4D97E9051D99C460009FEF7E /* CocoaSecurity.m in Sources */ = {isa = PBXBuildFile; fileRef = 922F43AF1CA37F0200955B33 /* CocoaSecurity.m */; };

@@ -440,7 +440,7 @@ std::mutex mtx;
 
 - (void)pieceFinishedAlert:(piece_finished_alert *)alert {
     torrent_handle th = alert->handle;
-    torrent_status status = th.status();
+    status = th.status();
     
     int requiredPiecesDownloaded = 0;
     BOOL allRequiredPiecesDownloaded = YES;

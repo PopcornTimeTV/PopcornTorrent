@@ -36,6 +36,7 @@ using namespace libtorrent;
 @implementation PTTorrentStreamer {
     session *_session;
     std::vector<int> required_pieces;
+    torrent_status status;
 }
 @synthesize requestedRangeInfo;
 long long firstPiece=-1;
@@ -95,7 +96,9 @@ std::mutex mtx;
     settings.max_peerlist_size = 10000;
     _session->set_settings(settings);
     requestedRangeInfo=[[NSMutableDictionary alloc]init];
-
+    
+    status = torrent_status();
+    
     if(![NSThread isMainThread])
         dispatch_sync(dispatch_get_main_queue(), ^{
             [GCDWebServer   setLogLevel:kGCDWebServerLoggingLevel_Error];
@@ -330,9 +333,10 @@ std::mutex mtx;
             file_entry fe = ti->file_at(file_index);
             std::string path = fe.path;
             __weak __typeof__(self) weakSelf = self;
+            status = th.status();
             NSString *fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
             NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:fileName]];
-            torrent_status status = th.status();
+            
             [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
                 
                 if(request.hasByteRange && !status.is_finished){
@@ -431,6 +435,7 @@ std::mutex mtx;
         th.set_piece_deadline(piece, PIECE_DEADLINE_MILLIS, torrent_handle::alert_when_available);
     }
     piece_priorities = th.piece_priorities();
+    status = th.status();
 }
 
 - (void)pieceFinishedAlert:(piece_finished_alert *)alert {

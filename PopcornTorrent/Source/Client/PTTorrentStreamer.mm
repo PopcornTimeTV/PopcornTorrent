@@ -332,10 +332,10 @@ std::mutex mtx;
             __weak __typeof__(self) weakSelf = self;
             NSString *fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
             NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:fileName]];
-            
+            torrent_status status = th.status();
             [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
                 
-                if(request.hasByteRange){
+                if(request.hasByteRange && !status.is_finished){
                     GCDWebServerFileResponse *response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath byteRange:request.byteRange ];
                     if([weakSelf fastForwardTorrentForRange:request.byteRange]){
                         completionBlock(response);
@@ -343,6 +343,10 @@ std::mutex mtx;
                         [weakSelf.requestedRangeInfo setObject:response forKey:@"response"];
                         [weakSelf.requestedRangeInfo setObject:completionBlock forKey:@"completionBlock"];
                     }
+                    return;
+                }else if(request.hasByteRange && status.is_finished){
+                    GCDWebServerFileResponse *response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath byteRange:request.byteRange ];
+                    completionBlock(response);
                     return;
                 }
                 GCDWebServerFileResponse *response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath];

@@ -14,5 +14,5 @@ Torrent client for tvOS and iOS implemented with `libtorrent`.
 1. `pod install`
 2. Open up \*.xcworkspace ⌘ + B in Xcode with Universal iOS scheme and Universal tvOS scheme.
 3. Update the `PopcornTorrent.podspec` updating the version and linking it to the new framework version.
-4. Zip the build folder
+4. Zip the build folder and rename it "PopcornTorrent".
 5. Push changes to github and create a new release on [GitHub](https://github.com/PopcornTimeTV/PopcornTorrent/releases), uploading the zipped build folder as a binary.

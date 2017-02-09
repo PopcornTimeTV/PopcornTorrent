@@ -19,10 +19,12 @@
 using namespace libtorrent;
 
 @interface PTTorrentStreamer()
+    
 @property (nonatomic, strong) dispatch_queue_t alertsQueue;
 @property (nonatomic, getter=isAlertsLoopActive) BOOL alertsLoopActive;
 @property (nonatomic, strong) NSString *savePath;
 @property (nonatomic, getter=isDownloading) BOOL downloading;
+@property (nonatomic, getter=shouldCancelStreaming) BOOL cancelStreaming;
 @property (nonatomic, getter=isStreaming) BOOL streaming;
 @property (nonatomic, strong) NSMutableDictionary* requestedRangeInfo;
 
@@ -31,6 +33,7 @@ using namespace libtorrent;
 @property (nonatomic, copy) PTTorrentStreamerFailure failureBlock;
 
 @property(nonatomic, strong) GCDWebServer* mediaServer;
+    
 @end
 
 @implementation PTTorrentStreamer {
@@ -38,10 +41,12 @@ using namespace libtorrent;
     std::vector<int> required_pieces;
     torrent_status status;
 }
+    
 @synthesize requestedRangeInfo;
-long long firstPiece=-1;
-long long endPiece=0;
+long long firstPiece = -1;
+long long endPiece = 0;
 std::mutex mtx;
+    
 + (instancetype)sharedStreamer {
     static dispatch_once_t onceToken;
     static PTTorrentStreamer *sharedStreamer;
@@ -99,12 +104,12 @@ std::mutex mtx;
     
     status = torrent_status();
     
-    if(![NSThread isMainThread])
+    if(![NSThread isMainThread]) {
         dispatch_sync(dispatch_get_main_queue(), ^{
             [GCDWebServer   setLogLevel:kGCDWebServerLoggingLevel_Error];
             _mediaServer= [[GCDWebServer alloc]init];
         });
-    else{
+    } else {
         [GCDWebServer   setLogLevel:kGCDWebServerLoggingLevel_Error];
         _mediaServer= [[GCDWebServer alloc]init];
     }
@@ -113,10 +118,10 @@ std::mutex mtx;
 }
 
 - (void)startStreamingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink
-                                  progress:(PTTorrentStreamerProgress)progreess
+                                  progress:(PTTorrentStreamerProgress)progress
                                readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
                                    failure:(PTTorrentStreamerFailure)failure {
-    self.progressBlock = progreess;
+    self.progressBlock = progress;
     self.readyToPlayBlock = readyToPlay;
     self.failureBlock = failure;
     
@@ -148,7 +153,7 @@ std::mutex mtx;
                 return;
             }
         } else {
-            NSLog(@"File doesn't exists at path: %@", filePath);
+            NSLog(@"File doesn't exist at path: %@", filePath);
             return;
         }
     }
@@ -208,6 +213,9 @@ std::mutex mtx;
         return;
     }
     self.downloading = YES;
+    if (self.shouldCancelStreaming) {
+        [self cancelStreamingAndDeleteData:NO];
+    }
 }
 #pragma mark - Fast Forward
 
@@ -265,6 +273,10 @@ std::mutex mtx;
         
         self.streaming = NO;
         self.downloading = NO;
+        self.cancelStreaming = NO;
+        self.torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
+    } else {
+        self.cancelStreaming = YES;
     }
 }
 
@@ -399,7 +411,7 @@ std::mutex mtx;
 
 - (void)logTorrentStatus:(PTTorrentStatus)status {
     NSString *speedString = [NSByteCountFormatter stringFromByteCount:status.downloadSpeed countStyle:NSByteCountFormatterCountStyleBinary];
-    NSLog(@"%.0f%%, %.0f%%, %@/s, %d, %d", status.bufferingProgress*100, status.totalProgreess*100, speedString, status.seeds, status.peers);
+    NSLog(@"%.0f%%, %.0f%%, %@/s, %d, %d", status.bufferingProgress*100, status.totalProgress*100, speedString, status.seeds, status.peers);
 }
 
 #pragma mark - Alerts

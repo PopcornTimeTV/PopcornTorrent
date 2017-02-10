@@ -24,7 +24,6 @@ using namespace libtorrent;
 @property (nonatomic, getter=isAlertsLoopActive) BOOL alertsLoopActive;
 @property (nonatomic, strong) NSString *savePath;
 @property (nonatomic, getter=isDownloading) BOOL downloading;
-@property (nonatomic, getter=shouldCancelStreaming) BOOL cancelStreaming;
 @property (nonatomic, getter=isStreaming) BOOL streaming;
 @property (nonatomic, strong) NSMutableDictionary* requestedRangeInfo;
 
@@ -213,9 +212,6 @@ std::mutex mtx;
         return;
     }
     self.downloading = YES;
-    if (self.shouldCancelStreaming) {
-        [self cancelStreamingAndDeleteData:NO];
-    }
 }
 #pragma mark - Fast Forward
 
@@ -273,12 +269,10 @@ std::mutex mtx;
         
         self.streaming = NO;
         self.downloading = NO;
-        self.cancelStreaming = NO;
         self.torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
-    } else {
-        self.cancelStreaming = YES;
     }
 }
+
 
 #pragma mark - Alerts Loop
 

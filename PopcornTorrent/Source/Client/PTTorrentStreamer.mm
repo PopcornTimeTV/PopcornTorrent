@@ -9,6 +9,7 @@
 #import <GCDWebServer/GCDWebServerFileRequest.h>
 #import <GCDWebServer/GCDWebServerFileResponse.h>
 #import <GCDWebServer/GCDWebServerPrivate.h>
+#import <UIKit/UIApplication.h>
 
 #define ALERTS_LOOP_WAIT_MILLIS 500
 #define MIN_PIECES 15
@@ -212,6 +213,9 @@ std::mutex mtx;
         return;
     }
     self.downloading = YES;
+    #ifdef TARGET_OS_IOS
+        [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+    #endif
 }
 #pragma mark - Fast Forward
 
@@ -271,6 +275,10 @@ std::mutex mtx;
         self.downloading = NO;
         self.torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
     }
+    
+    #ifdef TARGET_OS_IOS
+        [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+    #endif
 }
 
 
@@ -489,6 +497,10 @@ std::mutex mtx;
 
 - (void)torrentFinishedAlert:(torrent_finished_alert *)alert {
     [self processTorrent:alert->handle];
+    
+    #ifdef TARGET_OS_IOS
+        [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+    #endif
     
     // Remove the torrent when its finished
     torrent_handle th = alert->handle;

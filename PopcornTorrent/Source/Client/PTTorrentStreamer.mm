@@ -17,6 +17,8 @@
 #define LIBTORRENT_PRIORITY_SKIP 0
 #define LIBTORRENT_PRIORITY_MAXIMUM 7
 
+NSNotificationName const PTTorrentStatusDidChangeNotification = @"com.popcorntimetv.popcorntorrent.status.change";
+
 using namespace libtorrent;
 
 @interface PTTorrentStreamer()
@@ -213,7 +215,7 @@ std::mutex mtx;
         return;
     }
     self.downloading = YES;
-    #ifdef TARGET_OS_IOS
+    #if TARGET_OS_IOS
         [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
     #endif
 }
@@ -276,7 +278,7 @@ std::mutex mtx;
         self.torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
     }
     
-    #ifdef TARGET_OS_IOS
+    #if TARGET_OS_IOS
         [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
     #endif
 }
@@ -478,6 +480,7 @@ std::mutex mtx;
         status.num_seeds,
         status.num_peers};
     self.torrentStatus = torrentStatus;
+    [[NSNotificationCenter defaultCenter] postNotificationName:PTTorrentStatusDidChangeNotification object:self];
     if (self.progressBlock) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if([self isKindOfClass:[PTTorrentStreamer class]])self.progressBlock(torrentStatus);
@@ -498,7 +501,7 @@ std::mutex mtx;
 - (void)torrentFinishedAlert:(torrent_finished_alert *)alert {
     [self processTorrent:alert->handle];
     
-    #ifdef TARGET_OS_IOS
+    #if TARGET_OS_IOS
         [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
     #endif
     

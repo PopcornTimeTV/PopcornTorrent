@@ -17,6 +17,11 @@ typedef void (^PTTorrentStreamerFailure)(NSError * _Nonnull error);
 NS_ASSUME_NONNULL_BEGIN
 
 /**
+ Posted when the status of the current Torrent changes finishes executing. To retrieve the current status, use the instance variable, `torrentStatus`.
+ */
+FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
+
+/**
  A class that streams magnet links or `.torrent` files to a `GCDWebServer`.
  */
 @interface PTTorrentStreamer : NSObject

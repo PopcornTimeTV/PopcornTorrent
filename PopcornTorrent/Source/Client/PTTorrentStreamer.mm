@@ -376,7 +376,14 @@ std::mutex mtx;
             [_mediaServer startWithPort:50321 bonjourName:nil];
             
             dispatch_async(dispatch_get_main_queue(), ^{
-                self.readyToPlayBlock(_mediaServer.serverURL,fileURL);
+                NSURL *serverURL = _mediaServer.serverURL;
+                
+                if (serverURL == nil) // `nil` when device is on cellular network.
+                {
+                    serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://0.0.0.0:%i/", (int)_mediaServer.port]];
+                }
+                
+                self.readyToPlayBlock(serverURL, fileURL);
             });
         }
     }

@@ -32,6 +32,7 @@ using namespace libtorrent;
 
 @property (nonatomic, copy) PTTorrentStreamerProgress progressBlock;
 @property (nonatomic, copy) PTTorrentStreamerReadyToPlay readyToPlayBlock;
+#warning Do something with this block.
 @property (nonatomic, copy) PTTorrentStreamerFailure failureBlock;
 
 @property(nonatomic, strong) GCDWebServer* mediaServer;
@@ -487,7 +488,9 @@ std::mutex mtx;
         status.num_seeds,
         status.num_peers};
     self.torrentStatus = torrentStatus;
-    [[NSNotificationCenter defaultCenter] postNotificationName:PTTorrentStatusDidChangeNotification object:self];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:PTTorrentStatusDidChangeNotification object:self];
+    });
     if (self.progressBlock) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if([self isKindOfClass:[PTTorrentStreamer class]])self.progressBlock(torrentStatus);

@@ -10,8 +10,26 @@ typedef struct {
     int peers;
 } PTTorrentStatus;
 
+/**
+ Block called when the status of the currently streamed torrent is called.
+ 
+ @param status  The buffering progress of the current piece of the torrent, overall buffering of the torrent, the current download speed, the current upload speed, the amount of active seeds downloading from and the amount of peers connected to.
+ */
 typedef void (^PTTorrentStreamerProgress)(PTTorrentStatus status);
+
+/**
+ Block called when the first piece of the torrent has sufficiently buffered enough for streaming.
+ 
+ @param videoFileURL    The `GCDWebServer` url that the torrent should be streamed from.
+ @param videoFilePath   The local path to the video file. This should not be used for streaming.
+ */
 typedef void (^PTTorrentStreamerReadyToPlay)(NSURL * _Nonnull videoFileURL, NSURL * _Nonnull videoFilePath);
+
+/**
+ Block called if there is a fatal error processing the torrent.
+ 
+ @param error    The underlying error.
+ */
 typedef void (^PTTorrentStreamerFailure)(NSError * _Nonnull error);
 
 NS_ASSUME_NONNULL_BEGIN

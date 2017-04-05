@@ -68,7 +68,7 @@ FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
  
  @param deleteData  Pass `YES` to clear the download directory, `NO` to keep the downloaded directory.
  */
-- (void)cancelStreamingAndDeleteData:(BOOL) deleteData;
+- (void)cancelStreamingAndDeleteData:(BOOL)deleteData;
     
 /**
  Status of the torrent that is currently streaming. Will return all 0 struct if no torrent is being streamed.

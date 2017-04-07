@@ -256,7 +256,7 @@ std::mutex mtx;
         
         std::vector<torrent_handle> ths = _session->get_torrents();
         for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
-            _session->remove_torrent(ths[i], session::delete_files);
+            _session->remove_torrent(ths[i]);
         }
         
         required_pieces.clear();

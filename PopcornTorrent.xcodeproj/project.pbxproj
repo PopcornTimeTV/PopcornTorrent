@@ -283,17 +283,23 @@
 		4D97E9031D99C459009FEF7E /* PTTorrentStreamer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */; };
 		4D97E9041D99C45D009FEF7E /* CocoaSecurity.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43AE1CA37F0200955B33 /* CocoaSecurity.h */; };
 		4D97E9051D99C460009FEF7E /* CocoaSecurity.m in Sources */ = {isa = PBXBuildFile; fileRef = 922F43AF1CA37F0200955B33 /* CocoaSecurity.m */; };
-		4D97E9071D99CCFF009FEF7E /* PopcornTorrent.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43351CA37CF800955B33 /* PopcornTorrent.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4D9E49891DAEC1D300BBD753 /* Test.torrent in Resources */ = {isa = PBXBuildFile; fileRef = 4D9E49871DAEC1CD00BBD753 /* Test.torrent */; };
 		4D9E498A1DAEC1D400BBD753 /* Test.torrent in Resources */ = {isa = PBXBuildFile; fileRef = 4D9E49871DAEC1CD00BBD753 /* Test.torrent */; };
 		4D9E498B1DAEC26E00BBD753 /* PopcornTorrentTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 922F43411CA37CF800955B33 /* PopcornTorrentTests.m */; };
 		4DCB39341E8444CA00388374 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DCB39331E8444CA00388374 /* UIKit.framework */; };
 		4DCB39361E8444D300388374 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DCB39351E8444D300388374 /* UIKit.framework */; };
+		4DFBACFB1E990591009A5E35 /* PopcornTorrent.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBACF91E990591009A5E35 /* PopcornTorrent.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4DFBACFC1E990596009A5E35 /* PopcornTorrent.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBACF91E990591009A5E35 /* PopcornTorrent.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4DFBACFE1E99062E009A5E35 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4DFBACFD1E99062E009A5E35 /* Localizable.strings */; };
+		4DFBACFF1E99062E009A5E35 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4DFBACFD1E99062E009A5E35 /* Localizable.strings */; };
+		4DFBAD081E990BA7009A5E35 /* NSString+Localization.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */; };
+		4DFBAD091E990BA7009A5E35 /* NSString+Localization.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */; };
+		4DFBAD0A1E990BA7009A5E35 /* NSString+Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */; };
+		4DFBAD0B1E990BA7009A5E35 /* NSString+Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */; };
 		9265165A1CEA69A6000F57D4 /* CocoaSecurity.m in Sources */ = {isa = PBXBuildFile; fileRef = 922F43AF1CA37F0200955B33 /* CocoaSecurity.m */; };
 		9265165C1CEA69A6000F57D4 /* PTTorrentStreamer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */; };
 		926516631CEA69A6000F57D4 /* PTTorrentStreamer.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		926516641CEA69A6000F57D4 /* CocoaSecurity.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43AE1CA37F0200955B33 /* CocoaSecurity.h */; };
-		926516651CEA69A6000F57D4 /* PopcornTorrent.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43351CA37CF800955B33 /* PopcornTorrent.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		B8F4E6DA7C9F57DE1DE04FEF /* Pods_PopcornTorrent_tvOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1BC644C8FF4271C556AD751E /* Pods_PopcornTorrent_tvOS.framework */; };
 		D91570A71D6B927C00C6C848 /* PopcornTorrent.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9265166A1CEA69A6000F57D4 /* PopcornTorrent.framework */; };
 /* End PBXBuildFile section */
@@ -447,9 +453,12 @@
 		4D9E49871DAEC1CD00BBD753 /* Test.torrent */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Test.torrent; sourceTree = "<group>"; };
 		4DCB39331E8444CA00388374 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		4DCB39351E8444D300388374 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		4DFBACF81E990591009A5E35 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = "Supporting Files/Info.plist"; sourceTree = "<group>"; };
+		4DFBACF91E990591009A5E35 /* PopcornTorrent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopcornTorrent.h; path = "Supporting Files/PopcornTorrent.h"; sourceTree = "<group>"; };
+		4DFBACFD1E99062E009A5E35 /* Localizable.strings */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = "Supporting Files/Localizable.strings"; sourceTree = "<group>"; };
+		4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "NSString+Localization.h"; path = "Supporting Files/NSString+Localization.h"; sourceTree = "<group>"; };
+		4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "NSString+Localization.m"; path = "Supporting Files/NSString+Localization.m"; sourceTree = "<group>"; };
 		6C35EB84FA4C029ADEDD0E6A /* Pods_PopcornTorrent_iOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PopcornTorrent_iOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		922F43351CA37CF800955B33 /* PopcornTorrent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PopcornTorrent.h; sourceTree = "<group>"; };
-		922F43371CA37CF800955B33 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		922F43411CA37CF800955B33 /* PopcornTorrentTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PopcornTorrentTests.m; sourceTree = "<group>"; };
 		922F43431CA37CF800955B33 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PTTorrentStreamer.h; sourceTree = "<group>"; };
@@ -658,6 +667,18 @@
 			name = kademlia;
 			sourceTree = "<group>";
 		};
+		4DFBACF71E990548009A5E35 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				4DFBACF81E990591009A5E35 /* Info.plist */,
+				4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */,
+				4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */,
+				4DFBACF91E990591009A5E35 /* PopcornTorrent.h */,
+				4DFBACFD1E99062E009A5E35 /* Localizable.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
 		5ADC4A718800FC5862C9BA09 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
@@ -706,8 +727,7 @@
 			isa = PBXGroup;
 			children = (
 				922F43A71CA37F0200955B33 /* Source */,
-				922F43351CA37CF800955B33 /* PopcornTorrent.h */,
-				922F43371CA37CF800955B33 /* Info.plist */,
+				4DFBACF71E990548009A5E35 /* Supporting Files */,
 			);
 			path = PopcornTorrent;
 			sourceTree = "<group>";
@@ -764,11 +784,12 @@
 				4D97E8F11D99C448009FEF7E /* fixedint.h in Headers */,
 				4D97E9041D99C45D009FEF7E /* CocoaSecurity.h in Headers */,
 				4D97E8F31D99C448009FEF7E /* precomp_data.h in Headers */,
-				4D97E9071D99CCFF009FEF7E /* PopcornTorrent.h in Headers */,
+				4DFBACFC1E990596009A5E35 /* PopcornTorrent.h in Headers */,
 				4D97E8901D99C424009FEF7E /* windows_file_codecvt.hpp in Headers */,
 				4D97E8F21D99C448009FEF7E /* ge.h in Headers */,
 				4D97E9021D99C456009FEF7E /* PTTorrentStreamer.h in Headers */,
 				4D97E8F01D99C448009FEF7E /* fe.h in Headers */,
+				4DFBAD091E990BA7009A5E35 /* NSString+Localization.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -781,11 +802,12 @@
 				4D97E81D1D99A53A009FEF7E /* fe.h in Headers */,
 				4D97E8291D99A53A009FEF7E /* precomp_data.h in Headers */,
 				4D97E8331D99A53A009FEF7E /* sha512.h in Headers */,
+				4DFBACFB1E990591009A5E35 /* PopcornTorrent.h in Headers */,
 				4D97E81F1D99A53A009FEF7E /* fixedint.h in Headers */,
-				926516651CEA69A6000F57D4 /* PopcornTorrent.h in Headers */,
 				4D97E82D1D99A53A009FEF7E /* sc.h in Headers */,
 				4D97E8231D99A53A009FEF7E /* ge.h in Headers */,
 				4D97E7A61D99A49A009FEF7E /* windows_file_codecvt.hpp in Headers */,
+				4DFBAD081E990BA7009A5E35 /* NSString+Localization.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -927,6 +949,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4DFBACFF1E99062E009A5E35 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -942,6 +965,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4DFBACFE1E99062E009A5E35 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1057,6 +1081,7 @@
 				4D97E9051D99C460009FEF7E /* CocoaSecurity.m in Sources */,
 				4D97E8951D99C432009FEF7E /* asio.cpp in Sources */,
 				4D97E8E81D99C442009FEF7E /* ge.cpp in Sources */,
+				4DFBAD0B1E990BA7009A5E35 /* NSString+Localization.m in Sources */,
 				4D97E8FD1D99C450009FEF7E /* node.cpp in Sources */,
 				4D97E8991D99C432009FEF7E /* bandwidth_queue_entry.cpp in Sources */,
 				4D97E88A1D99C422009FEF7E /* path_traits.cpp in Sources */,
@@ -1189,6 +1214,7 @@
 				4D97E7511D99A3BE009FEF7E /* enum_net.cpp in Sources */,
 				4D97E8541D99A56C009FEF7E /* node.cpp in Sources */,
 				4D97E7A21D99A49A009FEF7E /* portability.cpp in Sources */,
+				4DFBAD0A1E990BA7009A5E35 /* NSString+Localization.m in Sources */,
 				4D97E7461D99A3BE009FEF7E /* broadcast_socket.cpp in Sources */,
 				4D97E7561D99A3BE009FEF7E /* file.cpp in Sources */,
 				4D97E7771D99A3BE009FEF7E /* session.cpp in Sources */,
@@ -1379,7 +1405,7 @@
 					"$(PROJECT_DIR)/include",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				ONLY_ACTIVE_ARCH = NO;
@@ -1420,7 +1446,7 @@
 					"$(PROJECT_DIR)/include",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				ONLY_ACTIVE_ARCH = NO;
@@ -1578,7 +1604,7 @@
 					"$(PROJECT_DIR)/include",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				ONLY_ACTIVE_ARCH = NO;
@@ -1617,7 +1643,7 @@
 					"$(PROJECT_DIR)/include",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				ONLY_ACTIVE_ARCH = NO;

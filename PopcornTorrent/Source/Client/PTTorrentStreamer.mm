@@ -1,3 +1,5 @@
+
+
 #import "PTTorrentStreamer.h"
 #import <Foundation/Foundation.h>
 #import <string>
@@ -10,6 +12,7 @@
 #import <GCDWebServer/GCDWebServerFileResponse.h>
 #import <GCDWebServer/GCDWebServerPrivate.h>
 #import <UIKit/UIApplication.h>
+#import "NSString+Localization.h"
 
 #define ALERTS_LOOP_WAIT_MILLIS 500
 #define MIN_PIECES 15
@@ -150,7 +153,7 @@ std::mutex mtx;
                 error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
             }
         } else {
-            error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-2 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"File doesn't exist at path: %@", filePath]}];
+            error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-2 userInfo:@{NSLocalizedDescriptionKey: [NSString localizedStringWithFormat:@"File doesn't exist at path: %@".localizedString, filePath]}];
         }
         
         if (error) {
@@ -423,7 +426,7 @@ std::mutex mtx;
     long long availableSpace = attributes ? [attributes[NSFileSystemFreeSize] longLongValue] : 0;
     
     if (requiredSpace > availableSpace) {
-        NSString *description = [NSString stringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.", [NSByteCountFormatter stringFromByteCount:requiredSpace countStyle:NSByteCountFormatterCountStyleBinary]];
+        NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, [NSByteCountFormatter stringFromByteCount:requiredSpace countStyle:NSByteCountFormatterCountStyleBinary]];
         NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-4 userInfo:@{NSLocalizedDescriptionKey: description}];
         [self cancelStreamingAndDeleteData:NO];
         self.failureBlock(error);

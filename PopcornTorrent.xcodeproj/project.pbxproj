@@ -34,6 +34,8 @@
 /* Begin PBXBuildFile section */
 		3A0B7B3833FEAE22CA6DDE0C /* Pods_PopcornTorrent_iOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C35EB84FA4C029ADEDD0E6A /* Pods_PopcornTorrent_iOS.framework */; };
 		4D0699F41D96F56100D17065 /* PopcornTorrentTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 922F43411CA37CF800955B33 /* PopcornTorrentTests.m */; };
+		4D1440261E9AF45500B78269 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4D1440291E9AF45500B78269 /* Localizable.strings */; };
+		4D1440271E9AF45500B78269 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4D1440291E9AF45500B78269 /* Localizable.strings */; };
 		4D97E73D1D99A3BE009FEF7E /* alert_manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4D97E6E71D99A3BE009FEF7E /* alert_manager.cpp */; };
 		4D97E73E1D99A3BE009FEF7E /* alert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4D97E6E81D99A3BE009FEF7E /* alert.cpp */; };
 		4D97E73F1D99A3BE009FEF7E /* allocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4D97E6E91D99A3BE009FEF7E /* allocator.cpp */; };
@@ -290,8 +292,6 @@
 		4DCB39361E8444D300388374 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DCB39351E8444D300388374 /* UIKit.framework */; };
 		4DFBACFB1E990591009A5E35 /* PopcornTorrent.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBACF91E990591009A5E35 /* PopcornTorrent.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4DFBACFC1E990596009A5E35 /* PopcornTorrent.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBACF91E990591009A5E35 /* PopcornTorrent.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		4DFBACFE1E99062E009A5E35 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4DFBACFD1E99062E009A5E35 /* Localizable.strings */; };
-		4DFBACFF1E99062E009A5E35 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4DFBACFD1E99062E009A5E35 /* Localizable.strings */; };
 		4DFBAD081E990BA7009A5E35 /* NSString+Localization.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */; };
 		4DFBAD091E990BA7009A5E35 /* NSString+Localization.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */; };
 		4DFBAD0A1E990BA7009A5E35 /* NSString+Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */; };
@@ -326,6 +326,8 @@
 		0E442A9FB3CD3EABA0F1BBD6 /* Pods-PopcornTorrent tvOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent tvOS.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent tvOS/Pods-PopcornTorrent tvOS.debug.xcconfig"; sourceTree = "<group>"; };
 		1BC644C8FF4271C556AD751E /* Pods_PopcornTorrent_tvOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PopcornTorrent_tvOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		25F2A9146006364112154AD0 /* Pods-PopcornTorrent iOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent iOS.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent iOS/Pods-PopcornTorrent iOS.debug.xcconfig"; sourceTree = "<group>"; };
+		4D1440281E9AF45500B78269 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/Localizable.strings; sourceTree = "<group>"; };
+		4D14402A1E9AF46000B78269 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4D97E6E71D99A3BE009FEF7E /* alert_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = alert_manager.cpp; path = torrent/alert_manager.cpp; sourceTree = "<group>"; };
 		4D97E6E81D99A3BE009FEF7E /* alert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = alert.cpp; path = torrent/alert.cpp; sourceTree = "<group>"; };
 		4D97E6E91D99A3BE009FEF7E /* allocator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = allocator.cpp; path = torrent/allocator.cpp; sourceTree = "<group>"; };
@@ -455,7 +457,6 @@
 		4DCB39351E8444D300388374 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		4DFBACF81E990591009A5E35 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = "Supporting Files/Info.plist"; sourceTree = "<group>"; };
 		4DFBACF91E990591009A5E35 /* PopcornTorrent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopcornTorrent.h; path = "Supporting Files/PopcornTorrent.h"; sourceTree = "<group>"; };
-		4DFBACFD1E99062E009A5E35 /* Localizable.strings */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = "Supporting Files/Localizable.strings"; sourceTree = "<group>"; };
 		4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "NSString+Localization.h"; path = "Supporting Files/NSString+Localization.h"; sourceTree = "<group>"; };
 		4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "NSString+Localization.m"; path = "Supporting Files/NSString+Localization.m"; sourceTree = "<group>"; };
 		6C35EB84FA4C029ADEDD0E6A /* Pods_PopcornTorrent_iOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PopcornTorrent_iOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -508,6 +509,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4D1440221E9AF42300B78269 /* Base.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				4D1440291E9AF45500B78269 /* Localizable.strings */,
+			);
+			name = Base.lproj;
+			sourceTree = "<group>";
+		};
 		4D97E6E41D99A37D009FEF7E /* torrent */ = {
 			isa = PBXGroup;
 			children = (
@@ -674,7 +683,6 @@
 				4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */,
 				4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */,
 				4DFBACF91E990591009A5E35 /* PopcornTorrent.h */,
-				4DFBACFD1E99062E009A5E35 /* Localizable.strings */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -726,6 +734,7 @@
 		922F43341CA37CF800955B33 /* PopcornTorrent */ = {
 			isa = PBXGroup;
 			children = (
+				4D1440221E9AF42300B78269 /* Base.lproj */,
 				922F43A71CA37F0200955B33 /* Source */,
 				4DFBACF71E990548009A5E35 /* Supporting Files */,
 			);
@@ -926,8 +935,8 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
 				Base,
+				en,
 			);
 			mainGroup = 922F43281CA37CF800955B33;
 			productRefGroup = 922F43331CA37CF800955B33 /* Products */;
@@ -949,7 +958,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4DFBACFF1E99062E009A5E35 /* Localizable.strings in Resources */,
+				4D1440271E9AF45500B78269 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -965,7 +974,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4DFBACFE1E99062E009A5E35 /* Localizable.strings in Resources */,
+				4D1440261E9AF45500B78269 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1351,6 +1360,18 @@
 			targetProxy = D91570A81D6B927C00C6C848 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		4D1440291E9AF45500B78269 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				4D1440281E9AF45500B78269 /* Base */,
+				4D14402A1E9AF46000B78269 /* en */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		4D97E8641D99B5E6009FEF7E /* Debug */ = {

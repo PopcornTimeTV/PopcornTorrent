@@ -5,7 +5,7 @@
 @implementation NSString (Localization)
 
 - (NSString *)localizedString {
-    return NSLocalizedString(self, nil);
+    return [[NSBundle bundleWithIdentifier:@"com.popcorntimetv.popcorntorrent"] localizedStringForKey:self value:self table:nil];
 }
 
 @end

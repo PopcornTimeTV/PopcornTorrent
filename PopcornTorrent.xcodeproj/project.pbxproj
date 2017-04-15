@@ -328,6 +328,9 @@
 		25F2A9146006364112154AD0 /* Pods-PopcornTorrent iOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent iOS.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent iOS/Pods-PopcornTorrent iOS.debug.xcconfig"; sourceTree = "<group>"; };
 		4D1440281E9AF45500B78269 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4D14402A1E9AF46000B78269 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		4D95BF351EA23398000BFE70 /* tvOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = tvOS.plist; path = "Supporting Files/tvOS.plist"; sourceTree = "<group>"; };
+		4D95BF361EA2340A000BFE70 /* iOS.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = iOS.plist; sourceTree = "<group>"; };
+		4D95BF371EA2340A000BFE70 /* tvOS.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = tvOS.plist; sourceTree = "<group>"; };
 		4D97E6E71D99A3BE009FEF7E /* alert_manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = alert_manager.cpp; path = torrent/alert_manager.cpp; sourceTree = "<group>"; };
 		4D97E6E81D99A3BE009FEF7E /* alert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = alert.cpp; path = torrent/alert.cpp; sourceTree = "<group>"; };
 		4D97E6E91D99A3BE009FEF7E /* allocator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = allocator.cpp; path = torrent/allocator.cpp; sourceTree = "<group>"; };
@@ -455,13 +458,12 @@
 		4D9E49871DAEC1CD00BBD753 /* Test.torrent */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Test.torrent; sourceTree = "<group>"; };
 		4DCB39331E8444CA00388374 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		4DCB39351E8444D300388374 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
-		4DFBACF81E990591009A5E35 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = "Supporting Files/Info.plist"; sourceTree = "<group>"; };
+		4DFBACF81E990591009A5E35 /* iOS.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = iOS.plist; path = "Supporting Files/iOS.plist"; sourceTree = "<group>"; };
 		4DFBACF91E990591009A5E35 /* PopcornTorrent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PopcornTorrent.h; path = "Supporting Files/PopcornTorrent.h"; sourceTree = "<group>"; };
 		4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "NSString+Localization.h"; path = "Supporting Files/NSString+Localization.h"; sourceTree = "<group>"; };
 		4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "NSString+Localization.m"; path = "Supporting Files/NSString+Localization.m"; sourceTree = "<group>"; };
 		6C35EB84FA4C029ADEDD0E6A /* Pods_PopcornTorrent_iOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PopcornTorrent_iOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		922F43411CA37CF800955B33 /* PopcornTorrentTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PopcornTorrentTests.m; sourceTree = "<group>"; };
-		922F43431CA37CF800955B33 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PTTorrentStreamer.h; sourceTree = "<group>"; };
 		922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PTTorrentStreamer.mm; sourceTree = "<group>"; };
 		922F43AE1CA37F0200955B33 /* CocoaSecurity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CocoaSecurity.h; sourceTree = "<group>"; };
@@ -679,7 +681,8 @@
 		4DFBACF71E990548009A5E35 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				4DFBACF81E990591009A5E35 /* Info.plist */,
+				4DFBACF81E990591009A5E35 /* iOS.plist */,
+				4D95BF351EA23398000BFE70 /* tvOS.plist */,
 				4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */,
 				4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */,
 				4DFBACF91E990591009A5E35 /* PopcornTorrent.h */,
@@ -744,9 +747,10 @@
 		922F43401CA37CF800955B33 /* PopcornTorrentTests */ = {
 			isa = PBXGroup;
 			children = (
+				4D95BF361EA2340A000BFE70 /* iOS.plist */,
+				4D95BF371EA2340A000BFE70 /* tvOS.plist */,
 				4D9E49871DAEC1CD00BBD753 /* Test.torrent */,
 				922F43411CA37CF800955B33 /* PopcornTorrentTests.m */,
-				922F43431CA37CF800955B33 /* Info.plist */,
 			);
 			path = PopcornTorrentTests;
 			sourceTree = "<group>";
@@ -1426,7 +1430,7 @@
 					"$(PROJECT_DIR)/include",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/tvOS.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				ONLY_ACTIVE_ARCH = NO;
@@ -1467,7 +1471,7 @@
 					"$(PROJECT_DIR)/include",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/tvOS.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				ONLY_ACTIVE_ARCH = NO;
@@ -1497,7 +1501,7 @@
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrentTests/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrentTests/tvOS.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.popcorntimetv.popcorntorrent.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1510,7 +1514,7 @@
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrentTests/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrentTests/tvOS.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.popcorntimetv.popcorntorrent.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1625,7 +1629,7 @@
 					"$(PROJECT_DIR)/include",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/iOS.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				ONLY_ACTIVE_ARCH = NO;
@@ -1664,7 +1668,7 @@
 					"$(PROJECT_DIR)/include",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrent/Supporting Files/iOS.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				ONLY_ACTIVE_ARCH = NO;
@@ -1696,7 +1700,7 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrentTests/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrentTests/iOS.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.popcorntimetv.popcorntorrent.tests;
@@ -1712,7 +1716,7 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = "";
-				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrentTests/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/PopcornTorrentTests/iOS.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.popcorntimetv.popcorntorrent.tests;

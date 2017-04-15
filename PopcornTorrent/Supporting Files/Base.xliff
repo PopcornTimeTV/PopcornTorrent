@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 http://docs.oasis-open.org/xliff/v1.2/os/xliff-core-1.2-strict.xsd">
+  <file original="PopcornTorrent/en.lproj/Localizable.strings" source-language="en" target-language="Language code goes here" datatype="plaintext">
+    <header>
+      <tool tool-id="com.apple.dt.xcode" tool-name="Xcode" tool-version="8.3" build-num="8E162"/>
+    </header>
+    <body>
+      <trans-unit id="File doesn't exist at path: %@">
+        <source>File doesn't exist at path: %1$@</source>
+        <target><!-- Translation goes here --></target>
+        <note>There is not enough space to download the torrent. Please clear at least {Amount of space required for the user to remove} and try again.</note>
+      </trans-unit>
+      <trans-unit id="There is not enough space to download the torrent. Please clear at least %@ and try again.">
+        <source>There is not enough space to download the torrent. Please clear at least %1$@ and try again.</source>
+        <target><!-- Translation goes here --></target>
+        <note>File doesn't exist at path: {Path to file}</note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

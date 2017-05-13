@@ -8,6 +8,7 @@ typedef struct {
     int uploadSpeed;
     int seeds;
     int peers;
+    char videoFileName[256];
 } PTTorrentStatus;
 
 /**
@@ -74,6 +75,11 @@ FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
  Status of the torrent that is currently streaming. Will return all 0 struct if no torrent is being streamed.
  */
 @property (assign, nonatomic) PTTorrentStatus torrentStatus;
+
+/**
+ The file name of the video that will be streamed
+ */
+@property (strong, nonatomic) NSString *fileName;
 
 @end
 

@@ -362,6 +362,7 @@ std::mutex mtx;
         status = th.status();
         NSString *fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
         NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:fileName]];
+        self.fileName = fileName;
         
         [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
             GCDWebServerFileResponse *response;
@@ -498,6 +499,9 @@ std::mutex mtx;
         status.num_peers
     };
     
+    if (self.fileName != nil) {
+        strncpy(torrentStatus.videoFileName, [self.fileName cStringUsingEncoding:NSUTF8StringEncoding], 256);
+    }
     self.torrentStatus = torrentStatus;
     
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -532,6 +536,9 @@ std::mutex mtx;
         status.num_seeds,
         status.num_peers
     };
+    if (self.fileName != nil) {
+        strncpy(torrentStatus.videoFileName, [self.fileName cStringUsingEncoding:NSUTF8StringEncoding], 256);
+    }
     
     self.torrentStatus = torrentStatus;
     

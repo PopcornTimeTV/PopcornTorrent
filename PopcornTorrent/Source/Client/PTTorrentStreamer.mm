@@ -364,23 +364,28 @@ std::mutex mtx;
         NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:fileName]];
         
         [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
-            if (request.hasByteRange && !status.is_finished) {
-                GCDWebServerFileResponse *response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath byteRange:request.byteRange ];
+            GCDWebServerFileResponse *response;
+            
+            if (request.hasByteRange) {
+                response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath byteRange:request.byteRange];
+            } else {
+                response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath];
+            }
+
+            [response setValue:@"*" forAdditionalHeader:@"Access-Control-Allow-Origin"];
+            [response setValue:@"public, max-age=3600" forAdditionalHeader:@"Cache-Control"];
+            [response setValue:@"Content-Type" forAdditionalHeader:@"Access-Control-Expose-Headers"];
+            
+            if (!th.status().is_finished) {
                 if ([weakSelf fastForwardTorrentForRange:request.byteRange]) {
                     completionBlock(response);
                 } else {
                     [weakSelf.requestedRangeInfo setObject:response forKey:@"response"];
                     [weakSelf.requestedRangeInfo setObject:completionBlock forKey:@"completionBlock"];
                 }
-                return;
-            } else if (request.hasByteRange && status.is_finished) {
-                GCDWebServerFileResponse *response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath byteRange:request.byteRange];
+            } else {
                 completionBlock(response);
-                return;
             }
-            
-            GCDWebServerFileResponse *response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath];
-            completionBlock(response);
         }];
         
         [_mediaServer startWithPort:50321 bonjourName:nil];

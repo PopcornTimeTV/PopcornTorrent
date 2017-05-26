@@ -373,7 +373,6 @@ std::mutex mtx;
             }
 
             [response setValue:@"*" forAdditionalHeader:@"Access-Control-Allow-Origin"];
-            [response setValue:@"public, max-age=3600" forAdditionalHeader:@"Cache-Control"];
             [response setValue:@"Content-Type" forAdditionalHeader:@"Access-Control-Expose-Headers"];
             
             if (!th.status().is_finished) {

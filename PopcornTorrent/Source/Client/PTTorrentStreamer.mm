@@ -3,16 +3,17 @@
 #import "PTTorrentStreamer.h"
 #import <Foundation/Foundation.h>
 #import <string>
-#import <libtorrent/session.hpp>
 #import <libtorrent/alert.hpp>
 #import <libtorrent/alert_types.hpp>
 #import "CocoaSecurity.h"
+#import "PTTorrentStreamer+Protected.h"
 #import <GCDWebServer/GCDWebServer.h>
 #import <GCDWebServer/GCDWebServerFileRequest.h>
 #import <GCDWebServer/GCDWebServerFileResponse.h>
 #import <GCDWebServer/GCDWebServerPrivate.h>
 #import <UIKit/UIApplication.h>
 #import "NSString+Localization.h"
+#import "PTSize.h"
 
 #define ALERTS_LOOP_WAIT_MILLIS 500
 #define MIN_PIECES 15
@@ -24,7 +25,12 @@ NSNotificationName const PTTorrentStatusDidChangeNotification = @"com.popcorntim
 
 using namespace libtorrent;
 
-@interface PTTorrentStreamer()
+@interface PTTorrentStreamer () {
+    std::vector<int> required_pieces;
+    torrent_status status;
+    NSString *_fileName;
+    long long requiredSpace;
+}
     
 @property (nonatomic, strong) dispatch_queue_t alertsQueue;
 @property (nonatomic, getter=isAlertsLoopActive) BOOL alertsLoopActive;
@@ -41,11 +47,7 @@ using namespace libtorrent;
     
 @end
 
-@implementation PTTorrentStreamer {
-    session *_session;
-    std::vector<int> required_pieces;
-    torrent_status status;
-}
+@implementation PTTorrentStreamer 
     
 @synthesize requestedRangeInfo;
 long long firstPiece = -1;
@@ -69,16 +71,27 @@ std::mutex mtx;
     return self;
 }
 
-+ (NSString *)downloadsDirectory {
-    NSString *downloadsDirectoryPath;
-    NSString *cachesPath = NSTemporaryDirectory();
-    downloadsDirectoryPath = [cachesPath stringByAppendingPathComponent:@"Downloads"];
+- (NSString *)fileName {
+    return _fileName;
+}
+
+- (PTTorrentStatus)torrentStatus {
+    return _torrentStatus;
+}
+
+- (PTSize *)fileSize {
+    return [PTSize sizeWithLongLong:requiredSpace];
+}
+
+
++ (NSString * _Nullable)downloadDirectory {
+    NSString *downloadDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"Downloads"];
     
-    if (![[NSFileManager defaultManager] fileExistsAtPath:downloadsDirectoryPath]) {
+    if (![[NSFileManager defaultManager] fileExistsAtPath:downloadDirectory]) {
         NSError *error;
-        [[NSFileManager defaultManager] createDirectoryAtPath:downloadsDirectoryPath
-                                    withIntermediateDirectories:YES
-                                                    attributes:nil
+        [[NSFileManager defaultManager] createDirectoryAtPath:downloadDirectory
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
                                                         error:&error];
         if (error) {
             NSLog(@"%@", error);
@@ -86,7 +99,7 @@ std::mutex mtx;
         }
     }
     
-    return downloadsDirectoryPath;
+    return downloadDirectory;
 }
 
 - (void)setupSession {
@@ -110,8 +123,6 @@ std::mutex mtx;
     requestedRangeInfo = [[NSMutableDictionary alloc] init];
     
     status = torrent_status();
-    
-    [GCDWebServer setLogLevel:kGCDWebServerLoggingLevel_Error];
     _mediaServer = [[GCDWebServer alloc] init];
 }
 
@@ -157,13 +168,13 @@ std::mutex mtx;
         }
         
         if (error) {
-            failure(error);
+            if (failure) failure(error);
             return [self cancelStreamingAndDeleteData:NO];
         }
     }
     
     NSString *halfMD5String = [MD5String substringToIndex:16];
-    self.savePath = [[PTTorrentStreamer downloadsDirectory] stringByAppendingPathComponent:halfMD5String];
+    self.savePath = [[PTTorrentStreamer downloadDirectory] stringByAppendingPathComponent:halfMD5String];
     
     NSError *error;
     [[NSFileManager defaultManager] createDirectoryAtPath:self.savePath
@@ -171,7 +182,7 @@ std::mutex mtx;
                                                attributes:nil
                                                     error:&error];
     if (error) {
-        failure(error);
+        if (failure) failure(error);
         return [self cancelStreamingAndDeleteData:NO];
     }
     
@@ -180,9 +191,10 @@ std::mutex mtx;
     
     torrent_handle th = _session->add_torrent(tp, ec);
     
+    
     if (ec) {
         error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
-        failure(error);
+        if (failure) failure(error);
         return [self cancelStreamingAndDeleteData:NO];
     }
     
@@ -274,10 +286,12 @@ std::mutex mtx;
         }
         
         self.savePath = nil;
+        _fileName = nil;
+        requiredSpace = 0;
         
         self.streaming = NO;
         self.downloading = NO;
-        self.torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
+        _torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
     }
     
     #if TARGET_OS_IOS
@@ -352,6 +366,7 @@ std::mutex mtx;
     if ([self isStreaming]) { return; }
     
     self.streaming = YES;
+    status = th.status();
     
     if (self.readyToPlayBlock) {
         boost::intrusive_ptr<const torrent_info> ti = th.torrent_file();
@@ -359,8 +374,7 @@ std::mutex mtx;
         file_entry fe = ti->file_at(file_index);
         std::string path = fe.path;
         __weak __typeof__(self) weakSelf = self;
-        status = th.status();
-        NSString *fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
+        _fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
         NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:fileName]];
         
         [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
@@ -426,14 +440,14 @@ std::mutex mtx;
 - (void)metadataReceivedAlert:(torrent_handle)th {
     NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfFileSystemForPath:NSHomeDirectory() error:nil];
     
-    long long requiredSpace = th.status().total_wanted;
+    requiredSpace = th.status().total_wanted;
     long long availableSpace = attributes ? [attributes[NSFileSystemFreeSize] longLongValue] : 0;
     
     if (requiredSpace > availableSpace) {
-        NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, [NSByteCountFormatter stringFromByteCount:requiredSpace countStyle:NSByteCountFormatterCountStyleBinary]];
+        NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, _fileSize.stringValue];
         NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-4 userInfo:@{NSLocalizedDescriptionKey: description}];
         [self cancelStreamingAndDeleteData:NO];
-        self.failureBlock(error);
+        if (_failureBlock) _failureBlock(error);
         return;
     }
     
@@ -488,7 +502,7 @@ std::mutex mtx;
     
     int requiredPieces = (int)required_pieces.size();
     float bufferingProgress = 1.0 - (requiredPieces - requiredPiecesDownloaded)/(float)requiredPieces;
-    PTTorrentStatus torrentStatus = {
+    _torrentStatus = {
         bufferingProgress,
         status.progress,
         status.download_rate,
@@ -497,19 +511,12 @@ std::mutex mtx;
         status.num_peers
     };
     
-    self.torrentStatus = torrentStatus;
-    
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (_progressBlock) _progressBlock(_torrentStatus);
         [[NSNotificationCenter defaultCenter] postNotificationName:PTTorrentStatusDidChangeNotification object:self];
     });
     
-    if (self.progressBlock) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if ([self isKindOfClass:[PTTorrentStreamer class]]) {
-                self.progressBlock(torrentStatus);
-            }
-        });
-    }
+    
     
     if (allRequiredPiecesDownloaded) {
         if (th.have_piece((int)endPiece) && self.requestedRangeInfo.count > 0) {
@@ -526,15 +533,14 @@ std::mutex mtx;
 - (void)torrentFinishedAlert:(torrent_handle)th {
     [self processTorrent:th];
     
-    PTTorrentStatus torrentStatus = {1, 1, 0,
+    _torrentStatus = {1, 1, 0,
         status.upload_rate,
         status.num_seeds,
         status.num_peers
     };
     
-    self.torrentStatus = torrentStatus;
-    
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (_progressBlock) _progressBlock(_torrentStatus);
         [[NSNotificationCenter defaultCenter] postNotificationName:PTTorrentStatusDidChangeNotification object:self];
     });
     

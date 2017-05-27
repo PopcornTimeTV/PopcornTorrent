@@ -10,6 +10,8 @@ typedef struct {
     int peers;
 } PTTorrentStatus;
 
+@class PTSize;
+
 /**
  Block called when the status of the currently streamed torrent is called.
  
@@ -59,9 +61,9 @@ FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
  @param failure                 Block called if there is an error while processing the torrent.
 */
 - (void)startStreamingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink
-                                  progress:(PTTorrentStreamerProgress)progress
-                               readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
-                                   failure:(PTTorrentStreamerFailure)failure;
+                                  progress:(PTTorrentStreamerProgress _Nullable)progress
+                               readyToPlay:(PTTorrentStreamerReadyToPlay _Nullable)readyToPlay
+                                   failure:(PTTorrentStreamerFailure _Nullable)failure;
 
 /**
  Cancels loading of the current torrent and optionally clears the download directory.
@@ -73,7 +75,17 @@ FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
 /**
  Status of the torrent that is currently streaming. Will return all 0 struct if no torrent is being streamed.
  */
-@property (assign, nonatomic) PTTorrentStatus torrentStatus;
+@property (nonatomic, readonly) PTTorrentStatus torrentStatus;
+
+/**
+ The name of the torrent that is currently streaming. Will be `nil` if no torrent is being streamed or the currently streaming torrent has not been processed yet.
+ */
+@property (strong, nonatomic, readonly, nullable) NSString *fileName;
+
+/**
+ The size of the torrent that is currently streaming. Will be 0 if no torrent is being streamed or the currently streaming torrent has not been processed yet.
+ */
+@property (nonatomic, readonly, strong) PTSize *fileSize;
 
 @end
 

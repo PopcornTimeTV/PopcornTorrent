@@ -35,7 +35,6 @@ using namespace libtorrent;
 @property (nonatomic, strong) dispatch_queue_t alertsQueue;
 @property (nonatomic, getter=isAlertsLoopActive) BOOL alertsLoopActive;
 @property (nonatomic, strong) NSString *savePath;
-@property (nonatomic, getter=isDownloading) BOOL downloading;
 @property (nonatomic, getter=isStreaming) BOOL streaming;
 @property (nonatomic, strong) NSMutableDictionary *requestedRangeInfo;
 
@@ -84,7 +83,7 @@ std::mutex mtx;
 }
 
 
-+ (NSString * _Nullable)downloadDirectory {
++ (NSString *)downloadDirectory {
     NSString *downloadDirectory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"Downloads"];
     
     if (![[NSFileManager defaultManager] fileExistsAtPath:downloadDirectory]) {
@@ -109,9 +108,7 @@ std::mutex mtx;
     _session->set_alert_mask(alert::all_categories);
     _session->listen_on(std::make_pair(6881, 6889), ec);
     
-    if (ec) {
-        NSLog(@"failed to open listen socket: %s", ec.message().c_str());
-    }
+    NSAssert(ec == nil, @"FATAL ERROR: Failed to open listen socket: %s", ec.message().c_str());
     
     session_settings settings = _session->settings();
     settings.announce_to_all_tiers = true;
@@ -204,8 +201,6 @@ std::mutex mtx;
         [self metadataReceivedAlert:th];
     }
     
-    self.downloading = YES;
-    
     #if TARGET_OS_IOS
         [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
     #endif
@@ -265,34 +260,35 @@ std::mutex mtx;
 
 
 - (void)cancelStreamingAndDeleteData:(BOOL)deleteData {
-    if ([self isDownloading]) {
-        self.alertsQueue = nil;
-        self.alertsLoopActive = NO;
-        
-        std::vector<torrent_handle> ths = _session->get_torrents();
-        for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
-            _session->remove_torrent(ths[i]);
-        }
-        
-        required_pieces.clear();
-        
-        self.progressBlock = nil;
-        self.readyToPlayBlock = nil;
-        self.failureBlock = nil;
-        if (_mediaServer.isRunning)[_mediaServer stop];
-        
-        if (deleteData) {
-            [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
-        }
-        
-        self.savePath = nil;
-        _fileName = nil;
-        requiredSpace = 0;
-        
-        self.streaming = NO;
-        self.downloading = NO;
-        _torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
+    self.alertsQueue = nil;
+    self.alertsLoopActive = NO;
+    
+    std::vector<torrent_handle> ths = _session->get_torrents();
+    for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
+        _session->remove_torrent(ths[i]);
     }
+    
+    required_pieces.clear();
+    [self.requestedRangeInfo removeAllObjects];
+    status = torrent_status();
+    
+    self.progressBlock = nil;
+    self.readyToPlayBlock = nil;
+    self.failureBlock = nil;
+    if (_mediaServer.isRunning)[_mediaServer stop];
+    
+    if (deleteData) {
+        [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
+    }
+    
+    self.savePath = nil;
+    _fileName = nil;
+    requiredSpace = 0;
+    firstPiece = -1;
+    endPiece = 0;
+    
+    self.streaming = NO;
+    _torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
     
     #if TARGET_OS_IOS
         [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
@@ -375,7 +371,7 @@ std::mutex mtx;
         std::string path = fe.path;
         __weak __typeof__(self) weakSelf = self;
         _fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
-        NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:fileName]];
+        NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:_fileName]];
         
         [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
             GCDWebServerFileResponse *response;
@@ -444,7 +440,7 @@ std::mutex mtx;
     long long availableSpace = attributes ? [attributes[NSFileSystemFreeSize] longLongValue] : 0;
     
     if (requiredSpace > availableSpace) {
-        NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, _fileSize.stringValue];
+        NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, self.fileSize.stringValue];
         NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-4 userInfo:@{NSLocalizedDescriptionKey: description}];
         [self cancelStreamingAndDeleteData:NO];
         if (_failureBlock) _failureBlock(error);

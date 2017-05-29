@@ -1,7 +1,10 @@
 
 
 #import <Foundation/Foundation.h>
-#import "PTTorrentDownload.h"
+#import "PTTorrentDownloadStatus.h"
+#import "PTTorrentStatus.h"
+
+@class PTTorrentDownload;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -95,7 +98,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  An array of all the torrents currently downloading.
  */
-@property (strong, nonatomic, readonly) NSArray<PTTorrentDownload *> *activeDownloads;
+@property (strong, nonatomic, readonly) NSHashTable<PTTorrentDownload *> *activeDownloads;
 
 @end
 

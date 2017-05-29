@@ -1,14 +1,6 @@
 
 #import <Foundation/Foundation.h>
-
-typedef struct {
-    float bufferingProgress;
-    float totalProgress;
-    int downloadSpeed;
-    int uploadSpeed;
-    int seeds;
-    int peers;
-} PTTorrentStatus;
+#import "PTTorrentStatus.h"
 
 @class PTSize;
 
@@ -50,6 +42,11 @@ FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
   Shared singleton instance.
 */
 + (instancetype)sharedStreamer;
+
+/**
+ The directory to which all torrents are saved. Defaults to `NSTemporaryDirectory`. Will return `nil` if there is an error creating the directory.
+ */
++ (NSString * _Nullable)downloadDirectory;
     
 
 /**

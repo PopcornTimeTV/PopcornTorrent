@@ -302,6 +302,10 @@
 		4DBE9F091ED9E975004F1B52 /* PTSize.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DBE9F051ED9E975004F1B52 /* PTSize.m */; };
 		4DBE9F0B1EDA361E004F1B52 /* PTTorrentStreamer+Protected.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DBE9F0A1EDA361E004F1B52 /* PTTorrentStreamer+Protected.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		4DBE9F0C1EDA361E004F1B52 /* PTTorrentStreamer+Protected.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DBE9F0A1EDA361E004F1B52 /* PTTorrentStreamer+Protected.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		4DBE9F0E1EDA4AC8004F1B52 /* PTTorrentDownloadStatus.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DBE9F0D1EDA4AC8004F1B52 /* PTTorrentDownloadStatus.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4DBE9F0F1EDA4AC8004F1B52 /* PTTorrentDownloadStatus.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DBE9F0D1EDA4AC8004F1B52 /* PTTorrentDownloadStatus.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4DBE9F111EDA4BAF004F1B52 /* PTTorrentStatus.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DBE9F101EDA4BAF004F1B52 /* PTTorrentStatus.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4DBE9F121EDA4BAF004F1B52 /* PTTorrentStatus.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DBE9F101EDA4BAF004F1B52 /* PTTorrentStatus.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4DCB39341E8444CA00388374 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DCB39331E8444CA00388374 /* UIKit.framework */; };
 		4DCB39361E8444D300388374 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DCB39351E8444D300388374 /* UIKit.framework */; };
 		4DFBACFB1E990591009A5E35 /* PopcornTorrent.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBACF91E990591009A5E35 /* PopcornTorrent.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -477,6 +481,8 @@
 		4DBE9F041ED9E975004F1B52 /* PTSize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PTSize.h; sourceTree = "<group>"; };
 		4DBE9F051ED9E975004F1B52 /* PTSize.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PTSize.m; sourceTree = "<group>"; };
 		4DBE9F0A1EDA361E004F1B52 /* PTTorrentStreamer+Protected.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "PTTorrentStreamer+Protected.h"; sourceTree = "<group>"; };
+		4DBE9F0D1EDA4AC8004F1B52 /* PTTorrentDownloadStatus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PTTorrentDownloadStatus.h; sourceTree = "<group>"; };
+		4DBE9F101EDA4BAF004F1B52 /* PTTorrentStatus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PTTorrentStatus.h; sourceTree = "<group>"; };
 		4DCB39331E8444CA00388374 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		4DCB39351E8444D300388374 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		4DFBACF81E990591009A5E35 /* iOS.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = iOS.plist; path = "Supporting Files/iOS.plist"; sourceTree = "<group>"; };
@@ -791,15 +797,17 @@
 		922F43A81CA37F0200955B33 /* Client */ = {
 			isa = PBXGroup;
 			children = (
+				4DBE9F0A1EDA361E004F1B52 /* PTTorrentStreamer+Protected.h */,
 				922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */,
 				922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */,
-				4DBE9F0A1EDA361E004F1B52 /* PTTorrentStreamer+Protected.h */,
 				4DBE9EF81ED9DA5F004F1B52 /* PTTorrentDownload.h */,
 				4DBE9EF91ED9DA5F004F1B52 /* PTTorrentDownload.mm */,
 				4DBE9EFE1ED9DBE0004F1B52 /* PTTorrentDownloadManager.h */,
 				4DBE9EFF1ED9DBE0004F1B52 /* PTTorrentDownloadManager.m */,
 				4DBE9F041ED9E975004F1B52 /* PTSize.h */,
 				4DBE9F051ED9E975004F1B52 /* PTSize.m */,
+				4DBE9F0D1EDA4AC8004F1B52 /* PTTorrentDownloadStatus.h */,
+				4DBE9F101EDA4BAF004F1B52 /* PTTorrentStatus.h */,
 			);
 			path = Client;
 			sourceTree = "<group>";
@@ -826,6 +834,7 @@
 				4D97E8F11D99C448009FEF7E /* fixedint.h in Headers */,
 				4D97E9041D99C45D009FEF7E /* CocoaSecurity.h in Headers */,
 				4D97E8F31D99C448009FEF7E /* precomp_data.h in Headers */,
+				4DBE9F121EDA4BAF004F1B52 /* PTTorrentStatus.h in Headers */,
 				4DFBACFC1E990596009A5E35 /* PopcornTorrent.h in Headers */,
 				4D97E8901D99C424009FEF7E /* windows_file_codecvt.hpp in Headers */,
 				4DBE9F071ED9E975004F1B52 /* PTSize.h in Headers */,
@@ -833,6 +842,7 @@
 				4DBE9EFB1ED9DA5F004F1B52 /* PTTorrentDownload.h in Headers */,
 				4D97E9021D99C456009FEF7E /* PTTorrentStreamer.h in Headers */,
 				4D97E8F01D99C448009FEF7E /* fe.h in Headers */,
+				4DBE9F0F1EDA4AC8004F1B52 /* PTTorrentDownloadStatus.h in Headers */,
 				4DFBAD091E990BA7009A5E35 /* NSString+Localization.h in Headers */,
 				4DBE9F011ED9DBE0004F1B52 /* PTTorrentDownloadManager.h in Headers */,
 			);
@@ -848,6 +858,7 @@
 				4D97E81D1D99A53A009FEF7E /* fe.h in Headers */,
 				4D97E8291D99A53A009FEF7E /* precomp_data.h in Headers */,
 				4D97E8331D99A53A009FEF7E /* sha512.h in Headers */,
+				4DBE9F111EDA4BAF004F1B52 /* PTTorrentStatus.h in Headers */,
 				4DFBACFB1E990591009A5E35 /* PopcornTorrent.h in Headers */,
 				4D97E81F1D99A53A009FEF7E /* fixedint.h in Headers */,
 				4DBE9F061ED9E975004F1B52 /* PTSize.h in Headers */,
@@ -855,6 +866,7 @@
 				4DBE9EFA1ED9DA5F004F1B52 /* PTTorrentDownload.h in Headers */,
 				4D97E8231D99A53A009FEF7E /* ge.h in Headers */,
 				4D97E7A61D99A49A009FEF7E /* windows_file_codecvt.hpp in Headers */,
+				4DBE9F0E1EDA4AC8004F1B52 /* PTTorrentDownloadStatus.h in Headers */,
 				4DFBAD081E990BA7009A5E35 /* NSString+Localization.h in Headers */,
 				4DBE9F001ED9DBE0004F1B52 /* PTTorrentDownloadManager.h in Headers */,
 			);
@@ -945,6 +957,7 @@
 		922F43291CA37CF800955B33 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				CLASSPREFIX = PT;
 				LastSwiftUpdateCheck = 0730;
 				LastUpgradeCheck = 0800;
 				ORGANIZATIONNAME = PopcornTime;

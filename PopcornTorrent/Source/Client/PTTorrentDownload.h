@@ -2,15 +2,7 @@
 
 #import <Foundation/Foundation.h>
 #import "PTTorrentStreamer.h"
-
-typedef NS_ENUM(NSInteger, PTTorrentDownloadStatus) {
-    PTTorrentDownloadStatusStopped,
-    PTTorrentDownloadStatusPaused,
-    PTTorrentDownloadStatusDownloading,
-    PTTorrentDownloadStatusFinished,
-    PTTorrentDownloadStatusFailed,
-    PTTorrentDownloadStatusProcessing
-};
+#import "PTTorrentDownloadStatus.h"
 
 
 @protocol PTTorrentDownloadManagerListener;
@@ -28,7 +20,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) PTTorrentDownloadStatus downloadStatus;
 
 /**
- Stops the current download and deletes all download progress (if any). Once you call stop you can not resume the download - `startDownloadingFromFileOrMagnetLink:listeners` will have to be called again.
+ The delegate `PTTorrentDownloadManagerListener` requests.
+ */
+@property (weak, nonatomic, nullable) id<PTTorrentDownloadManagerListener> delegate;
+
+/**
+ Stops the current download and deletes all download progress (if any). Once you call stop you can not resume the download - `startDownloadingFromFileOrMagnetLink:` will have to be called again.
  */
 - (void)stop;
 
@@ -43,12 +40,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)pause;
 
 /**
- Begins streaming of a torrent.
+ Begins streaming of a torrent. To recieve status updates about the download, assign an object to the `delegate` property.
  
  @param filePathOrMagnetLink    The direct link of a locally stored `.torrent` file or a `magnet:?` link.
- @param listeners               An array of weak listeners to recieve delegate requests. No strong references are held to these objects.
+ 
+ @warning   Usage of this method is discouraged. Use `PTTorrentDownloadManager` class instead.
  */
-- (void)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink listeners:(NSHashTable<id<PTTorrentDownloadManagerListener>> *)listeners;
+- (void)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink;
 
 #pragma mark - Hidden methods
 

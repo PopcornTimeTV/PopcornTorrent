@@ -2,14 +2,8 @@
 
 #import "PTTorrentDownload.h"
 #import "PTSize.h"
-#import "PTTorrentDownloadManager.h"
 #import "PTTorrentStreamer+Protected.h"
-
-@interface PTTorrentDownload ()
-
-@property (weak, nonatomic) NSHashTable<id<PTTorrentDownloadManagerListener>> *listeners;
-
-@end
+#import "PTTorrentDownloadManager.h"
 
 @implementation PTTorrentDownload {
     PTTorrentDownloadStatus _downloadStatus;
@@ -46,28 +40,32 @@
     return self;
 }
 
-- (void)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink listeners:(NSHashTable<id<PTTorrentDownloadManagerListener>> *)listeners {
-    _listeners = listeners;
+
+- (void)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink {
     __weak __typeof__(self) weakSelf = self;
     
     [super startStreamingFromFileOrMagnetLink:filePathOrMagnetLink progress:^(PTTorrentStatus status) {
         [weakSelf setDownloadStatus:status.totalProgress < 1 ? PTTorrentDownloadStatusDownloading : PTTorrentDownloadStatusFinished];
-        
-        for (id<PTTorrentDownloadManagerListener> listener in weakSelf.listeners) {
-            if (listener && [listener respondsToSelector:@selector(torrentStatusDidChange:forDownload:)]) {
-                _torrentStatus = status;
-                [listener torrentStatusDidChange:status forDownload:weakSelf];
-            }
-        }
+        [weakSelf setTorrentStatus:status];
     } readyToPlay:nil failure:^(NSError * _Nonnull error) {
-        [weakSelf setDownloadStatus:PTTorrentDownloadStatusFailed];
+        id<PTTorrentDownloadManagerListener> delegate = weakSelf.delegate;
         
-        for (id<PTTorrentDownloadManagerListener> listener in weakSelf.listeners) {
-            if (listener && [listener respondsToSelector:@selector(downloadDidFail:withError:)]) {
-                [listener downloadDidFail:self withError:error];
-            }
+        if (delegate && [delegate respondsToSelector:@selector(downloadDidFail:withError:)]) {
+            [weakSelf setDownloadStatus:PTTorrentDownloadStatusFailed];
+            [delegate downloadDidFail:weakSelf withError:error];
         }
     }];
+}
+
+
+- (void)setTorrentStatus:(PTTorrentStatus)torrentStatus {
+    if (PTTorrentStatusEqualToStatus(torrentStatus, _torrentStatus)) return;
+    
+    _torrentStatus = torrentStatus;
+    
+    if (_delegate && [_delegate respondsToSelector:@selector(torrentStatusDidChange:forDownload:)]) {
+        [_delegate torrentStatusDidChange:torrentStatus forDownload:self];
+    }
 }
 
 - (void)setDownloadStatus:(PTTorrentDownloadStatus)downloadStatus {
@@ -75,10 +73,12 @@
     
     _downloadStatus = downloadStatus;
     
-    for (id<PTTorrentDownloadManagerListener> listener in _listeners) {
-        if (listener && [listener respondsToSelector:@selector(downloadStatusDidChange:forDownload:)]) {
-            [listener downloadStatusDidChange:downloadStatus forDownload:self];
-        }
+    if (downloadStatus == PTTorrentDownloadStatusFinished) {
+        [super cancelStreamingAndDeleteData:NO];
+    }
+    
+    if (_delegate && [_delegate respondsToSelector:@selector(downloadStatusDidChange:forDownload:)]) {
+        [_delegate downloadStatusDidChange:downloadStatus forDownload:self];
     }
 }
 
@@ -87,18 +87,17 @@
     
     [super cancelStreamingAndDeleteData:YES];
     [self setDownloadStatus:PTTorrentDownloadStatusStopped];
-    _listeners = nil;
 }
 
 - (void)pause {
-    if (_downloadStatus == PTTorrentDownloadStatusPaused || _downloadStatus == PTTorrentDownloadStatusStopped || _downloadStatus == PTTorrentDownloadStatusFailed) return;
+    if (_downloadStatus != PTTorrentDownloadStatusDownloading) return;
     
     _session->pause();
     [self setDownloadStatus:PTTorrentDownloadStatusPaused];
 }
 
 - (void)resume {
-    if (_downloadStatus == PTTorrentDownloadStatusDownloading || _downloadStatus == PTTorrentDownloadStatusStopped || _downloadStatus == PTTorrentDownloadStatusFailed) return;
+    if (_downloadStatus != PTTorrentDownloadStatusPaused) return;
     
     _session->resume();
     [self setDownloadStatus:PTTorrentDownloadStatusDownloading];

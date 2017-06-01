@@ -30,11 +30,11 @@ using namespace libtorrent;
     torrent_status status;
     NSString *_fileName;
     long long requiredSpace;
+    NSString *_savePath;
 }
     
 @property (nonatomic, strong) dispatch_queue_t alertsQueue;
 @property (nonatomic, getter=isAlertsLoopActive) BOOL alertsLoopActive;
-@property (nonatomic, strong) NSString *savePath;
 @property (nonatomic, getter=isStreaming) BOOL streaming;
 @property (nonatomic, strong) NSMutableDictionary *requestedRangeInfo;
 
@@ -72,6 +72,10 @@ std::mutex mtx;
 
 - (NSString *)fileName {
     return _fileName;
+}
+
+- (NSString *)savePath {
+    return _savePath;
 }
 
 - (PTTorrentStatus)torrentStatus {
@@ -127,6 +131,19 @@ std::mutex mtx;
                                   progress:(PTTorrentStreamerProgress)progress
                                readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
                                    failure:(PTTorrentStreamerFailure)failure {
+    [self startStreamingFromFileOrMagnetLink:filePathOrMagnetLink
+                            uniqueIdentifier:nil
+                                    progress:progress
+                                 readyToPlay:readyToPlay
+                                     failure:failure];
+    
+}
+
+- (void)startStreamingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink
+                          uniqueIdentifier:(NSString * _Nullable)uniqueIdentifier
+                                  progress:(PTTorrentStreamerProgress)progress
+                               readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
+                                   failure:(PTTorrentStreamerFailure)failure {
     self.progressBlock = progress;
     self.readyToPlayBlock = readyToPlay;
     self.failureBlock = failure;
@@ -170,8 +187,9 @@ std::mutex mtx;
         }
     }
     
-    NSString *halfMD5String = [MD5String substringToIndex:16];
-    self.savePath = [[PTTorrentStreamer downloadDirectory] stringByAppendingPathComponent:halfMD5String];
+    NSString *pathComponent = uniqueIdentifier != nil ? uniqueIdentifier : [MD5String substringToIndex:16];
+    
+    _savePath = [[[self class] downloadDirectory] stringByAppendingPathComponent:pathComponent];
     
     NSError *error;
     [[NSFileManager defaultManager] createDirectoryAtPath:self.savePath
@@ -281,7 +299,7 @@ std::mutex mtx;
         [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
     }
     
-    self.savePath = nil;
+    _savePath = nil;
     _fileName = nil;
     requiredSpace = 0;
     firstPiece = -1;

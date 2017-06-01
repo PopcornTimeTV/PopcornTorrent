@@ -7,6 +7,7 @@
 
 @implementation PTTorrentDownload {
     PTTorrentDownloadStatus _downloadStatus;
+    NSString *_uniqueIdentifier;
 }
 
 - (PTTorrentDownloadStatus)downloadStatus {
@@ -32,21 +33,43 @@
     return downloadDirectory;
 }
 
-- (instancetype)init {
+- (instancetype)initWithUniqueIdentifier:(NSString *)uniqueIdentifier {
     self = [super init];
     if (self) {
         _downloadStatus = PTTorrentDownloadStatusProcessing;
+        _uniqueIdentifier = uniqueIdentifier;
     }
     return self;
+}
+
+- (NSString *)uniqueIdentifier {
+    return _uniqueIdentifier;
+}
+
+- (BOOL)isEqual:(id)object {
+    if ([object isKindOfClass:[PTTorrentDownload class]]) {
+        return [((PTTorrentDownload *)object).uniqueIdentifier isEqualToString:self.uniqueIdentifier];
+    }
+    return NO;
+}
+
+- (NSUInteger)hash {
+    return [_uniqueIdentifier hash];
 }
 
 
 - (void)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink {
     __weak __typeof__(self) weakSelf = self;
     
-    [super startStreamingFromFileOrMagnetLink:filePathOrMagnetLink progress:^(PTTorrentStatus status) {
-        [weakSelf setDownloadStatus:status.totalProgress < 1 ? PTTorrentDownloadStatusDownloading : PTTorrentDownloadStatusFinished];
+    [super startStreamingFromFileOrMagnetLink:filePathOrMagnetLink uniqueIdentifier:_uniqueIdentifier progress:^(PTTorrentStatus status) {
+        PTTorrentDownloadStatus downloadStatus = status.totalProgress < 1 ? PTTorrentDownloadStatusDownloading : PTTorrentDownloadStatusFinished;
+        
+        [weakSelf setDownloadStatus:downloadStatus];
         [weakSelf setTorrentStatus:status];
+        
+        if (downloadStatus == PTTorrentDownloadStatusFinished) {
+            [super cancelStreamingAndDeleteData:NO];
+        }
     } readyToPlay:nil failure:^(NSError * _Nonnull error) {
         id<PTTorrentDownloadManagerListener> delegate = weakSelf.delegate;
         
@@ -73,20 +96,16 @@
     
     _downloadStatus = downloadStatus;
     
-    if (downloadStatus == PTTorrentDownloadStatusFinished) {
-        [super cancelStreamingAndDeleteData:NO];
-    }
-    
     if (_delegate && [_delegate respondsToSelector:@selector(downloadStatusDidChange:forDownload:)]) {
         [_delegate downloadStatusDidChange:downloadStatus forDownload:self];
     }
 }
 
 - (void)stop {
-    if (_downloadStatus == PTTorrentDownloadStatusStopped) return;
+    if (_downloadStatus == PTTorrentDownloadStatusFinished) return;
     
     [super cancelStreamingAndDeleteData:YES];
-    [self setDownloadStatus:PTTorrentDownloadStatusStopped];
+    [self setDownloadStatus:PTTorrentDownloadStatusFinished];
 }
 
 - (void)pause {
@@ -101,6 +120,13 @@
     
     _session->resume();
     [self setDownloadStatus:PTTorrentDownloadStatusDownloading];
+}
+
+- (BOOL)delete {
+    NSAssert(_downloadStatus != PTTorrentDownloadStatusPaused && _downloadStatus != PTTorrentDownloadStatusDownloading, @"This method should not be used to stop downloads, only to delete a pre-existing download.");
+    
+    NSString *path = [[[self class] downloadDirectory] stringByAppendingPathComponent:_uniqueIdentifier];
+    return [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
 }
 
 @end

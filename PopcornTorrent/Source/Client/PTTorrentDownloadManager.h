@@ -69,10 +69,11 @@ NS_ASSUME_NONNULL_BEGIN
  Begins streaming of a torrent. To recieve status updates about the download, sign up for delegate requests using the  `addListener:` method.
  
  @param filePathOrMagnetLink    The direct link of a locally stored `.torrent` file or a `magnet:?` link.
+ @param uniqueIdentifier        The unique identifier to be given to the download object returned.
  
  @return    The download instance.
  */
-- (PTTorrentDownload *)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink;
+- (PTTorrentDownload *)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink uniqueIdentifier:(NSString *)uniqueIdentifier;
 
 /**
  Stops the specified download, deletes all download progress (if any) and removes the download object from the `activeDownloads` array.
@@ -94,6 +95,17 @@ NS_ASSUME_NONNULL_BEGIN
  @param download    The download to resume.
  */
 - (void)resumeDownload:(PTTorrentDownload *)download;
+
+/**
+ Deletes the current download.
+ 
+ @param download    The download to delete.
+ 
+ @return    Boolean indicating the success of the operation.
+ 
+ @warning   This method should not be used to stop a download. If the download is running and this method is called, an exception will be raised.
+ */
+- (BOOL)deleteDownload:(PTTorrentDownload *)download;
 
 /**
  An array of all the torrents currently downloading.

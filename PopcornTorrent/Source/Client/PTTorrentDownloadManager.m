@@ -3,6 +3,7 @@
 #import "PTTorrentDownloadManager.h"
 #import "PTTorrentDownload.h"
 #import <objc/runtime.h>
+#import <UIKit/UIApplication.h>
 
 @interface PTTorrentDownloadManager () <PTTorrentDownloadManagerListener>
 
@@ -28,8 +29,22 @@
     if (self) {
         _listeners = [NSHashTable weakObjectsHashTable];
         _activeDownloads = [NSHashTable weakObjectsHashTable];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationWillEnterForeground) name:UIApplicationWillEnterForegroundNotification object:nil];
     }
     return self;
+}
+
+- (void)applicationDidEnterBackground {
+    for (PTTorrentDownload *download in _activeDownloads) {
+        [download pause];
+    }
+}
+
+- (void)applicationWillEnterForeground {
+    for (PTTorrentDownload *download in _activeDownloads) {
+        [download resume];
+    }
 }
 
 - (void)addListener:(id<PTTorrentDownloadManagerListener>)listener {
@@ -42,8 +57,8 @@
     [_listeners removeObject:listener];
 }
 
-- (PTTorrentDownload *)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink {
-    PTTorrentDownload *download = [PTTorrentDownload new];
+- (PTTorrentDownload *)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink uniqueIdentifier:(NSString *)uniqueIdentifier {
+    PTTorrentDownload *download = [[PTTorrentDownload alloc] initWithUniqueIdentifier:uniqueIdentifier];
     download.delegate = self;
     
     [_activeDownloads addObject:download];
@@ -68,6 +83,10 @@
 
 - (void)pauseDownload:(PTTorrentDownload *)download {
     [download pause];
+}
+
+- (BOOL)deleteDownload:(PTTorrentDownload *)download {
+    return [download delete];
 }
 
 #pragma mark - PTTorrentDownloadManagerListener
@@ -100,6 +119,10 @@
             [listener downloadDidFail:download withError:error];
         }
     }
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 @end

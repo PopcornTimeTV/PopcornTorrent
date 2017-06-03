@@ -14,8 +14,4 @@ typedef struct {
     int peers;
 } PTTorrentStatus;
 
-static inline bool PTTorrentStatusEqualToStatus (PTTorrentStatus lhs, PTTorrentStatus rhs) {
-    return (lhs.bufferingProgress == rhs.bufferingProgress && lhs.totalProgress == rhs.totalProgress && lhs.downloadSpeed == rhs.downloadSpeed && lhs.uploadSpeed == rhs.uploadSpeed && lhs.seeds == rhs.seeds && lhs.peers == rhs.peers) == true;
-}
-
 #endif

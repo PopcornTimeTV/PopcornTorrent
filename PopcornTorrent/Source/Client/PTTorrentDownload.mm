@@ -82,8 +82,6 @@
 
 
 - (void)setTorrentStatus:(PTTorrentStatus)torrentStatus {
-    if (PTTorrentStatusEqualToStatus(torrentStatus, _torrentStatus)) return;
-    
     _torrentStatus = torrentStatus;
     
     if (_delegate && [_delegate respondsToSelector:@selector(torrentStatusDidChange:forDownload:)]) {

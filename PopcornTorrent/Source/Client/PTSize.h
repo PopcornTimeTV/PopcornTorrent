@@ -4,7 +4,6 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-
 /**
  A class used to define the size of a torrent.
  */

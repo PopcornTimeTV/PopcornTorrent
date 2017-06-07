@@ -85,7 +85,12 @@ FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
 @property (nonatomic, readonly, strong) PTSize *fileSize;
 
 /**
- The local path to the torrent. Will be `nil` if no torrent is being streamed or if the torrent is still processing.
+ The total size of the torrent that has been downloaded. Will be 0 if no torrent is being streamed or the currently streaming torrent has not been processed yet.
+ */
+@property (nonatomic, readonly, strong) PTSize *totalDownloaded;
+
+/**
+ The local path to the torrent directory. Will be `nil` if no torrent is being streamed or if the torrent is still processing.
  */
 @property (strong, nonatomic, readonly, nullable) NSString *savePath;
 

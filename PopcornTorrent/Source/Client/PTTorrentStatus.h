@@ -1,10 +1,5 @@
 
 
-#ifndef PTTorrentStatus_h
-#define PTTorrentStatus_h
-
-#include <stdbool.h>
-
 typedef struct {
     float bufferingProgress;
     float totalProgress;
@@ -13,5 +8,3 @@ typedef struct {
     int seeds;
     int peers;
 } PTTorrentStatus;
-
-#endif

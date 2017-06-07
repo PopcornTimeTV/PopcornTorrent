@@ -1,45 +1,12 @@
 
 
 #import <Foundation/Foundation.h>
-#import "PTTorrentDownloadStatus.h"
-#import "PTTorrentStatus.h"
+#import "PTTorrentStreamer.h"
 
 @class PTTorrentDownload;
+@protocol PTTorrentDownloadManagerListener;
 
 NS_ASSUME_NONNULL_BEGIN
-
-/**
- A listener protocol for receiving status updates for downloads.
- */
-@protocol PTTorrentDownloadManagerListener <NSObject>
-
-@optional
-
-/**
- Called when the torrent status of a download changes.
- 
- @param torrentStatus   The status of the torrent (speed, progress, seeds, peers etc.).
- @param download        The download that's status has changed.
- */
-- (void)torrentStatusDidChange:(PTTorrentStatus)torrentStatus forDownload:(PTTorrentDownload *)download;
-
-/**
- Called when the download status of a download changes.
- 
- @param downloadStatus  The download status of the torrent (downloading, paused, stopped, failed etc.).
- @param download        The download that's status has changed.
- */
-- (void)downloadStatusDidChange:(PTTorrentDownloadStatus)downloadStatus forDownload:(PTTorrentDownload *)download;
-
-/**
- Called when a download fails.
- 
- @param download    The download that has failed.
- @param error       The underlying error.
- */
-- (void)downloadDidFail:(PTTorrentDownload *)download withError:(NSError *)error;
-
-@end
 
 /**
  A class that manages torrent downloads.
@@ -69,11 +36,13 @@ NS_ASSUME_NONNULL_BEGIN
  Begins streaming of a torrent. To recieve status updates about the download, sign up for delegate requests using the  `addListener:` method.
  
  @param filePathOrMagnetLink    The direct link of a locally stored `.torrent` file or a `magnet:?` link.
- @param uniqueIdentifier        The unique identifier to be given to the download object returned.
+ @param mediaMetadata           Metadata for the current download. Use `MPMediaItem` keys.
  
  @return    The download instance.
+ 
+ @warning   Only one property in the `mediaMetadata` dictionary must be set: `MPMediaItemPropertyPersistentID`. If this is not set, an exception will be raised. Also, if every `mediaMetadata` value is not an instance of `NSData`, `NSDate`, `NSNumber`, `NSString`, `NSArray`, or `NSDictionary`, an exception will be raised.
  */
-- (PTTorrentDownload *)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink uniqueIdentifier:(NSString *)uniqueIdentifier;
+- (PTTorrentDownload *)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink mediaMetadata:(NSDictionary<NSString *, id> *)mediaMetadata;
 
 /**
  Stops the specified download, deletes all download progress (if any) and removes the download object from the `activeDownloads` array.
@@ -108,9 +77,40 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)deleteDownload:(PTTorrentDownload *)download;
 
 /**
+ Saves metadata about the current download so it can be resumed at a later date
+ 
+ @param download    The download to save.
+ 
+ @return    Boolean indicating the success of the operation.
+ 
+ @warning   This method should be run on a background thread as it could take a while to save depending on how much metdata there is.
+ */
+- (BOOL)saveDownload:(PTTorrentDownload *)download;
+
+/**
+ Starts a webserver to play local content.
+ 
+ @param download    The download to play.
+ @param handler Block called when the torrent has finished processing and is ready to begin being played.
+ */
+- (void)playDownload:(PTTorrentDownload *)download withHandler:(PTTorrentStreamerReadyToPlay)handler;
+
+/**
+ Stops the webserver created when `playWithHandler:` is called.
+ 
+ @param download    The download to stop playing.
+ */
+- (void)stopPlayingDownload:(PTTorrentDownload *)download;
+
+/**
  An array of all the torrents currently downloading.
  */
-@property (strong, nonatomic, readonly) NSHashTable<PTTorrentDownload *> *activeDownloads;
+@property (strong, nonatomic, readonly) NSArray<PTTorrentDownload *> *activeDownloads;
+
+/**
+ An array of all the torrents that have finished downloading.
+ */
+@property (strong, nonatomic, readonly) NSArray<PTTorrentDownload *> *completedDownloads;
 
 @end
 

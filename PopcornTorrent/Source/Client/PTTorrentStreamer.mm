@@ -7,7 +7,6 @@
 #import <libtorrent/alert_types.hpp>
 #import "CocoaSecurity.h"
 #import "PTTorrentStreamer+Protected.h"
-#import <GCDWebServer/GCDWebServer.h>
 #import <GCDWebServer/GCDWebServerFileRequest.h>
 #import <GCDWebServer/GCDWebServerFileResponse.h>
 #import <GCDWebServer/GCDWebServerPrivate.h>
@@ -27,10 +26,6 @@ using namespace libtorrent;
 
 @interface PTTorrentStreamer () {
     std::vector<int> required_pieces;
-    torrent_status status;
-    NSString *_fileName;
-    long long requiredSpace;
-    NSString *_savePath;
 }
     
 @property (nonatomic, strong) dispatch_queue_t alertsQueue;
@@ -39,10 +34,7 @@ using namespace libtorrent;
 @property (nonatomic, strong) NSMutableDictionary *requestedRangeInfo;
 
 @property (nonatomic, copy) PTTorrentStreamerProgress progressBlock;
-@property (nonatomic, copy) PTTorrentStreamerReadyToPlay readyToPlayBlock;
 @property (nonatomic, copy) PTTorrentStreamerFailure failureBlock;
-
-@property(nonatomic, strong) GCDWebServer *mediaServer;
     
 @end
 
@@ -83,7 +75,11 @@ std::mutex mtx;
 }
 
 - (PTSize *)fileSize {
-    return [PTSize sizeWithLongLong:requiredSpace];
+    return [PTSize sizeWithLongLong:_requiredSpace];
+}
+
+- (PTSize *)totalDownloaded {
+    return [PTSize sizeWithLongLong:_totalDownloaded];
 }
 
 
@@ -123,7 +119,7 @@ std::mutex mtx;
     
     requestedRangeInfo = [[NSMutableDictionary alloc] init];
     
-    status = torrent_status();
+    _status = torrent_status();
     _mediaServer = [[GCDWebServer alloc] init];
 }
 
@@ -132,7 +128,7 @@ std::mutex mtx;
                                readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
                                    failure:(PTTorrentStreamerFailure)failure {
     [self startStreamingFromFileOrMagnetLink:filePathOrMagnetLink
-                            uniqueIdentifier:nil
+                               directoryName:nil
                                     progress:progress
                                  readyToPlay:readyToPlay
                                      failure:failure];
@@ -140,7 +136,7 @@ std::mutex mtx;
 }
 
 - (void)startStreamingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink
-                          uniqueIdentifier:(NSString * _Nullable)uniqueIdentifier
+                             directoryName:(NSString * _Nullable)directoryName
                                   progress:(PTTorrentStreamerProgress)progress
                                readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
                                    failure:(PTTorrentStreamerFailure)failure {
@@ -187,18 +183,20 @@ std::mutex mtx;
         }
     }
     
-    NSString *pathComponent = uniqueIdentifier != nil ? uniqueIdentifier : [MD5String substringToIndex:16];
+    NSString *pathComponent = directoryName != nil ? directoryName : [MD5String substringToIndex:16];
     
     _savePath = [[[self class] downloadDirectory] stringByAppendingPathComponent:pathComponent];
     
-    NSError *error;
-    [[NSFileManager defaultManager] createDirectoryAtPath:self.savePath
-                              withIntermediateDirectories:YES
-                                               attributes:nil
-                                                    error:&error];
-    if (error) {
-        if (failure) failure(error);
-        return [self cancelStreamingAndDeleteData:NO];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:_savePath]) {
+        NSError *error;
+        [[NSFileManager defaultManager] createDirectoryAtPath:self.savePath
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
+                                                        error:&error];
+        if (error) {
+            if (failure) failure(error);
+            return [self cancelStreamingAndDeleteData:NO];
+        }
     }
     
     tp.save_path = std::string([self.savePath UTF8String]);
@@ -208,7 +206,7 @@ std::mutex mtx;
     
     
     if (ec) {
-        error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
+        NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
         if (failure) failure(error);
         return [self cancelStreamingAndDeleteData:NO];
     }
@@ -288,12 +286,13 @@ std::mutex mtx;
     
     required_pieces.clear();
     [self.requestedRangeInfo removeAllObjects];
-    status = torrent_status();
+    _status = torrent_status();
     
     self.progressBlock = nil;
     self.readyToPlayBlock = nil;
     self.failureBlock = nil;
     if (_mediaServer.isRunning)[_mediaServer stop];
+    [_mediaServer removeAllHandlers];
     
     if (deleteData) {
         [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
@@ -301,12 +300,14 @@ std::mutex mtx;
     
     _savePath = nil;
     _fileName = nil;
-    requiredSpace = 0;
+    _requiredSpace = 0;
+    _totalDownloaded = 0;
     firstPiece = -1;
     endPiece = 0;
     
     self.streaming = NO;
     _torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
+    _isFinished = false;
     
     #if TARGET_OS_IOS
         [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
@@ -377,57 +378,62 @@ std::mutex mtx;
 }
 
 - (void)processTorrent:(torrent_handle)th {
-    if ([self isStreaming]) { return; }
+    if ([self isStreaming]) return;
     
     self.streaming = YES;
-    status = th.status();
+    _status = th.status();
+    
+    boost::intrusive_ptr<const torrent_info> ti = th.torrent_file();
+    int file_index = [self indexOfLargestFileInTorrent:th];
+    file_entry fe = ti->file_at(file_index);
+    std::string path = fe.path;
+    _fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
     
     if (self.readyToPlayBlock) {
-        boost::intrusive_ptr<const torrent_info> ti = th.torrent_file();
-        int file_index = [self indexOfLargestFileInTorrent:th];
-        file_entry fe = ti->file_at(file_index);
-        std::string path = fe.path;
-        __weak __typeof__(self) weakSelf = self;
-        _fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
-        NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:_fileName]];
-        
-        [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
-            GCDWebServerFileResponse *response;
-            
-            if (request.hasByteRange) {
-                response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath byteRange:request.byteRange];
-            } else {
-                response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath];
-            }
-
-            [response setValue:@"*" forAdditionalHeader:@"Access-Control-Allow-Origin"];
-            [response setValue:@"Content-Type" forAdditionalHeader:@"Access-Control-Expose-Headers"];
-            
-            if (!th.status().is_finished) {
-                if ([weakSelf fastForwardTorrentForRange:request.byteRange]) {
-                    completionBlock(response);
-                } else {
-                    [weakSelf.requestedRangeInfo setObject:response forKey:@"response"];
-                    [weakSelf.requestedRangeInfo setObject:completionBlock forKey:@"completionBlock"];
-                }
-            } else {
-                completionBlock(response);
-            }
-        }];
-        
-        [_mediaServer startWithPort:50321 bonjourName:nil];
-        
-        dispatch_async(dispatch_get_main_queue(), ^{
-            NSURL *serverURL = _mediaServer.serverURL;
-            
-            if (serverURL == nil) // `nil` when device is on cellular network.
-            {
-                serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://0.0.0.0:%i/", (int)_mediaServer.port]];
-            }
-            
-            self.readyToPlayBlock(serverURL, fileURL);
-        });
+        [self startWebServerAndPlay];
     }
+}
+
+- (void)startWebServerAndPlay {
+    __block NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:_fileName]];
+    __weak __typeof__(self) weakSelf = self;
+    
+    [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
+        GCDWebServerFileResponse *response;
+        
+        if (request.hasByteRange) {
+            response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath byteRange:request.byteRange];
+        } else {
+            response = [GCDWebServerFileResponse responseWithFile:fileURL.relativePath];
+        }
+        
+        [response setValue:@"*" forAdditionalHeader:@"Access-Control-Allow-Origin"];
+        [response setValue:@"Content-Type" forAdditionalHeader:@"Access-Control-Expose-Headers"];
+        
+        if (!weakSelf.isFinished) {
+            if ([weakSelf fastForwardTorrentForRange:request.byteRange]) {
+                completionBlock(response);
+            } else {
+                [weakSelf.requestedRangeInfo setObject:response forKey:@"response"];
+                [weakSelf.requestedRangeInfo setObject:completionBlock forKey:@"completionBlock"];
+            }
+        } else {
+            completionBlock(response);
+        }
+    }];
+    
+    [_mediaServer startWithPort:50321 bonjourName:nil];
+    
+    __block NSURL *serverURL = _mediaServer.serverURL;
+    
+    if (serverURL == nil) // `nil` when device is on cellular network.
+    {
+        serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://0.0.0.0:%i/", (int)_mediaServer.port]];
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (weakSelf.readyToPlayBlock) weakSelf.readyToPlayBlock(serverURL, fileURL);
+    });
 }
 
 
@@ -454,10 +460,10 @@ std::mutex mtx;
 - (void)metadataReceivedAlert:(torrent_handle)th {
     NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfFileSystemForPath:NSHomeDirectory() error:nil];
     
-    requiredSpace = th.status().total_wanted;
+    _requiredSpace = th.status().total_wanted;
     long long availableSpace = attributes ? [attributes[NSFileSystemFreeSize] longLongValue] : 0;
     
-    if (requiredSpace > availableSpace) {
+    if (_requiredSpace > availableSpace) {
         NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, self.fileSize.stringValue];
         NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-4 userInfo:@{NSLocalizedDescriptionKey: description}];
         [self cancelStreamingAndDeleteData:NO];
@@ -494,11 +500,11 @@ std::mutex mtx;
         th.set_piece_deadline(piece, PIECE_DEADLINE_MILLIS, torrent_handle::alert_when_available);
     }
     piece_priorities = th.piece_priorities();
-    status = th.status();
+    _status = th.status();
 }
 
 - (void)pieceFinishedAlert:(torrent_handle)th {
-    status = th.status();
+    _status = th.status();
     
     int requiredPiecesDownloaded = 0;
     BOOL allRequiredPiecesDownloaded = YES;
@@ -518,12 +524,15 @@ std::mutex mtx;
     float bufferingProgress = 1.0 - (requiredPieces - requiredPiecesDownloaded)/(float)requiredPieces;
     _torrentStatus = {
         bufferingProgress,
-        status.progress,
-        status.download_rate,
-        status.upload_rate,
-        status.num_seeds,
-        status.num_peers
+        _status.progress,
+        _status.download_rate,
+        _status.upload_rate,
+        _status.num_seeds,
+        _status.num_peers
     };
+    
+    _totalDownloaded = _status.total_wanted_done;
+    _isFinished = _status.is_finished;
     
     dispatch_async(dispatch_get_main_queue(), ^{
         if (_progressBlock) _progressBlock(_torrentStatus);
@@ -548,10 +557,13 @@ std::mutex mtx;
     [self processTorrent:th];
     
     _torrentStatus = {1, 1, 0,
-        status.upload_rate,
-        status.num_seeds,
-        status.num_peers
+        _status.upload_rate,
+        _status.num_seeds,
+        _status.num_peers
     };
+    
+    _totalDownloaded = _status.total_wanted_done;
+    _isFinished = _status.is_finished;
     
     dispatch_async(dispatch_get_main_queue(), ^{
         if (_progressBlock) _progressBlock(_torrentStatus);

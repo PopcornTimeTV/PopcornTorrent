@@ -1,6 +1,7 @@
 
 #import "PTTorrentStreamer.h"
 #import <libtorrent/session.hpp>
+#import <GCDWebServer/GCDWebServer.h>
 
 /**
  Variables to be used by `PTTorrentStreamer` subclasses only.
@@ -9,12 +10,23 @@
     @protected
     libtorrent::session *_session;
     PTTorrentStatus _torrentStatus;
+    NSString *_fileName;
+    long long _requiredSpace;
+    long long _totalDownloaded;
+    NSString *_savePath;
 }
 
+@property (nonatomic, copy, nullable) PTTorrentStreamerReadyToPlay readyToPlayBlock;
+@property (nonatomic, strong, nonnull) GCDWebServer *mediaServer;
+@property (nonatomic) libtorrent::torrent_status status;
+@property (nonatomic) bool isFinished;
+
 - (void)startStreamingFromFileOrMagnetLink:(NSString * _Nonnull)filePathOrMagnetLink
-                          uniqueIdentifier:(NSString * _Nullable)uniqueIdentifier
+                             directoryName:(NSString * _Nullable)directoryName
                                   progress:(PTTorrentStreamerProgress _Nullable)progress
                                readyToPlay:(PTTorrentStreamerReadyToPlay _Nullable)readyToPlay
                                    failure:(PTTorrentStreamerFailure _Nullable)failure;
+
+- (void)startWebServerAndPlay;
 
 @end

@@ -135,7 +135,6 @@
 }
 
 - (void)stopDownload:(PTTorrentDownload *)download {
-    download.delegate = nil;
     [_activeDownloads removeObject:download];
     [download stop];
 }
@@ -178,7 +177,6 @@
 
 - (void)downloadStatusDidChange:(PTTorrentDownloadStatus)downloadStatus forDownload:(PTTorrentDownload *)download {
     if (downloadStatus == PTTorrentDownloadStatusFinished || downloadStatus == PTTorrentDownloadStatusFailed) {
-        download.delegate = nil;
         [_activeDownloads removeObject:download];
     }
     

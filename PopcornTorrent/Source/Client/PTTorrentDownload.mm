@@ -147,10 +147,7 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
 }
 
 - (void)stop {
-    if (_downloadStatus == PTTorrentDownloadStatusFinished) return;
-    
     [self performSelector:@selector(cancelStreamingAndDeleteData:) withObject:@YES];
-    [self setDownloadStatus:PTTorrentDownloadStatusFinished];
 }
 
 - (void)pause {
@@ -180,7 +177,7 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
 - (BOOL)delete {
     NSAssert(_downloadStatus != PTTorrentDownloadStatusPaused && _downloadStatus != PTTorrentDownloadStatusDownloading, @"This method should not be used to stop downloads, only to delete a pre-existing download.");
     
-    NSString *path = [[[self class] downloadDirectory] stringByAppendingPathComponent:_mediaMetadata[MPMediaItemPropertyPersistentID]];
+    NSString *path = [[[self class] downloadDirectory] stringByAppendingPathComponent:_savePath];
     return [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
 }
 

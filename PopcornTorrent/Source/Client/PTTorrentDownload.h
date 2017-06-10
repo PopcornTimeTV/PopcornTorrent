@@ -69,11 +69,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)playWithHandler:(PTTorrentStreamerReadyToPlay)handler;
 
 /**
- Stops the webserver created when `playWithHandler:` is called.
- */
-- (void)stopPlaying;
-
-/**
  Designated initialiser for the class.
  
  @param mediaMetadata   Metadata for the current download. Use `MPMediaItem` keys.

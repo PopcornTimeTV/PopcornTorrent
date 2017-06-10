@@ -206,12 +206,6 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
     [self startWebServerAndPlay];
 }
 
-- (void)stopPlaying {
-    if (self.mediaServer.isRunning) [self.mediaServer stop];
-    [self.mediaServer removeAllHandlers];
-    self.readyToPlayBlock = nil;
-}
-
 - (void)cancelStreamingAndDeleteData:(BOOL)deleteData {
     NSString *savePath = _savePath;
     NSString *fileName = _fileName;

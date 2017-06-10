@@ -96,13 +96,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)playDownload:(PTTorrentDownload *)download withHandler:(PTTorrentStreamerReadyToPlay)handler;
 
 /**
- Stops the webserver created when `playWithHandler:` is called.
- 
- @param download    The download to stop playing.
- */
-- (void)stopPlayingDownload:(PTTorrentDownload *)download;
-
-/**
  An array of all the torrents currently downloading.
  */
 @property (strong, nonatomic, readonly) NSArray<PTTorrentDownload *> *activeDownloads;

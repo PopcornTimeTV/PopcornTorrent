@@ -165,10 +165,6 @@
     [download playWithHandler:handler];
 }
 
-- (void)stopPlayingDownload:(PTTorrentDownload *)download {
-    [download stopPlaying];
-}
-
 #pragma mark - PTTorrentDownloadManagerListener
 
 - (void)torrentStatusDidChange:(PTTorrentStatus)torrentStatus forDownload:(PTTorrentDownload *)download {

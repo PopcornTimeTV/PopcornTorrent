@@ -3,7 +3,7 @@
 #import <Foundation/Foundation.h>
 
 typedef NS_ENUM(NSInteger, PTTorrentDownloadStatus) {
-    PTTorrentDownloadStatusPaused,
+    PTTorrentDownloadStatusPaused = 1,
     PTTorrentDownloadStatusDownloading,
     PTTorrentDownloadStatusFinished,
     PTTorrentDownloadStatusFailed,

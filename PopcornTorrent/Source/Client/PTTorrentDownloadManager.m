@@ -42,14 +42,18 @@
                                                      name:UIApplicationWillEnterForegroundNotification
                                                    object:nil];
         
+        NSString *path = [PTTorrentDownload downloadDirectory];
         
-        NSArray<NSURL *> *URLs = [self fileURLsInDirectory:[NSURL fileURLWithPath:[PTTorrentDownload downloadDirectory]]];
+        if (!path) return self;
         
-        for (NSURL *filePath in URLs) {
-            if (![[filePath pathExtension] isEqualToString: @"plist"]) continue;
-            PTTorrentDownload *download = [[PTTorrentDownload alloc] initFromPlist:[filePath path]];
+        NSArray<NSURL *> *URLs = [self fileURLsInDirectory:[NSURL fileURLWithPath:path]];
+        
+        for (NSURL *fileURL in URLs) {
+            if (![[fileURL pathExtension] isEqualToString: @"plist"]) continue;
+            PTTorrentDownload *download = [[PTTorrentDownload alloc] initFromPlist:[fileURL path]];
             if (!download) continue;
-            [_completedDownloads addObject:download];
+            download.downloadStatus == PTTorrentDownloadStatusFinished ? [_completedDownloads addObject:download] : [_activeDownloads addObject:download];
+            download.delegate = self;
         }
     }
     return self;
@@ -88,6 +92,7 @@
         
         for (PTTorrentDownload *download in weakSelf.activeDownloads) {
             [download pause];
+            [download save];
         }
         
         for (PTTorrentDownload *download in weakSelf.completedDownloads) {
@@ -182,6 +187,7 @@
     
     if (downloadStatus == PTTorrentDownloadStatusFinished) {
         [_completedDownloads addObject:download];
+        [download save];
     }
     
     for (id<PTTorrentDownloadManagerListener> listener in _listeners) {

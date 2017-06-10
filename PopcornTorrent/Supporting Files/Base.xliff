@@ -15,6 +15,9 @@
         <target><!-- Translation goes here --></target>
         <note>File doesn't exist at path: {Path to file}</note>
       </trans-unit>
+      <trans-unit id="Could not create download directory">
+          <source>Could not create download directory</source>
+          <target><!-- Translation goes here --></target>
     </body>
   </file>
 </xliff>

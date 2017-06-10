@@ -92,10 +92,7 @@ std::mutex mtx;
                                   withIntermediateDirectories:YES
                                                    attributes:nil
                                                         error:&error];
-        if (error) {
-            NSLog(@"%@", error);
-            return nil;
-        }
+        if (error) return nil;
     }
     
     return downloadDirectory;
@@ -171,10 +168,10 @@ std::mutex mtx;
             tp.ti = new torrent_info([filePathOrMagnetLink UTF8String], ec);
             
             if (ec) {
-                error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
+                error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
             }
         } else {
-            error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-2 userInfo:@{NSLocalizedDescriptionKey: [NSString localizedStringWithFormat:@"File doesn't exist at path: %@".localizedString, filePath]}];
+            error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-2 userInfo:@{NSLocalizedDescriptionKey: [NSString localizedStringWithFormat:@"File doesn't exist at path: %@".localizedString, filePath]}];
         }
         
         if (error) {
@@ -185,7 +182,15 @@ std::mutex mtx;
     
     NSString *pathComponent = directoryName != nil ? directoryName : [MD5String substringToIndex:16];
     
-    _savePath = [[[self class] downloadDirectory] stringByAppendingPathComponent:pathComponent];
+    NSString *basePath = [[self class] downloadDirectory];
+    
+    if (!basePath) {
+        NSError *error = [NSError errorWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-412 userInfo:@{NSLocalizedDescriptionKey: @"Could not create download directory".localizedString}];
+        if (failure) failure(error);
+        return [self cancelStreamingAndDeleteData:NO];
+    }
+    
+    _savePath = [basePath stringByAppendingPathComponent:pathComponent];
     
     if (![[NSFileManager defaultManager] fileExistsAtPath:_savePath]) {
         NSError *error;
@@ -206,7 +211,7 @@ std::mutex mtx;
     
     
     if (ec) {
-        NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
+        NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
         if (failure) failure(error);
         return [self cancelStreamingAndDeleteData:NO];
     }
@@ -465,7 +470,7 @@ std::mutex mtx;
     
     if (_requiredSpace > availableSpace) {
         NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, self.fileSize.stringValue];
-        NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntime.popcorntorrent.error" code:-4 userInfo:@{NSLocalizedDescriptionKey: description}];
+        NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-4 userInfo:@{NSLocalizedDescriptionKey: description}];
         [self cancelStreamingAndDeleteData:NO];
         if (_failureBlock) _failureBlock(error);
         return;
@@ -556,7 +561,9 @@ std::mutex mtx;
 - (void)torrentFinishedAlert:(torrent_handle)th {
     [self processTorrent:th];
     
-    _torrentStatus = {1, 1, 0,
+    _torrentStatus = {
+        1, 1,
+        _status.download_rate,
         _status.upload_rate,
         _status.num_seeds,
         _status.num_peers

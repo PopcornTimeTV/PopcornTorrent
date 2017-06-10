@@ -106,7 +106,6 @@ NS_ASSUME_NONNULL_BEGIN
                                readyToPlay:(PTTorrentStreamerReadyToPlay _Nullable)readyToPlay
                                    failure:(PTTorrentStreamerFailure _Nullable)failure;
 + (instancetype) __unavailable sharedStreamer;
-- (void) __unavailable cancelStreamingAndDeleteData:(BOOL)deleteData;
 - (instancetype) __unavailable init;
 + (instancetype) __unavailable new;
 

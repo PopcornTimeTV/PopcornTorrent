@@ -7,7 +7,9 @@
 #import <MediaPlayer/MPMediaItem.h>
 #import <UIKit/UIApplication.h>
 
-NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
+NSString * const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
+NSString * const MPMediaItemPropertyPathOrLink = @"filePathOrLink";
+NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
 
 @implementation PTTorrentDownload {
     PTTorrentDownloadStatus _downloadStatus;
@@ -18,8 +20,7 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
 }
 
 + (NSString *)downloadDirectory {
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSMoviesDirectory, NSUserDomainMask, YES);
-    NSString *downloadDirectory = [paths objectAtIndex:0];
+    NSString *downloadDirectory = [[[[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject] path] stringByAppendingPathComponent:@"Downloads"];
     
     if (![[NSFileManager defaultManager] fileExistsAtPath:downloadDirectory]) {
         NSError *error;
@@ -27,10 +28,7 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
                                   withIntermediateDirectories:YES
                                                    attributes:nil
                                                         error:&error];
-        if (error) {
-            NSLog(@"%@", error);
-            return nil;
-        }
+        if (error) return nil;
     }
     
     return downloadDirectory;
@@ -40,6 +38,8 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
     NSDictionary<NSString *, id> *dictionary = [NSDictionary dictionaryWithContentsOfFile:pathToPlist];
     
     PTTorrentDownloadStatus downloadStatus = (PTTorrentDownloadStatus)[[dictionary objectForKey:PTTorrentItemPropertyDownloadStatus] integerValue];
+    
+    float progress = [[dictionary objectForKey:PTTorrentItemPropertyTorrentProgress] floatValue];
     
     NSString *savePath = [pathToPlist stringByDeletingLastPathComponent];
     NSDirectoryEnumerator *enumerator = [[NSFileManager defaultManager] enumeratorAtPath:savePath];
@@ -52,15 +52,15 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
     
     long long requiredSpace = [[[[NSFileManager defaultManager] attributesOfItemAtPath:[savePath stringByAppendingPathComponent:fileName] error:nil] objectForKey:NSFileSize] longLongValue];
     
-    if (dictionary && downloadStatus && savePath && fileName && requiredSpace) {
+    if (dictionary && downloadStatus && savePath && fileName && requiredSpace && progress) {
         @try {
             self = [self initWithMediaMetadata:dictionary downloadStatus:downloadStatus];
             _savePath = savePath;
             _fileName = fileName;
             _requiredSpace = requiredSpace;
             _totalDownloaded = requiredSpace;
-            self.isFinished = true;
-            self.torrentStatus = {1, 1, 0, 0, 0, 0};
+            self.isFinished = downloadStatus == PTTorrentDownloadStatusFinished;
+            self.torrentStatus = {progress, 0, 0, 0, 0, 0};
             return self;
         } @catch (NSException *exception) {
             return nil;
@@ -78,7 +78,10 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
         BOOL isSubclass = NO;
         
         for (id validClass in validClasses) {
-            if ([[value class] isSubclassOfClass:validClass]) isSubclass = YES;
+            if ([[value class] isSubclassOfClass:validClass]) {
+                isSubclass = YES;
+                break;
+            }
         }
         
         NSAssert(isSubclass, @"All mediaMetadata values must be instances of NSData, NSDate, NSNumber, NSString, NSArray, or NSDictionary for a valid property list file to be created. %@ is not.", value);
@@ -107,6 +110,10 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
 - (void)startDownloadingFromFileOrMagnetLink:(NSString *)filePathOrMagnetLink {
     __weak __typeof__(self) weakSelf = self;
     
+    NSMutableDictionary *copy = _mediaMetadata.mutableCopy;
+    copy[MPMediaItemPropertyPathOrLink] = filePathOrMagnetLink;
+    _mediaMetadata = copy;
+    
     [super startStreamingFromFileOrMagnetLink:filePathOrMagnetLink directoryName:_mediaMetadata[MPMediaItemPropertyPersistentID] progress:^(PTTorrentStatus status) {
         PTTorrentDownloadStatus downloadStatus = status.totalProgress < 1 ? PTTorrentDownloadStatusDownloading : PTTorrentDownloadStatusFinished;
         
@@ -114,7 +121,7 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
         [weakSelf setTorrentStatus:status];
         
         if (downloadStatus == PTTorrentDownloadStatusFinished) {
-            [self performSelector:@selector(cancelStreamingAndDeleteData:) withObject:nil];
+            [self cancelStreamingAndDeleteData:NO];
         }
     } readyToPlay:nil failure:^(NSError * _Nonnull error) {
         id<PTTorrentDownloadManagerListener> delegate = weakSelf.delegate;
@@ -147,7 +154,7 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
 }
 
 - (void)stop {
-    [self performSelector:@selector(cancelStreamingAndDeleteData:) withObject:@YES];
+    [self cancelStreamingAndDeleteData:YES];
 }
 
 - (void)pause {
@@ -164,6 +171,12 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
 - (void)resume {
     if (_downloadStatus != PTTorrentDownloadStatusPaused) return;
     
+    if (_session->get_torrents().size() == 0) // Torrent was in the middle of downloading and app was exited. Download has been loaded from disk and is now being resumed. Fetch torrent metadata instead of just resuming.
+    {
+        [self startDownloadingFromFileOrMagnetLink:_mediaMetadata[MPMediaItemPropertyPathOrLink]];
+        return [self setDownloadStatus:PTTorrentDownloadStatusProcessing];
+    }
+    
     if (_session->is_paused()) {
        _session->resume();
     }
@@ -176,16 +189,15 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
 
 - (BOOL)delete {
     NSAssert(_downloadStatus != PTTorrentDownloadStatusPaused && _downloadStatus != PTTorrentDownloadStatusDownloading, @"This method should not be used to stop downloads, only to delete a pre-existing download.");
-    
-    NSString *path = [[[self class] downloadDirectory] stringByAppendingPathComponent:_savePath];
-    return [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
+    return [[NSFileManager defaultManager] removeItemAtPath:_savePath error:nil];
 }
 
 - (BOOL)save {
     NSString *filePath = [_savePath stringByAppendingPathComponent:@"Metadata.plist"];
-    NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithDictionary:_mediaMetadata];
-    [dictionary setObject:@(_downloadStatus) forKey:PTTorrentItemPropertyDownloadStatus];
-    return [dictionary writeToFile:filePath atomically:YES];
+    NSMutableDictionary *copy = _mediaMetadata.mutableCopy;
+    [copy setObject:@(_downloadStatus) forKey:PTTorrentItemPropertyDownloadStatus];
+    [copy setObject:@(_torrentStatus.totalProgress) forKey:PTTorrentItemPropertyTorrentProgress];
+    return [copy writeToFile:filePath atomically:YES];
 }
 
 - (void)playWithHandler:(PTTorrentStreamerReadyToPlay)handler {
@@ -218,7 +230,7 @@ NSString *const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
     self.isFinished = isFinished;
     
     if (isFinished) {
-        self.torrentStatus = {1, 1, 0, 0, 0, 0};
+        self.torrentStatus = {1, 0, 0, 0, 0, 0};
     }
 }
 

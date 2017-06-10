@@ -29,7 +29,7 @@ typedef void (^PTTorrentStreamerFailure)(NSError * _Nonnull error);
 NS_ASSUME_NONNULL_BEGIN
 
 /**
- Posted when the status of the current Torrent changes finishes executing. To retrieve the current status, use the instance variable, `torrentStatus`.
+ Posted when the status of the current Torrent changes finishes executing. Torrent status can be retrieved by accessing the `torrentStatus` variable of the posting object.
  */
 FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
 

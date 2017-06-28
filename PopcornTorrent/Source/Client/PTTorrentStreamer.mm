@@ -24,26 +24,7 @@ NSNotificationName const PTTorrentStatusDidChangeNotification = @"com.popcorntim
 
 using namespace libtorrent;
 
-@interface PTTorrentStreamer () {
-    std::vector<int> required_pieces;
-}
-    
-@property (nonatomic, strong) dispatch_queue_t alertsQueue;
-@property (nonatomic, getter=isAlertsLoopActive) BOOL alertsLoopActive;
-@property (nonatomic, getter=isStreaming) BOOL streaming;
-@property (nonatomic, strong) NSMutableDictionary *requestedRangeInfo;
-
-@property (nonatomic, copy) PTTorrentStreamerProgress progressBlock;
-@property (nonatomic, copy) PTTorrentStreamerFailure failureBlock;
-    
-@end
-
-@implementation PTTorrentStreamer 
-    
-@synthesize requestedRangeInfo;
-long long firstPiece = -1;
-long long endPiece = 0;
-std::mutex mtx;
+@implementation PTTorrentStreamer
     
 + (instancetype)sharedStreamer {
     static dispatch_once_t onceToken;
@@ -101,6 +82,9 @@ std::mutex mtx;
 - (void)setupSession {
     error_code ec;
     
+    firstPiece = -1;
+    endPiece = 0;
+    
     _session = new session();
     _session->set_alert_mask(alert::all_categories);
     _session->listen_on(std::make_pair(6881, 6889), ec);
@@ -114,7 +98,7 @@ std::mutex mtx;
     settings.max_peerlist_size = 10000;
     _session->set_settings(settings);
     
-    requestedRangeInfo = [[NSMutableDictionary alloc] init];
+    _requestedRangeInfo = [[NSMutableDictionary alloc] init];
     
     _status = torrent_status();
     _mediaServer = [[GCDWebServer alloc] init];

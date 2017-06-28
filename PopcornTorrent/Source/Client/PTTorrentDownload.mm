@@ -207,25 +207,31 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
 }
 
 - (void)cancelStreamingAndDeleteData:(BOOL)deleteData {
-    NSString *savePath = _savePath;
-    NSString *fileName = _fileName;
-    long long requiredSpace = _requiredSpace;
-    long long totalDownloaded = _totalDownloaded;
-    libtorrent::torrent_status status = self.status;
-    bool isFinished = self.isFinished;
+    self.alertsQueue = nil;
+    self.alertsLoopActive = NO;
     
-    [super cancelStreamingAndDeleteData:deleteData];
-    
-    _savePath = savePath;
-    _fileName = fileName;
-    _requiredSpace = requiredSpace;
-    _totalDownloaded = totalDownloaded;
-    self.status = status;
-    self.isFinished = isFinished;
-    
-    if (isFinished) {
-        self.torrentStatus = {1, 0, 0, 0, 0, 0};
+    std::vector<libtorrent::torrent_handle> ths = _session->get_torrents();
+    for(std::vector<libtorrent::torrent_handle>::size_type i = 0; i != ths.size(); i++) {
+        _session->remove_torrent(ths[i]);
     }
+    
+    required_pieces.clear();
+    [self.requestedRangeInfo removeAllObjects];
+    
+    self.progressBlock = nil;
+    self.readyToPlayBlock = nil;
+    self.failureBlock = nil;
+    if (self.mediaServer.isRunning) [self.mediaServer stop];
+    [self.mediaServer removeAllHandlers];
+    
+    firstPiece = -1;
+    endPiece = 0;
+    
+    self.streaming = NO;
+    
+    #if TARGET_OS_IOS
+        [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+    #endif
 }
 
 @end

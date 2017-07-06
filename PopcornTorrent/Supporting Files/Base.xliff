@@ -18,6 +18,7 @@
       <trans-unit id="Could not create download directory">
           <source>Could not create download directory</source>
           <target><!-- Translation goes here --></target>
+      </trans-unit>
     </body>
   </file>
 </xliff>

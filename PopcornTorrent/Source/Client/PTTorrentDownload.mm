@@ -115,6 +115,7 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
     _mediaMetadata = copy;
     
     [super startStreamingFromFileOrMagnetLink:filePathOrMagnetLink directoryName:_mediaMetadata[MPMediaItemPropertyPersistentID] progress:^(PTTorrentStatus status) {
+        if (weakSelf.downloadStatus == PTTorrentDownloadStatusPaused) return;
         PTTorrentDownloadStatus downloadStatus = status.totalProgress < 1 ? PTTorrentDownloadStatusDownloading : PTTorrentDownloadStatusFinished;
         
         [weakSelf setDownloadStatus:downloadStatus];
@@ -154,7 +155,8 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
 }
 
 - (void)stop {
-    [self cancelStreamingAndDeleteData:YES];
+    [super cancelStreamingAndDeleteData:YES];
+    [self setDownloadStatus:PTTorrentDownloadStatusFailed];
 }
 
 - (void)pause {

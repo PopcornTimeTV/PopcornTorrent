@@ -140,8 +140,8 @@
 }
 
 - (void)stopDownload:(PTTorrentDownload *)download {
-    [_activeDownloads removeObject:download];
     [download stop];
+    download.delegate = nil;
 }
 
 - (void)resumeDownload:(PTTorrentDownload *)download {
@@ -154,6 +154,7 @@
 
 - (BOOL)deleteDownload:(PTTorrentDownload *)download {
     [_completedDownloads removeObject:download];
+    download.delegate = nil;
     return [download delete];
 }
 

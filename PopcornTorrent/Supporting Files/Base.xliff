@@ -8,12 +8,12 @@
       <trans-unit id="File doesn't exist at path: %@">
         <source>File doesn't exist at path: %1$@</source>
         <target><!-- Translation goes here --></target>
-        <note>There is not enough space to download the torrent. Please clear at least {Amount of space required for the user to remove} and try again.</note>
+        <note>File doesn't exist at path: {Path to file}</note>
       </trans-unit>
       <trans-unit id="There is not enough space to download the torrent. Please clear at least %@ and try again.">
         <source>There is not enough space to download the torrent. Please clear at least %1$@ and try again.</source>
         <target><!-- Translation goes here --></target>
-        <note>File doesn't exist at path: {Path to file}</note>
+        <note>There is not enough space to download the torrent. Please clear at least {Amount of space required for the user to remove} and try again.</note>
       </trans-unit>
       <trans-unit id="Could not create download directory">
           <source>Could not create download directory</source>

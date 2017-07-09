@@ -20,7 +20,15 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
 }
 
 + (NSString *)downloadDirectory {
-    NSString *downloadDirectory = [[[[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject] path] stringByAppendingPathComponent:@"Downloads"];
+    NSURL *URL;
+    
+    #if TARGET_OS_IOS
+    URL = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
+    #elif TARGET_OS_TV
+    URL = [[[NSFileManager defaultManager] URLsForDirectory:NSCachesDirectory inDomains:NSUserDomainMask] lastObject];
+    #endif
+    
+    NSString *downloadDirectory =  [[URL path] stringByAppendingPathComponent:@"Downloads"];
     
     if (![[NSFileManager defaultManager] fileExistsAtPath:downloadDirectory]) {
         NSError *error;

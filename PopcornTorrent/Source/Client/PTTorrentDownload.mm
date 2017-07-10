@@ -60,7 +60,7 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
     
     long long requiredSpace = [[[[NSFileManager defaultManager] attributesOfItemAtPath:[savePath stringByAppendingPathComponent:fileName] error:nil] objectForKey:NSFileSize] longLongValue];
     
-    if (dictionary && downloadStatus && savePath && fileName && requiredSpace && progress) {
+    if (dictionary != nil && savePath != nil && fileName != nil) {
         @try {
             self = [self initWithMediaMetadata:dictionary downloadStatus:downloadStatus];
             _savePath = savePath;
@@ -68,7 +68,7 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
             _requiredSpace = requiredSpace;
             _totalDownloaded = requiredSpace;
             self.isFinished = downloadStatus == PTTorrentDownloadStatusFinished;
-            self.torrentStatus = {progress, 0, 0, 0, 0, 0};
+            self.torrentStatus = {0, progress, 0, 0, 0, 0};
             return self;
         } @catch (NSException *exception) {
             return nil;

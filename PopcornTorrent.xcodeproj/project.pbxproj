@@ -357,6 +357,11 @@
 		4D2996641EE431AF00737894 /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.3.sdk/System/Library/Frameworks/MediaPlayer.framework; sourceTree = DEVELOPER_DIR; };
 		4D2996661EE431B600737894 /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 		4D29966A1EE4C4E400737894 /* PTTorrentDownloadManagerListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PTTorrentDownloadManagerListener.h; sourceTree = "<group>"; };
+		4D5D79061F21899400E2542E /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
+		4D5D79071F21899400E2542E /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/tvOSPlist.strings; sourceTree = "<group>"; };
+		4D5D79081F21899400E2542E /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/iOSPlist.strings; sourceTree = "<group>"; };
+		4D5D79091F21899400E2542E /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/tvOSPlist.strings; sourceTree = "<group>"; };
+		4D5D790A1F21899500E2542E /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/iOSPlist.strings; sourceTree = "<group>"; };
 		4D8794F01F0ED71000F41C6A /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/iOSPlist.strings"; sourceTree = "<group>"; };
 		4D8794F51F0ED71100F41C6A /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/iOSPlist.strings"; sourceTree = "<group>"; };
 		4D8794FA1F0ED71200F41C6A /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/tvOSPlist.strings"; sourceTree = "<group>"; };
@@ -1029,6 +1034,7 @@
 				en,
 				ar,
 				it,
+				es,
 			);
 			mainGroup = 922F43281CA37CF800955B33;
 			productRefGroup = 922F43331CA37CF800955B33 /* Products */;
@@ -1472,6 +1478,7 @@
 				4D8794FC1F0ED71200F41C6A /* pt-BR */,
 				4DD9B3E01F10EFE2004745DB /* ar */,
 				4DD9B3E51F116B34004745DB /* it */,
+				4D5D79061F21899400E2542E /* es */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -1482,6 +1489,7 @@
 				4D8794F01F0ED71000F41C6A /* pt-BR */,
 				4DD9B3E21F10EFE2004745DB /* ar */,
 				4DD9B3E71F116B34004745DB /* it */,
+				4D5D79081F21899400E2542E /* es */,
 			);
 			name = iOSPlist.strings;
 			path = "Supporting Files";
@@ -1493,6 +1501,7 @@
 				4D8794F51F0ED71100F41C6A /* pt-BR */,
 				4DD9B3E41F10EFE3004745DB /* ar */,
 				4DD9B3E91F116B35004745DB /* it */,
+				4D5D790A1F21899500E2542E /* es */,
 			);
 			name = iOSPlist.strings;
 			sourceTree = "<group>";
@@ -1503,6 +1512,7 @@
 				4D8794FA1F0ED71200F41C6A /* pt-BR */,
 				4DD9B3E31F10EFE2004745DB /* ar */,
 				4DD9B3E81F116B34004745DB /* it */,
+				4D5D79091F21899400E2542E /* es */,
 			);
 			name = tvOSPlist.strings;
 			sourceTree = "<group>";
@@ -1513,6 +1523,7 @@
 				4D8795001F0ED71300F41C6A /* pt-BR */,
 				4DD9B3E11F10EFE2004745DB /* ar */,
 				4DD9B3E61F116B34004745DB /* it */,
+				4D5D79071F21899400E2542E /* es */,
 			);
 			name = tvOSPlist.strings;
 			path = "Supporting Files";

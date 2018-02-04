@@ -1,0 +1,9 @@
+/* (No Commment) */
+"File doesn't exist at path: %@" = "Il file non esiste al percorso: %1$@";
+
+/* (No Commment) */
+"There is not enough space to download the torrent. Please clear at least %@ and try again." = "Non c'è abbastanza spazio per scaricare il torrent. Cancella almeno %1$@ e riprova.";
+
+/* (No Commment) */
+"Could not create download directory" = "Impossibile creare la cartella di download";
+

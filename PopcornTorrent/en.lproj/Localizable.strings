@@ -1,0 +1,8 @@
+
+/* File doesn't exist at path: {Path to file} */
+"File doesn't exist at path: %@" = "File doesn't exist at path: %1$@";
+
+/* There is not enough space to download the torrent. Please clear at least {Amount of space required for the user to remove} and try again. */
+"There is not enough space to download the torrent. Please clear at least %@ and try again." = "There is not enough space to download the torrent. Please clear at least %1$@ and try again.";
+
+"Could not create download directory" = "Could not create download directory";

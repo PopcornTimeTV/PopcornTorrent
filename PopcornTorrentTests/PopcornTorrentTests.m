@@ -32,7 +32,7 @@
 -(void)testTorrentFileStreaming {
     XCTestExpectation *expectation = [self expectationWithDescription:@"Torrent Streaming"];
     
-    [[PTTorrentStreamer sharedStreamer] startStreamingFromFileOrMagnetLink:[[NSBundle mainBundle] pathForResource:@"Test" ofType:@"torrent"] progress:^(PTTorrentStatus status) {
+    [[PTTorrentStreamer sharedStreamer] startStreamingFromFileOrMagnetLink:[[NSBundle bundleForClass:[self class]] pathForResource:@"Test" ofType:@"torrent"] progress:^(PTTorrentStatus status) {
         
     } readyToPlay:^(NSURL *videoFileURL, NSURL* video) {
         NSLog(@"%@", videoFileURL);
@@ -44,6 +44,7 @@
         XCTFail(@"%@", error.localizedDescription);
         [expectation fulfill];
     }];
+   
     
     // Wait 5 minutes
     [self waitForExpectationsWithTimeout:60.0 * 5 handler:nil];

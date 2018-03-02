@@ -7,6 +7,7 @@
 #import <libtorrent/alert_types.hpp>
 #import "CocoaSecurity.h"
 #import "PTTorrentStreamer+Protected.h"
+#import <GCDWebServer/GCDWebServer.h>
 #import <GCDWebServer/GCDWebServerFileRequest.h>
 #import <GCDWebServer/GCDWebServerFileResponse.h>
 #import <GCDWebServer/GCDWebServerPrivate.h>
@@ -102,7 +103,7 @@ using namespace libtorrent;
     _requestedRangeInfo = [[NSMutableDictionary alloc] init];
     
     _status = torrent_status();
-    _mediaServer = [[GCDWebServer alloc] init];
+    self.mediaServer = [[GCDWebServer alloc] init];
     
 }
 
@@ -283,8 +284,8 @@ using namespace libtorrent;
     self.progressBlock = nil;
     self.readyToPlayBlock = nil;
     self.failureBlock = nil;
-    if (_mediaServer.isRunning)[_mediaServer stop];
-    [_mediaServer removeAllHandlers];
+    if (self.mediaServer.isRunning)[self.mediaServer stop];
+    [self.mediaServer removeAllHandlers];
     
     if (deleteData) {
         [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
@@ -393,15 +394,20 @@ using namespace libtorrent;
     __block NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:_fileName]];
     __weak __typeof__(self) weakSelf = self;
     
-    [_mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
+    [self.mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
         GCDWebServerFileResponse *response = [[GCDWebServerFileResponse alloc] init];
-        
+
         if (request.hasByteRange) {
             response = [[GCDWebServerFileResponse alloc]initWithFile:fileURL.relativePath byteRange:request.byteRange];
         } else {
             response = [[GCDWebServerFileResponse alloc]initWithFile:fileURL.relativePath];
         }
-        
+        if (response == nil){
+            GCDWebServerErrorResponse *newResponse = [GCDWebServerErrorResponse responseWithStatusCode:416];
+            [response setValue:[NSString stringWithFormat:@"*/%lu",(unsigned long)request.byteRange.location] forAdditionalHeader:@"Content-Range"];
+            completionBlock(newResponse);
+            return;
+        }
         [response setValue:@"*" forAdditionalHeader:@"Access-Control-Allow-Origin"];
         [response setValue:@"Content-Type" forAdditionalHeader:@"Access-Control-Expose-Headers"];
         
@@ -419,13 +425,13 @@ using namespace libtorrent;
         }
     }];
     
-    [_mediaServer startWithPort:50321 bonjourName:nil];
+    [self.mediaServer startWithPort:50321 bonjourName:nil];
     
-    __block NSURL *serverURL = _mediaServer.serverURL;
+    __block NSURL *serverURL = self.mediaServer.serverURL;
     
     if (serverURL == nil) // `nil` when device is on cellular network.
     {
-        serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://0.0.0.0:%i/", (int)_mediaServer.port]];
+        serverURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://0.0.0.0:%i/", (int)self.mediaServer.port]];
     }
     
     dispatch_async(dispatch_get_main_queue(), ^{

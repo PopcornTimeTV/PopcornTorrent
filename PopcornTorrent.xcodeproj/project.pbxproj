@@ -32,7 +32,6 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		0630994DD771B6C1801F7654 /* Pods_PopcornTorrentTests_iOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D9A2B676203F056000211FCF /* Pods_PopcornTorrentTests_iOS.framework */; };
 		3A0B7B3833FEAE22CA6DDE0C /* Pods_PopcornTorrent_iOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C35EB84FA4C029ADEDD0E6A /* Pods_PopcornTorrent_iOS.framework */; };
 		4D0699F41D96F56100D17065 /* PopcornTorrentTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 922F43411CA37CF800955B33 /* PopcornTorrentTests.m */; };
 		4D1440261E9AF45500B78269 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4D1440291E9AF45500B78269 /* Localizable.strings */; };
@@ -325,6 +324,7 @@
 		4DFBAD091E990BA7009A5E35 /* NSString+Localization.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */; };
 		4DFBAD0A1E990BA7009A5E35 /* NSString+Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */; };
 		4DFBAD0B1E990BA7009A5E35 /* NSString+Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */; };
+		5CF3A6091DC9C6558BAC91E6 /* Pods_PopcornTorrent_tvOSTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0812D4591DF874CC1FB9336D /* Pods_PopcornTorrent_tvOSTests.framework */; };
 		9265165C1CEA69A6000F57D4 /* PTTorrentStreamer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */; };
 		926516631CEA69A6000F57D4 /* PTTorrentStreamer.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		B8F4E6DA7C9F57DE1DE04FEF /* Pods_PopcornTorrent_tvOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1BC644C8FF4271C556AD751E /* Pods_PopcornTorrent_tvOS.framework */; };
@@ -530,11 +530,11 @@
 		922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PTTorrentStreamer.h; sourceTree = "<group>"; };
 		922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PTTorrentStreamer.mm; sourceTree = "<group>"; };
 		9265166A1CEA69A6000F57D4 /* PopcornTorrent.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PopcornTorrent.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5B92801DD3949E86AEFEBA1 /* Pods-PopcornTorrent tvOSTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent tvOSTests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests.debug.xcconfig"; sourceTree = "<group>"; };
 		BB5BB859415E8479D70380E5 /* Pods-PopcornTorrent tvOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent tvOS.release.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent tvOS/Pods-PopcornTorrent tvOS.release.xcconfig"; sourceTree = "<group>"; };
-		C1BE94C35568F02CFAED3886 /* Pods-PopcornTorrentTests iOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrentTests iOS.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrentTests iOS/Pods-PopcornTorrentTests iOS.debug.xcconfig"; sourceTree = "<group>"; };
 		D91570A21D6B927C00C6C848 /* PopcornTorrentTests iOS.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PopcornTorrentTests iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D9A2B676203F056000211FCF /* Pods_PopcornTorrentTests_iOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Pods_PopcornTorrentTests_iOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		DC3A0AE8581DCAD314F4498A /* Pods-PopcornTorrentTests iOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrentTests iOS.release.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrentTests iOS/Pods-PopcornTorrentTests iOS.release.xcconfig"; sourceTree = "<group>"; };
+		F1FFB6C28EB59FA52081D9FD /* Pods-PopcornTorrent tvOSTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent tvOSTests.release.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -553,6 +553,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D97E87A1D99C2EF009FEF7E /* PopcornTorrent.framework in Frameworks */,
+				5CF3A6091DC9C6558BAC91E6 /* Pods_PopcornTorrent_tvOSTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -571,7 +572,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D91570A71D6B927C00C6C848 /* PopcornTorrent.framework in Frameworks */,
-				0630994DD771B6C1801F7654 /* Pods_PopcornTorrentTests_iOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -775,8 +775,8 @@
 				04418AA7DE19557647E6C636 /* Pods-PopcornTorrent iOS.release.xcconfig */,
 				0E442A9FB3CD3EABA0F1BBD6 /* Pods-PopcornTorrent tvOS.debug.xcconfig */,
 				BB5BB859415E8479D70380E5 /* Pods-PopcornTorrent tvOS.release.xcconfig */,
-				C1BE94C35568F02CFAED3886 /* Pods-PopcornTorrentTests iOS.debug.xcconfig */,
-				DC3A0AE8581DCAD314F4498A /* Pods-PopcornTorrentTests iOS.release.xcconfig */,
+				A5B92801DD3949E86AEFEBA1 /* Pods-PopcornTorrent tvOSTests.debug.xcconfig */,
+				F1FFB6C28EB59FA52081D9FD /* Pods-PopcornTorrent tvOSTests.release.xcconfig */,
 			);
 			name = Pods;
 			sourceTree = "<group>";
@@ -953,9 +953,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4D97E8851D99C2EF009FEF7E /* Build configuration list for PBXNativeTarget "PopcornTorrent tvOSTests" */;
 			buildPhases = (
+				0725C7EACA6711AD9B013673 /* [CP] Check Pods Manifest.lock */,
 				4D97E8751D99C2EF009FEF7E /* Sources */,
 				4D97E8761D99C2EF009FEF7E /* Frameworks */,
 				4D97E8771D99C2EF009FEF7E /* Resources */,
+				FDD9B5D4CF8173C04374A186 /* [CP] Embed Pods Frameworks */,
+				F82E4D00FD28D804B427F25E /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -991,12 +994,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D91570AA1D6B927C00C6C848 /* Build configuration list for PBXNativeTarget "PopcornTorrentTests iOS" */;
 			buildPhases = (
-				2D78DEAB51E018A56C67B727 /* [CP] Check Pods Manifest.lock */,
 				D915709E1D6B927C00C6C848 /* Sources */,
 				D915709F1D6B927C00C6C848 /* Frameworks */,
 				D91570A01D6B927C00C6C848 /* Resources */,
-				98A02CACA3718A32902ECD5B /* [CP] Embed Pods Frameworks */,
-				88C14130FCDAA1D85A07127A /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -1124,34 +1124,40 @@
 			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrent tvOS/Pods-PopcornTorrent tvOS-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		0725C7EACA6711AD9B013673 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-PopcornTorrent tvOSTests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
 		1962D0D1CC7E4A7DE05D29A3 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
 			);
 			name = "[CP] Check Pods Manifest.lock";
 			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-PopcornTorrent iOS-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n";
-			showEnvVarsInLog = 0;
-		};
-		2D78DEAB51E018A56C67B727 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n";
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
 		4D97E8661D99B619009FEF7E /* Universal Binary */ = {
@@ -1182,36 +1188,6 @@
 			shellPath = /bin/sh;
 			shellScript = "# define output folder environment variable\nUNIVERSAL_OUTPUTFOLDER=${SRCROOT}/PopcornTorrent/Build/tvOS\n\n# Step 1. Build Device and Simulator versions\nxcodebuild -workspace PopcornTorrent.xcworkspace -scheme \"PopcornTorrent tvOS\" ONLY_ACTIVE_ARCH=NO BITCODE_GENERATION_MODE=bitcode -configuration ${CONFIGURATION} -sdk appletvos BUILD_DIR=\"${BUILD_DIR}\" BUILD_ROOT=\"${BUILD_ROOT}\"\nxcodebuild -workspace PopcornTorrent.xcworkspace -scheme \"PopcornTorrent tvOS\" ONLY_ACTIVE_ARCH=NO BITCODE_GENERATION_MODE=bitcode -configuration ${CONFIGURATION} -sdk appletvsimulator BUILD_DIR=\"${BUILD_DIR}\" BUILD_ROOT=\"${BUILD_ROOT}\"\n\n# make sure the output directory is empty\nrm -rf \"${UNIVERSAL_OUTPUTFOLDER}/*\"\n\n# Step 2. Move framework file to Universal folder.\ncp -r \"${BUILD_DIR}/${CONFIGURATION}-appletvsimulator/${PROJECT_NAME}.framework\" \"${UNIVERSAL_OUTPUTFOLDER}/\"\n\n# Step 3. Create universal binary file using lipo\nlipo -create -output \"${UNIVERSAL_OUTPUTFOLDER}/${PROJECT_NAME}.framework/${PROJECT_NAME}\" \"${BUILD_DIR}/${CONFIGURATION}-appletvos/${PROJECT_NAME}.framework/${PROJECT_NAME}\" \"${BUILD_DIR}/${CONFIGURATION}-appletvsimulator/${PROJECT_NAME}.framework/${PROJECT_NAME}\"\n\notool -arch arm64 -l \"${UNIVERSAL_OUTPUTFOLDER}/${PROJECT_NAME}.framework/${PROJECT_NAME}\"";
 		};
-		88C14130FCDAA1D85A07127A /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrentTests iOS/Pods-PopcornTorrentTests iOS-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		98A02CACA3718A32902ECD5B /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrentTests iOS/Pods-PopcornTorrentTests iOS-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		C3CDA6B948C180EE22CC09B8 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1233,13 +1209,49 @@
 			files = (
 			);
 			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
 			);
 			name = "[CP] Check Pods Manifest.lock";
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-PopcornTorrent tvOS-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		F82E4D00FD28D804B427F25E /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "[CP] Copy Pods Resources";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n";
+			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		FDD9B5D4CF8173C04374A186 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/GCDWebServer-tvOS/GCDWebServer.framework",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GCDWebServer.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -1716,6 +1728,7 @@
 		};
 		4D97E8861D99C2EF009FEF7E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A5B92801DD3949E86AEFEBA1 /* Pods-PopcornTorrent tvOSTests.debug.xcconfig */;
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
@@ -1729,6 +1742,7 @@
 		};
 		4D97E8871D99C2EF009FEF7E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F1FFB6C28EB59FA52081D9FD /* Pods-PopcornTorrent tvOSTests.release.xcconfig */;
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
@@ -1916,7 +1930,6 @@
 		};
 		D91570AB1D6B927C00C6C848 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C1BE94C35568F02CFAED3886 /* Pods-PopcornTorrentTests iOS.debug.xcconfig */;
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = "";
@@ -1933,7 +1946,6 @@
 		};
 		D91570AC1D6B927C00C6C848 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DC3A0AE8581DCAD314F4498A /* Pods-PopcornTorrentTests iOS.release.xcconfig */;
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEVELOPMENT_TEAM = "";

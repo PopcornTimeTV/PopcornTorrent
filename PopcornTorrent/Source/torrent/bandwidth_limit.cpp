@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2014, Arvid Norberg
+Copyright (c) 2009-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/bandwidth_limit.hpp"
 #include <algorithm>
 
-namespace libtorrent
-{
+namespace libtorrent {
+
 	bandwidth_channel::bandwidth_channel()
 		: tmp(0)
 		, distribute_quota(0)
@@ -45,12 +45,12 @@ namespace libtorrent
 	// 0 means infinite
 	void bandwidth_channel::throttle(int limit)
 	{
-		TORRENT_ASSERT(limit >= 0);
+		TORRENT_ASSERT_VAL(limit >= 0, limit);
 		// if the throttle is more than this, we might overflow
-		TORRENT_ASSERT(limit < INT_MAX);
+		TORRENT_ASSERT_VAL(limit < inf, limit);
 		m_limit = limit;
 	}
-	
+
 	int bandwidth_channel::quota_left() const
 	{
 		if (m_limit == 0) return inf;
@@ -59,13 +59,27 @@ namespace libtorrent
 
 	void bandwidth_channel::update_quota(int dt_milliseconds)
 	{
+		TORRENT_ASSERT_VAL(m_limit >= 0, m_limit);
+		TORRENT_ASSERT_VAL(m_limit < inf, m_limit);
+
 		if (m_limit == 0) return;
-		m_quota_left += (m_limit * dt_milliseconds + 500) / 1000;
-		if (m_quota_left > m_limit * 3) m_quota_left = m_limit * 3;
-		distribute_quota = int((std::max)(m_quota_left, boost::int64_t(0)));
-//		fprintf(stderr, "%p: [%d]: + %"PRId64" limit: %"PRId64" quota_left: %"PRId64"\n", this
-//			, dt_milliseconds, (m_limit * dt_milliseconds + 500) / 1000, m_limit
-//			, m_quota_left);
+
+		// "to_add" should never have int64 overflow: "m_limit" contains < "<int>::max"
+		boost::int64_t to_add = (boost::int64_t(m_limit) * dt_milliseconds + 500) / 1000;
+
+		if (to_add > inf - m_quota_left)
+		{
+			m_quota_left = inf;
+		}
+		else
+		{
+			m_quota_left += to_add;
+			if (m_quota_left / 3 > m_limit) m_quota_left = boost::int64_t(m_limit) * 3;
+			// "m_quota_left" will never have int64 overflow but may exceed "<int>::max"
+			m_quota_left = std::min(m_quota_left, boost::int64_t(inf));
+		}
+
+		distribute_quota = int(std::max(m_quota_left, boost::int64_t(0)));
 	}
 
 	// this is used when connections disconnect with
@@ -85,8 +99,6 @@ namespace libtorrent
 		TORRENT_ASSERT(m_limit >= 0);
 		if (m_limit == 0) return;
 
-//		fprintf(stderr, "%p: - %"PRId64" limit: %"PRId64" quota_left: %"PRId64"\n", this
-//			, amount, m_limit, m_quota_left);
 		m_quota_left -= amount;
 	}
 

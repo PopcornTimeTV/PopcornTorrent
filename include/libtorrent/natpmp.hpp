@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -38,11 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/address.hpp"
 #include "libtorrent/thread.hpp"
 #include "libtorrent/error_code.hpp"
-#include "libtorrent/intrusive_ptr_base.hpp"
 #include "libtorrent/deadline_timer.hpp"
 
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
 #include <boost/function/function1.hpp>
-#include <boost/function/function4.hpp>
+#include <boost/function/function5.hpp>
+#include <boost/enable_shared_from_this.hpp>
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 namespace libtorrent
 {
@@ -50,17 +54,16 @@ namespace libtorrent
 // int: port mapping index
 // int: external port
 // std::string: error message
-typedef boost::function<void(int, address, int, error_code const&)> portmap_callback_t;
+typedef boost::function<void(int, address, int, int, error_code const&)> portmap_callback_t;
 typedef boost::function<void(char const*)> log_callback_t;
 
-class natpmp : public intrusive_ptr_base<natpmp>
+class natpmp : public boost::enable_shared_from_this<natpmp>
 {
 public:
-	natpmp(io_service& ios, address const& listen_interface
-		, portmap_callback_t const& cb
+	natpmp(io_service& ios, portmap_callback_t const& cb
 		, log_callback_t const& lcb);
 
-	void rebind(address const& listen_interface);
+	void start();
 
 	// maps the ports, if a port is set to 0
 	// it will not be mapped
@@ -72,7 +75,9 @@ public:
 	void close();
 
 private:
-	
+
+	boost::shared_ptr<natpmp> self() { return shared_from_this(); }
+
 	void update_mapping(int i, mutex::scoped_lock& l);
 	void send_map_request(int i, mutex::scoped_lock& l);
 	void send_get_ip_address_request(mutex::scoped_lock& l);
@@ -104,7 +109,7 @@ private:
 		int action;
 
 		// the time the port mapping will expire
-		ptime expires;
+		time_point expires;
 
 		// the local port for this mapping. If this is set
 		// to 0, the mapping is not in use
@@ -128,7 +133,7 @@ private:
 	log_callback_t m_log_callback;
 
 	std::vector<mapping_t> m_mappings;
-	
+
 	// the endpoint to the nat router
 	udp::endpoint m_nat_endpoint;
 
@@ -140,7 +145,7 @@ private:
 	// current retry count
 	int m_retry_count;
 
-	// used to receive responses in	
+	// used to receive responses in
 	char m_response_buffer[16];
 
 	// router external IP address
@@ -148,10 +153,10 @@ private:
 
 	// the endpoint we received the message from
 	udp::endpoint m_remote;
-	
+
 	// the udp socket used to communicate
 	// with the NAT router
-	datagram_socket m_socket;
+	udp::socket m_socket;
 
 	// used to resend udp packets in case
 	// they time out
@@ -162,7 +167,7 @@ private:
 
 	// the mapping index that will expire next
 	int m_next_refresh;
-	
+
 	bool m_disabled;
 
 	bool m_abort;

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2010-2014, Arvid Norberg
+Copyright (c) 2010-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <stdlib.h> // free and calloc
+#include <new> // for bad_alloc
 #include "libtorrent/packet_buffer.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/invariant_check.hpp"
@@ -40,7 +41,7 @@ namespace libtorrent {
 	bool compare_less_wrap(boost::uint32_t lhs, boost::uint32_t rhs
 		, boost::uint32_t mask);
 
-	packet_buffer::packet_buffer()
+	packet_buffer_impl::packet_buffer_impl()
 		: m_storage(0)
 		, m_capacity(0)
 		, m_size(0)
@@ -49,7 +50,7 @@ namespace libtorrent {
 	{}
 
 #if TORRENT_USE_INVARIANT_CHECKS
-	void packet_buffer::check_invariant() const
+	void packet_buffer_impl::check_invariant() const
 	{
 		int count = 0;
 		for (int i = 0; i < int(m_capacity); ++i)
@@ -60,12 +61,12 @@ namespace libtorrent {
 	}
 #endif
 
-	packet_buffer::~packet_buffer()
+	packet_buffer_impl::~packet_buffer_impl()
 	{
 		free(m_storage);
 	}
 
-	void* packet_buffer::insert(index_type idx, void* value)
+	void* packet_buffer_impl::insert(index_type idx, void* value)
 	{
 		INVARIANT_CHECK;
 
@@ -132,7 +133,7 @@ namespace libtorrent {
 		return old_value;
 	}
 
-	void* packet_buffer::at(index_type idx) const
+	void* packet_buffer_impl::at(index_type idx) const
 	{
 		INVARIANT_CHECK;
 		if (idx >= m_first + m_capacity)
@@ -147,7 +148,7 @@ namespace libtorrent {
 		return m_storage[idx & mask];
 	}
 
-	void packet_buffer::reserve(std::size_t size)
+	void packet_buffer_impl::reserve(std::size_t size)
 	{
 		INVARIANT_CHECK;
 		TORRENT_ASSERT_VAL(size <= 0xffff, size);
@@ -156,7 +157,10 @@ namespace libtorrent {
 		while (new_size < size)
 			new_size <<= 1;
 
-		void** new_storage = (void**)malloc(sizeof(void*) * new_size);
+		void** new_storage = static_cast<void**>(malloc(sizeof(void*) * new_size));
+#ifndef BOOST_NO_EXCEPTIONS
+		if (new_storage == NULL) throw std::bad_alloc();
+#endif
 
 		for (index_type i = 0; i < new_size; ++i)
 			new_storage[i] = 0;
@@ -170,7 +174,7 @@ namespace libtorrent {
 		m_capacity = new_size;
 	}
 
-	void* packet_buffer::remove(index_type idx)
+	void* packet_buffer_impl::remove(index_type idx)
 	{
 		INVARIANT_CHECK;
 		// TODO: use compare_less_wrap for this comparison as well

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2014, Arvid Norberg
+Copyright (c) 2009-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -43,34 +43,14 @@ namespace libtorrent
 
 	struct TORRENT_EXTRA_EXPORT page_aligned_allocator
 	{
-		typedef std::size_t size_type;
+		typedef int size_type;
 		typedef std::ptrdiff_t difference_type;
 
-		static char* malloc(const size_type bytes);
+		static char* malloc(size_type bytes);
 		static void free(char* block);
-	};
-
-	struct TORRENT_EXTRA_EXPORT aligned_holder
-	{
-		aligned_holder(): m_buf(0) {}
-		aligned_holder(int size): m_buf(page_aligned_allocator::malloc(size)) {}
-		~aligned_holder() { if (m_buf) page_aligned_allocator::free(m_buf); }
-		char* get() const { return m_buf; }
-		void reset(char* buf = 0)
-		{
-			if (m_buf) page_aligned_allocator::free(m_buf);
-			m_buf = buf;
-		}
-		void swap(aligned_holder& h)
-		{
-			char* tmp = m_buf;
-			m_buf = h.m_buf;
-			h.m_buf =  tmp;
-		}
-	private:
-		aligned_holder(aligned_holder const&);
-		aligned_holder& operator=(aligned_holder const&);
-		char* m_buf;
+#ifdef TORRENT_DEBUG_BUFFERS
+		static bool in_use(char const* block);
+#endif
 	};
 
 }

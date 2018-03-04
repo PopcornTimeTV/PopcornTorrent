@@ -1,6 +1,8 @@
 
 #import "PTTorrentStreamer.h"
 #import <libtorrent/session.hpp>
+#import <libtorrent/torrent_info.hpp>
+#import <libtorrent/add_torrent_params.hpp>
 #import <GCDWebServer/GCDWebServer.h>
 
 /**

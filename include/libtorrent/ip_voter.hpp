@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2013-2014, Arvid Norberg
+Copyright (c) 2013-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include "libtorrent/address.hpp"
 #include "libtorrent/bloom_filter.hpp"
-#include "libtorrent/time.hpp" // for ptime
+#include "libtorrent/time.hpp" // for time_point
 
 namespace libtorrent
 {
@@ -48,7 +48,7 @@ namespace libtorrent
 
 		// returns true if a different IP is the top vote now
 		// i.e. we changed our idea of what our external IP is
-		bool cast_vote(address const& ip, int source_type, address const& sorce);
+		bool cast_vote(address const& ip, int source_type, address const& source);
 
 		address external_address() const { return m_external_address; }
 
@@ -103,7 +103,7 @@ namespace libtorrent
 		// the last time we rotated this ip_voter. i.e. threw
 		// away all the votes and started from scratch, in case
 		// our IP has changed
-		ptime m_last_rotate;
+		time_point m_last_rotate;
 	};
 
 	// this keeps track of multiple external IPs (for now, just IPv6 and IPv4, but

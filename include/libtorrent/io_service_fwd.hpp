@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2014, Arvid Norberg
+Copyright (c) 2009-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,37 +37,35 @@ POSSIBILITY OF SUCH DAMAGE.
 #define Protocol Protocol_
 #endif
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <boost/version.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
-#ifdef __OBJC__ 
+#ifdef __OBJC__
 #undef Protocol
 #endif
 
-#if BOOST_VERSION >= 103500
-namespace boost {
+#if defined TORRENT_BUILD_SIMULATOR
+namespace sim { namespace asio {
+	struct io_service;
+}}
 #endif
-namespace asio {
 
-class io_service;
-
-}
-#if BOOST_VERSION >= 103500
-}
+namespace boost { namespace asio {
+#if BOOST_VERSION < 106600
+	class io_service;
+#else
+	class io_context;
+	typedef io_context io_service;
 #endif
+}}
 
 namespace libtorrent
 {
-
-#if BOOST_VERSION < 103500
-	typedef ::asio::io_service io_service;
+#if defined TORRENT_BUILD_SIMULATOR
+	typedef sim::asio::io_service io_service;
 #else
 	typedef boost::asio::io_service io_service;
 #endif

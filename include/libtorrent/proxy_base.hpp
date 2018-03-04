@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,8 +37,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/io_service_fwd.hpp"
 #include "libtorrent/socket.hpp"
 #include "libtorrent/address.hpp"
-#include "libtorrent/escape_string.hpp"
 #include "libtorrent/error_code.hpp"
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+#include <boost/function/function1.hpp>
+#include <boost/shared_ptr.hpp>
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 namespace libtorrent {
 
@@ -46,22 +50,26 @@ class proxy_base : boost::noncopyable
 {
 public:
 
-	typedef stream_socket next_layer_type;
-	typedef stream_socket::lowest_layer_type lowest_layer_type;
-	typedef stream_socket::endpoint_type endpoint_type;
-	typedef stream_socket::protocol_type protocol_type;
+	typedef boost::function<void(error_code const&)> handler_type;
 
-	explicit proxy_base(io_service& io_service)
-		: m_sock(io_service)
-		, m_port(0)
-		, m_resolver(io_service)
-	{}
+	typedef tcp::socket next_layer_type;
+	typedef tcp::socket::lowest_layer_type lowest_layer_type;
+	typedef tcp::socket::endpoint_type endpoint_type;
+	typedef tcp::socket::protocol_type protocol_type;
+
+	explicit proxy_base(io_service& io_service);
+	~proxy_base();
 
 	void set_proxy(std::string hostname, int port)
 	{
 		m_hostname = hostname;
 		m_port = port;
 	}
+
+#if BOOST_VERSION >= 106600
+	typedef tcp::socket::executor_type executor_type;
+	executor_type get_executor() { return m_sock.get_executor(); }
+#endif
 
 	template <class Mutable_Buffers, class Handler>
 	void async_read_some(Mutable_Buffers const& buffers, Handler const& handler)
@@ -120,6 +128,18 @@ public:
 	}
 
 #ifndef BOOST_NO_EXCEPTIONS
+	void non_blocking(bool b)
+	{
+		m_sock.non_blocking(b);
+	}
+#endif
+
+	error_code non_blocking(bool b, error_code& ec)
+	{
+		return m_sock.non_blocking(b, ec);
+	}
+
+#ifndef BOOST_NO_EXCEPTIONS
 	template <class SettableSocketOption>
 	void set_option(SettableSocketOption const& opt)
 	{
@@ -148,13 +168,18 @@ public:
 	}
 
 #ifndef BOOST_NO_EXCEPTIONS
-	void bind(endpoint_type const& endpoint)
+	void bind(endpoint_type const& /* endpoint */)
 	{
 //		m_sock.bind(endpoint);
 	}
 #endif
 
-	void bind(endpoint_type const& endpoint, error_code& ec)
+	error_code cancel(error_code& ec)
+	{
+		return m_sock.cancel(ec);
+	}
+
+	void bind(endpoint_type const& /* endpoint */, error_code& /* ec */)
 	{
 		// the reason why we ignore binds here is because we don't
 		// (necessarily) yet know what address family the proxy
@@ -168,13 +193,13 @@ public:
 	}
 
 #ifndef BOOST_NO_EXCEPTIONS
-	void open(protocol_type const& p)
+	void open(protocol_type const&)
 	{
 //		m_sock.open(p);
 	}
 #endif
 
-	void open(protocol_type const& p, error_code& ec)
+	void open(protocol_type const&, error_code&)
 	{
 		// we need to ignore this for the same reason as stated
 		// for ignoring bind()
@@ -206,7 +231,7 @@ public:
 
 	endpoint_type remote_endpoint(error_code& ec) const
 	{
-		if (!m_sock.is_open()) ec = asio::error::not_connected;
+		if (!m_sock.is_open()) ec = boost::asio::error::not_connected;
 		return m_remote_endpoint;
 	}
 
@@ -238,15 +263,18 @@ public:
 	}
 
 	bool is_open() const { return m_sock.is_open(); }
-	
+
 protected:
 
-	stream_socket m_sock;
-	std::string m_hostname;
-	int m_port;
+	bool handle_error(error_code const& e, boost::shared_ptr<handler_type> const& h);
+
+	tcp::socket m_sock;
+	std::string m_hostname; // proxy host
+	int m_port;             // proxy port
 
 	endpoint_type m_remote_endpoint;
 
+	// TODO: 2 use the resolver interface that has a built-in cache
 	tcp::resolver m_resolver;
 };
 

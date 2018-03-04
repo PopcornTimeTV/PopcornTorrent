@@ -12,7 +12,7 @@
 - (void)testMangetLinkStreaming {
     XCTestExpectation *expectation = [self expectationWithDescription:@"Torrent Streaming"];
     
-    [[PTTorrentStreamer sharedStreamer] startStreamingFromFileOrMagnetLink:@"magnet:?xt=urn:btih:6ca50a090e6f71b0ce49c4c22dae9a52b85561a9&dn=The.Grand.Tour.S02E09.WEBRip.x264-ION10&tr=http%3A%2F%2Ftracker.trackerfix.com%3A80%2Fannounce&tr=udp%3A%2F%2F9.rarbg.me%3A2710&tr=udp%3A%2F%2F9.rarbg.to%3A2710" progress:^(PTTorrentStatus status) {
+    [[PTTorrentStreamer sharedStreamer] startStreamingFromFileOrMagnetLink:@"magnet:?xt=urn:btih:2037B2296417B5D6D3B89DC7A288255943406CF7&tr=udp://glotorrents.pw:6969/announce&tr=udp://tracker.opentrackr.org:1337/announce&tr=udp://torrent.gresille.org:80/announce&tr=udp://tracker.openbittorrent.com:80&tr=udp://tracker.coppersurfer.tk:6969&tr=udp://tracker.leechers-paradise.org:6969&tr=udp://p4p.arenabg.ch:1337&tr=udp://tracker.internetwarriors.net:1337" progress:^(PTTorrentStatus status) {
         
     } readyToPlay:^(NSURL *videoFileURL, NSURL* video) {
         NSLog(@"%@", videoFileURL);

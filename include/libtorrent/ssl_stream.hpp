@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2008-2014, Arvid Norberg
+Copyright (c) 2008-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,40 +33,66 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_SSL_STREAM_HPP_INCLUDED
 #define TORRENT_SSL_STREAM_HPP_INCLUDED
 
+#ifdef TORRENT_USE_OPENSSL
+
 #include "libtorrent/socket.hpp"
+#include "libtorrent/error_code.hpp"
+#include "libtorrent/io_service.hpp"
+#include "libtorrent/aux_/openssl.hpp"
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
+#include <boost/function/function1.hpp>
 #include <boost/bind.hpp>
-#if BOOST_VERSION < 103500
-#include <asio/ssl.hpp>
-#else
 #include <boost/asio/ssl.hpp>
-#endif
+
 // openssl seems to believe it owns
 // this name in every single scope
 #undef set_key
 
+#if defined TORRENT_BUILD_SIMULATOR
+#include "simulator/simulator.hpp"
+#endif
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
 namespace libtorrent {
+
+	namespace ssl {
+#if defined TORRENT_BUILD_SIMULATOR
+	using sim::asio::ssl::context;
+	using sim::asio::ssl::stream_base;
+	using sim::asio::ssl::stream;
+#else
+	using boost::asio::ssl::context;
+	using boost::asio::ssl::stream_base;
+	using boost::asio::ssl::stream;
+#endif
+	}
 
 template <class Stream>
 class ssl_stream
 {
 public:
 
-	explicit ssl_stream(io_service& io_service, asio::ssl::context& ctx)
+	explicit ssl_stream(io_service& io_service, ssl::context& ctx)
 		: m_sock(io_service, ctx)
 	{
 	}
 
-	typedef typename asio::ssl::stream<Stream> sock_type;
+	typedef typename boost::asio::ssl::stream<Stream> sock_type;
 	typedef typename sock_type::next_layer_type next_layer_type;
 	typedef typename Stream::lowest_layer_type lowest_layer_type;
 	typedef typename Stream::endpoint_type endpoint_type;
 	typedef typename Stream::protocol_type protocol_type;
+#if BOOST_VERSION >= 106600
+	typedef typename sock_type::executor_type executor_type;
+	executor_type get_executor() { return m_sock.get_executor(); }
+#endif
 
 	void set_host_name(std::string name)
 	{
-#if OPENSSL_VERSION_NUMBER >= 0x90812f
-		SSL_set_tlsext_host_name(m_sock.native_handle(), name.c_str());
-#endif
+		aux::openssl_set_tlsext_hostname(m_sock.native_handle(), name.c_str());
 	}
 
 	template <class T>
@@ -99,19 +125,21 @@ public:
 	{
 		// this is used for accepting SSL connections
 		boost::shared_ptr<handler_type> h(new handler_type(handler));
-		m_sock.async_handshake(asio::ssl::stream_base::server
+		m_sock.async_handshake(ssl::stream_base::server
 			, boost::bind(&ssl_stream::handshake, this, _1, h));
 	}
 
 	void accept_handshake(error_code& ec)
 	{
 		// this is used for accepting SSL connections
-		m_sock.handshake(asio::ssl::stream_base::server, ec);
+		m_sock.handshake(ssl::stream_base::server, ec);
 	}
 
 	template <class Handler>
 	void async_shutdown(Handler const& handler)
 	{
+		error_code ec;
+		m_sock.next_layer().cancel(ec);
 		m_sock.async_shutdown(handler);
 	}
 
@@ -180,6 +208,13 @@ public:
 		m_sock.next_layer().io_control(ioc, ec);
 	}
 
+#ifndef BOOST_NO_EXCEPTIONS
+	void non_blocking(bool b) { m_sock.next_layer().non_blocking(b); }
+#endif
+
+	error_code non_blocking(bool b, error_code& ec)
+	{ return m_sock.next_layer().non_blocking(b, ec); }
+
 	template <class Const_Buffers, class Handler>
 	void async_write_some(Const_Buffers const& buffers, Handler const& handler)
 	{
@@ -192,13 +227,16 @@ public:
 		return m_sock.write_some(buffers, ec);
 	}
 
+	// the SSL stream may cache 17 kiB internally, and there's no way of
+	// asking how large its buffer is. 17 kiB isn't very much though, so it
+	// seems fine to potentially over-estimate the number of bytes available.
 #ifndef BOOST_NO_EXCEPTIONS
 	std::size_t available() const
-	{ return const_cast<sock_type&>(m_sock).next_layer().available(); }
+	{ return 17 * 1024 + const_cast<sock_type&>(m_sock).next_layer().available(); }
 #endif
 
 	std::size_t available(error_code& ec) const
-	{ return const_cast<sock_type&>(m_sock).next_layer().available(ec); }
+	{ return 17 * 1024 + const_cast<sock_type&>(m_sock).next_layer().available(ec); }
 
 #ifndef BOOST_NO_EXCEPTIONS
 	void bind(endpoint_type const& endpoint)
@@ -274,7 +312,7 @@ public:
 	{
 		return m_sock.lowest_layer();
 	}
-	
+
 	next_layer_type& next_layer()
 	{
 		return m_sock.next_layer();
@@ -290,7 +328,7 @@ private:
 			return;
 		}
 
-		m_sock.async_handshake(asio::ssl::stream_base::client
+		m_sock.async_handshake(ssl::stream_base::client
 			, boost::bind(&ssl_stream::handshake, this, _1, h));
 	}
 
@@ -299,10 +337,12 @@ private:
 		(*h)(e);
 	}
 
-	asio::ssl::stream<Stream> m_sock;
+	ssl::stream<Stream> m_sock;
 };
 
 }
+
+#endif // TORRENT_USE_OPENSSL
 
 #endif
 

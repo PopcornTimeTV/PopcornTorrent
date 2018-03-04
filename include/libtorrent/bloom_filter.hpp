@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2010-2014, Arvid Norberg
+Copyright (c) 2010-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,11 +33,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_BLOOM_FILTER_HPP_INCLUDED
 #define TORRENT_BLOOM_FILTER_HPP_INCLUDED
 
-#include <boost/cstdint.hpp>
 #include "libtorrent/peer_id.hpp" // for sha1_hash
 #include "libtorrent/config.hpp" // for sha1_hash
 
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
+#include <boost/cstdint.hpp>
 #include <math.h> // for log()
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 namespace libtorrent
 {
@@ -55,7 +59,7 @@ namespace libtorrent
 		{ set_bits(&k[0], bits, N); }
 
 		std::string to_string() const
-		{ return std::string((char const*)&bits[0], N); }
+		{ return std::string(reinterpret_cast<char const*>(&bits[0]), N); }
 
 		void from_string(char const* str)
 		{ memcpy(bits, str, N); }

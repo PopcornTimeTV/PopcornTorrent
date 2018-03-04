@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,14 +33,17 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_XML_PARSE_HPP
 #define TORRENT_XML_PARSE_HPP
 
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
 #include <cctype>
 #include <cstring>
 
+#include <boost/function.hpp>
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
 #include "libtorrent/config.hpp"
 #include "libtorrent/assert.hpp"
-#include "libtorrent/escape_string.hpp"
-
-#include <boost/function.hpp>
 
 namespace libtorrent
 {
@@ -59,11 +62,14 @@ namespace libtorrent
 		xml_tag_content
 	};
 
-	// callback(int type, char const* name, char const* val)
-	// str2 is only used for attributes. name is element or attribute
-	// name and val is attribute value
-	TORRENT_EXTRA_EXPORT void xml_parse(char* p, char* end
-		, boost::function<void(int,char const*,char const*)> callback);
+	// callback(int type, char const* name, int name_len
+	//   , char const* val, int val_len)
+	// name is element or attribute name
+	// val is attribute value
+	// neither string is null terminated, but their lengths are specified via
+	// name_len and val_len respectively
+	TORRENT_EXTRA_EXPORT void xml_parse(char const* p, char const* end
+		, boost::function<void(int,char const*,int,char const*,int)> callback);
 }
 
 

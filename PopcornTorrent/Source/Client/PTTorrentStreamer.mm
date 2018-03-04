@@ -24,6 +24,7 @@ int MIN_PIECES; //they are calculated by divind the 5% of a torrent file size wi
 
 NSNotificationName const PTTorrentStatusDidChangeNotification = @"com.popcorntimetv.popcorntorrent.status.change";
 
+
 using namespace libtorrent;
 
 @implementation PTTorrentStreamer
@@ -98,6 +99,7 @@ using namespace libtorrent;
     settings.announce_to_all_trackers = true;
     settings.prefer_udp_trackers = false;
     settings.max_peerlist_size = 10000;
+    settings.cache_size = 2048;
     _session->set_settings(settings);
     
     _requestedRangeInfo = [[NSMutableDictionary alloc] init];
@@ -151,8 +153,8 @@ using namespace libtorrent;
         if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
             NSData *fileData = [NSData dataWithContentsOfFile:filePath];
             MD5String = [CocoaSecurity md5WithData:fileData].hexLower;
-            
-            tp.ti = new torrent_info([filePathOrMagnetLink UTF8String], ec);
+            shared_ptr<torrent_info> ti1 = boost::make_shared<torrent_info>([filePathOrMagnetLink UTF8String], ec);
+            tp.ti = ti1;
             if (ec) {
                 error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
             }
@@ -222,7 +224,7 @@ using namespace libtorrent;
     std::vector<torrent_handle> ths = _session->get_torrents();
     
     for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
-        boost::intrusive_ptr<const torrent_info> ti = ths[i].torrent_file();
+        boost::shared_ptr<const torrent_info> ti = ths[i].torrent_file();
         
         //get all the pieces in the movie
         int totalTorrentPieces = ti->num_pieces();
@@ -357,7 +359,7 @@ using namespace libtorrent;
     required_pieces.clear();
     
     std::vector<int> piece_priorities = th.piece_priorities();
-    boost::intrusive_ptr<const torrent_info> ti = th.torrent_file();
+    boost::shared_ptr<const torrent_info> ti = th.torrent_file();
     th.clear_piece_deadlines();//clear all deadlines on all pieces before we set new ones
     std::fill(piece_priorities.begin(), piece_priorities.end(), 1);
     th.prioritize_pieces(piece_priorities);// clear all piece priorities before setting new ones
@@ -379,7 +381,7 @@ using namespace libtorrent;
     self.streaming = YES;
     _status = th.status();
     
-    boost::intrusive_ptr<const torrent_info> ti = th.torrent_file();
+    boost::shared_ptr<const torrent_info> ti = th.torrent_file();
     int file_index = [self indexOfLargestFileInTorrent:th];
     file_entry fe = ti->file_at(file_index);
     std::string path = fe.path;
@@ -425,7 +427,7 @@ using namespace libtorrent;
         }
     }];
     
-    [self.mediaServer startWithPort:50321 bonjourName:nil];
+    [self.mediaServer startWithPort:50322 bonjourName:nil];
     
     __block NSURL *serverURL = self.mediaServer.serverURL;
     
@@ -441,14 +443,14 @@ using namespace libtorrent;
 
 
 - (int)indexOfLargestFileInTorrent:(torrent_handle)th {
-    boost::intrusive_ptr<const torrent_info> ti = th.torrent_file();
+    boost::shared_ptr<const torrent_info> ti = th.torrent_file();
     return [self indexOfLargestFileInTorrentWithTorrentInfo:ti];
 }
 
-- (int)indexOfLargestFileInTorrentWithTorrentInfo:(boost::intrusive_ptr<const torrent_info>)ti {
+- (int)indexOfLargestFileInTorrentWithTorrentInfo:(boost::shared_ptr<const torrent_info>)ti {
     int files_count = ti->num_files();
     if (files_count > 1) {
-        size_type largest_size = -1;
+        int64_t largest_size = -1;
         int largest_file_index = -1;
         for (int i = 0; i < files_count; i++) {
             file_entry fe = ti->file_at(i);
@@ -485,14 +487,14 @@ using namespace libtorrent;
     file_priorities[file_index] = LIBTORRENT_PRIORITY_MAXIMUM;
     th.prioritize_files(file_priorities);
     
-    boost::intrusive_ptr<const torrent_info> ti = th.torrent_file();
+    boost::shared_ptr<const torrent_info> ti = th.torrent_file();
     MIN_PIECES = ((ti->file_at([self indexOfLargestFileInTorrent:th]).size*0.05)/ti->piece_length());
     int first_piece = ti->map_file(file_index, 0, 0).piece;
     for (int i = first_piece; i < first_piece + MIN_PIECES; i++) {
         required_pieces.push_back(i);
     }
     
-    size_type file_size = ti->file_at(file_index).size;
+    int64_t file_size = ti->file_at(file_index).size;
     int last_piece = ti->map_file(file_index, file_size - 1, 0).piece;
     for (int i = 0; i < 10; i++) {
         required_pieces.push_back(last_piece - i);

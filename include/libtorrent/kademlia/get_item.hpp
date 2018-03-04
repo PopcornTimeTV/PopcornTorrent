@@ -43,23 +43,25 @@ namespace libtorrent { namespace dht
 class get_item : public find_data
 {
 public:
-	typedef boost::function<bool(item&)> data_callback;
+	typedef boost::function<void(item const&, bool)> data_callback;
 
-	void got_data(lazy_entry const* v,
+	void got_data(bdecode_node const& v,
 		char const* pk,
 		boost::uint64_t seq,
 		char const* sig);
 
 	// for immutable itms
-	get_item(node_impl& node
+	get_item(node& dht_node
 		, node_id target
-		, data_callback const& dcallback);
+		, data_callback const& dcallback
+		, nodes_callback const& ncallback);
 
 	// for mutable items
-	get_item(node_impl& node
+	get_item(node& dht_node
 		, char const* pk
 		, std::string const& salt
-		, data_callback const& dcallback);
+		, data_callback const& dcallback
+		, nodes_callback const& ncallback);
 
 	virtual char const* name() const;
 
@@ -68,11 +70,9 @@ protected:
 	virtual bool invoke(observer_ptr o);
 	virtual void done();
 
-	void put(std::vector<std::pair<node_entry, std::string> > const& v);
-
 	data_callback m_data_callback;
 	item m_data;
-	std::string m_salt;
+	bool m_immutable;
 };
 
 class get_item_observer : public find_data_observer

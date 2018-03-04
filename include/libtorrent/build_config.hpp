@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2010-2014, Arvid Norberg
+Copyright (c) 2010-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,24 +37,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/stringize.hpp>
 
-#if TORRENT_USE_BOOST_DATE_TIME
-#define TORRENT_CFG_TIME boosttime_
-#elif TORRENT_USE_ABSOLUTE_TIME
-#define TORRENT_CFG_TIME absolutetime_
-#elif TORRENT_USE_QUERY_PERFORMANCE_TIMER
-#define TORRENT_CFG_TIME performancetimer_
-#elif TORRENT_USE_CLOCK_GETTIME
-#define TORRENT_CFG_TIME clocktime_
-#elif TORRENT_USE_SYSTEM_TIME
-#define TORRENT_CFG_TIME systime_
-#else
-#error what timer is used?
-#endif
-
+// TODO: 2 instead of using a dummy function to cause link errors when
+// incompatible build configurations are used, make the namespace name
+// depend on the configuration, and have a using declaration in the headers
+// to pull it into libtorrent.
 #if TORRENT_USE_IPV6
 #define TORRENT_CFG_IPV6 ipv6_
 #else
-#define TORRENT_CFG_IPV6 noipv_-
+#define TORRENT_CFG_IPV6 noipv6_
 #endif
 
 #ifdef TORRENT_NO_DEPRECATE
@@ -64,7 +54,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #define TORRENT_CFG \
-	BOOST_PP_CAT(TORRENT_CFG_TIME, \
+	BOOST_PP_CAT(TORRENT_CFG_IPV6, \
 	TORRENT_CFG_DEPR)
 
 #define TORRENT_CFG_STRING BOOST_PP_STRINGIZE(TORRENT_CFG)

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2014, Arvid Norberg
+Copyright (c) 2009-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/version.hpp>
 #include "libtorrent/config.hpp"
 
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
 #ifdef __OBJC__
 #define Protocol Protocol_
 #endif
@@ -45,24 +47,25 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <winsock2.h>
 #endif
 
-#if BOOST_VERSION < 103500
-#include <asio/ip/address.hpp>
-#else
 #include <boost/asio/ip/address.hpp>
+
+#if defined TORRENT_BUILD_SIMULATOR
+#include "simulator/simulator.hpp"
 #endif
 
-#ifdef __OBJC__ 
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
+#ifdef __OBJC__
 #undef Protocol
 #endif
 
 namespace libtorrent
 {
-
-#if BOOST_VERSION < 103500
-	typedef ::asio::ip::address address;
-	typedef ::asio::ip::address_v4 address_v4;
+#if defined TORRENT_BUILD_SIMULATOR
+	typedef sim::asio::ip::address address;
+	typedef sim::asio::ip::address_v4 address_v4;
 #if TORRENT_USE_IPV6
-	typedef ::asio::ip::address_v6 address_v6;
+	typedef sim::asio::ip::address_v6 address_v6;
 #endif
 #else
 	typedef boost::asio::ip::address address;
@@ -70,7 +73,7 @@ namespace libtorrent
 #if TORRENT_USE_IPV6
 	typedef boost::asio::ip::address_v6 address_v6;
 #endif
-#endif
+#endif // SIMULATOR
 }
 
 #endif

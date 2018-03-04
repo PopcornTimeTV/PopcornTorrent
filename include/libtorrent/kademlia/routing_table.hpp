@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2006-2014, Arvid Norberg
+Copyright (c) 2006-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,37 +33,38 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef ROUTING_TABLE_HPP
 #define ROUTING_TABLE_HPP
 
-#include <vector>
-#include <boost/cstdint.hpp>
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
+#include <vector>
+#include <set>
+
+#include <boost/cstdint.hpp>
 #include <boost/utility.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/array.hpp>
 #include <boost/noncopyable.hpp>
-#include <set>
+#include <boost/unordered_set.hpp>
 
-#include <libtorrent/kademlia/logging.hpp>
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 #include <libtorrent/kademlia/node_id.hpp>
 #include <libtorrent/kademlia/node_entry.hpp>
 #include <libtorrent/session_settings.hpp>
-#include <libtorrent/size_type.hpp>
 #include <libtorrent/assert.hpp>
-#include <libtorrent/ptime.hpp>
+#include <libtorrent/time.hpp>
 
 namespace libtorrent
 {
+#ifndef TORRENT_NO_DEPRECATE
 	struct session_status;
+#endif
+	struct dht_routing_bucket;
 }
 
 namespace libtorrent { namespace dht
 {
+struct dht_logger;
 
-#ifdef TORRENT_DHT_VERBOSE_LOGGING
-TORRENT_DECLARE_LOG(table);
-#endif
-
-	
 typedef std::vector<node_entry> bucket_t;
 
 struct routing_table_node
@@ -82,18 +83,36 @@ struct routing_table_node
 // 	bucket has failed, then it is put in the replacement
 // 	cache (just like in the paper).
 
+namespace impl
+{
+	template <typename F>
+	inline void forwarder(void* userdata, node_entry const& node)
+	{
+		F* f = reinterpret_cast<F*>(userdata);
+		(*f)(node);
+	}
+}
+
 class TORRENT_EXTRA_EXPORT routing_table : boost::noncopyable
 {
 public:
+	// TODO: 3 to improve memory locality and scanning performance, turn the
+	// routing table into a single vector with boundaries for the nodes instead.
+	// Perhaps replacement nodes should be in a separate vector.
 	typedef std::vector<routing_table_node> table_t;
 
 	routing_table(node_id const& id, int bucket_size
-		, dht_settings const& settings);
+		, dht_settings const& settings
+		, dht_logger* log);
 
+#ifndef TORRENT_NO_DEPRECATE
 	void status(session_status& s) const;
+#endif
+
+	void status(std::vector<dht_routing_bucket>& s) const;
 
 	void node_failed(node_id const& id, udp::endpoint const& ep);
-	
+
 	// adds an endpoint that will never be added to
 	// the routing table
 	void add_router_node(udp::endpoint router);
@@ -122,7 +141,11 @@ public:
 	// not pinged. If the bucket the node falls into is full,
 	// the node will be ignored.
 	void heard_about(node_id const& id, udp::endpoint const& ep);
-	
+
+	// change our node ID. This can be expensive since nodes must be moved around
+	// and potentially dropped
+	void update_node_id(node_id id);
+
 	node_entry const* next_refresh();
 
 	enum
@@ -137,15 +160,21 @@ public:
 		, int options, int count = 0);
 	void remove_node(node_entry* n
 		, table_t::iterator bucket) ;
-	
+
 	int bucket_size(int bucket) const
 	{
 		int num_buckets = m_buckets.size();
 		if (num_buckets == 0) return 0;
-		if (bucket < num_buckets) bucket = num_buckets - 1;
+		if (bucket >= num_buckets) bucket = num_buckets - 1;
 		table_t::const_iterator i = m_buckets.begin();
 		std::advance(i, bucket);
-		return (int)i->live_nodes.size();
+		return int(i->live_nodes.size());
+	}
+
+	template <typename F>
+	void for_each_node(F f)
+	{
+		for_each_node(&impl::forwarder<F>, &impl::forwarder<F>, reinterpret_cast<void*>(&f));
 	}
 
 	void for_each_node(void (*)(void*, node_entry const&)
@@ -158,18 +187,16 @@ public:
 	// been pinged and confirmed up
 	boost::tuple<int, int, int> size() const;
 
-	size_type num_global_nodes() const;
+	boost::int64_t num_global_nodes() const;
 
 	// the number of bits down we have full buckets
 	// i.e. essentially the number of full buckets
 	// we have
 	int depth() const;
-	
-	int num_active_buckets() const { return m_buckets.size(); }
-	
-	void replacement_cache(bucket_t& nodes) const;
 
-#if defined TORRENT_DHT_VERBOSE_LOGGING || defined TORRENT_DEBUG
+	int num_active_buckets() const { return m_buckets.size(); }
+
+#if defined TORRENT_DEBUG
 	// used for debug and monitoring purposes. This will print out
 	// the state of the routing table to the given stream
 	void print_state(std::ostream& os) const;
@@ -181,7 +208,13 @@ public:
 	void check_invariant() const;
 #endif
 
+	bool is_full(int bucket) const;
+
 private:
+
+#ifndef TORRENT_DISABLE_LOGGING
+	dht_logger* m_log;
+#endif
 
 	table_t::iterator find_bucket(node_id const& id);
 
@@ -195,9 +228,6 @@ private:
 
 	dht_settings const& m_settings;
 
-	// constant called k in paper
-	int m_bucket_size;
-	
 	// (k-bucket, replacement cache) pairs
 	// the first entry is the bucket the furthest
 	// away from our own ID. Each time the bucket
@@ -214,8 +244,8 @@ private:
 
 	// the last time we refreshed our own bucket
 	// refreshed every 15 minutes
-	mutable ptime m_last_self_refresh;
-	
+	mutable time_point m_last_self_refresh;
+
 	// this is a set of all the endpoints that have
 	// been identified as router nodes. They will
 	// be used in searches, but they will never
@@ -226,7 +256,10 @@ private:
 	// table. It's used to only allow a single entry
 	// per IP in the whole table. Currently only for
 	// IPv4
-	std::multiset<address_v4::bytes_type> m_ips;
+	boost::unordered_multiset<address_v4::bytes_type> m_ips;
+
+	// constant called k in paper
+	int m_bucket_size;
 };
 
 } } // namespace libtorrent::dht

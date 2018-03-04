@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2014, Arvid Norberg
+Copyright (c) 2003-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+#include "libtorrent/config.hpp"
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
 #include <string>
 #include <cctype>
 #include <algorithm>
@@ -40,12 +44,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/array.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/escape_string.hpp"
-#include "libtorrent/parse_url.hpp"
-#include "libtorrent/random.hpp"
-
 #ifdef TORRENT_WINDOWS
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -53,34 +51,27 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <windows.h>
 #endif
 
-#include "libtorrent/utf8.hpp"
-#include "libtorrent/thread.hpp"
-
 #if TORRENT_USE_ICONV
 #include <iconv.h>
 #include <locale.h>
-#endif 
+#endif
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
+#include "libtorrent/assert.hpp"
+#include "libtorrent/parse_url.hpp"
+#include "libtorrent/random.hpp"
+
+#include "libtorrent/utf8.hpp"
+#include "libtorrent/thread.hpp"
+
+#include "libtorrent/aux_/escape_string.hpp"
+#include "libtorrent/string_util.hpp" // for to_string
 
 namespace libtorrent
 {
-
-	// lexical_cast's result depends on the locale. We need
-	// a well defined result
-	boost::array<char, 4 + std::numeric_limits<size_type>::digits10> to_string(size_type n)
-	{
-		boost::array<char, 4 + std::numeric_limits<size_type>::digits10> ret;
-		char *p = &ret.back();
-		*p = '\0';
-		unsigned_size_type un = n;
-		if (n < 0)  un = -un; // TODO: warning C4146: unary minus operator applied to unsigned type, result still unsigned
-		do {
-			*--p = '0' + un % 10;
-			un /= 10;
-		} while (un);
-		if (n < 0) *--p = '-';
-		std::memmove(&ret[0], p, &ret.back() - p + 1);
-		return ret;
-	}
+	// defined in hex.cpp
+	extern const char hex_chars[];
 
 	std::string unescape_string(std::string const& s, error_code& ec)
 	{
@@ -152,8 +143,6 @@ namespace libtorrent
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 		"0123456789";
 
-	static const char hex_chars[] = "0123456789abcdef";
-
 	// the offset is used to ignore the first characters in the unreserved_chars table.
 	static std::string escape_string_impl(const char* str, int len, int offset)
 	{
@@ -172,14 +161,14 @@ namespace libtorrent
 			else
 			{
 				ret += '%';
-				ret += hex_chars[((unsigned char)*str) >> 4];
-				ret += hex_chars[((unsigned char)*str) & 15];
+				ret += hex_chars[boost::uint8_t(*str) >> 4];
+				ret += hex_chars[boost::uint8_t(*str) & 15];
 			}
 			++str;
 		}
 		return ret;
 	}
-	
+
 	std::string escape_string(const char* str, int len)
 	{
 		return escape_string_impl(str, len, 11);
@@ -200,7 +189,7 @@ namespace libtorrent
 		}
 		return false;
 	}
-	
+
 	void convert_path_to_posix(std::string& path)
 	{
 		for (std::string::iterator i = path.begin()
@@ -208,6 +197,16 @@ namespace libtorrent
 			if (*i == '\\') *i = '/';
 	}
 
+#ifdef TORRENT_WINDOWS
+	void convert_path_to_windows(std::string& path)
+	{
+		for (std::string::iterator i = path.begin()
+			, end(path.end()); i != end; ++i)
+			if (*i == '/') *i = '\\';
+	}
+#endif
+
+	// TODO: 2 this should probably be moved into string_util.cpp
 	std::string read_until(char const*& str, char delim, char const* end)
 	{
 		TORRENT_ASSERT(str <= end);
@@ -242,6 +241,32 @@ namespace libtorrent
 			, port == -1 ? "" : to_string(port).elems
 			, escape_path(path.c_str(), path.size()).c_str());
 		return msg;
+	}
+
+	std::string resolve_file_url(std::string const& url)
+	{
+		TORRENT_ASSERT(url.substr(0, 7) == "file://");
+		// first, strip the file:// part.
+		// On windows, we have
+		// to strip the first / as well
+		int num_to_strip = 7;
+#ifdef TORRENT_WINDOWS
+		if (url[7] == '/' || url[7] == '\\') ++num_to_strip;
+#endif
+		std::string ret = url.substr(num_to_strip);
+
+		// we also need to URL-decode it
+		error_code ec;
+		std::string unescaped = unescape_string(ret, ec);
+		if (ec) unescaped = ret;
+
+		// on windows, we need to convert forward slashes
+		// to backslashes
+#ifdef TORRENT_WINDOWS
+		convert_path_to_windows(unescaped);
+#endif
+
+		return unescaped;
 	}
 
 	std::string base64encode(const std::string& s)
@@ -296,15 +321,23 @@ namespace libtorrent
 		return ret;
 	}
 
-	std::string base32encode(std::string const& s)
+	std::string base32encode(std::string const& s, int flags)
 	{
-		static const char base32_table[] =
+		static const char base32_table_canonical[] =
 		{
 			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 			'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
 			'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
 			'Y', 'Z', '2', '3', '4', '5', '6', '7'
 		};
+		static const char base32_table_lowercase[] =
+		{
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+			'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+			'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+			'y', 'z', '2', '3', '4', '5', '6', '7'
+		};
+		const char *base32_table = 0 != (flags & string::lowercase) ? base32_table_lowercase : base32_table_canonical;
 
 		int input_output_mapping[] = {0, 2, 4, 5, 7, 8};
 		
@@ -340,10 +373,13 @@ namespace libtorrent
 				ret += base32_table[outbuf[j]];
 			}
 
-			// write pad
-			for (int j = 0; j < 8 - num_out; ++j)
+			if (0 == (flags & string::no_padding))
 			{
-				ret += '=';
+				// write pad
+				for (int j = 0; j < 8 - num_out; ++j)
+				{
+					ret += '=';
+				}
 			}
 		}
 		return ret;
@@ -429,60 +465,6 @@ namespace libtorrent
 		return url.substr(pos, url.find('&', pos) - pos);
 	}
 
-	TORRENT_EXTRA_EXPORT std::string to_hex(std::string const& s)
-	{
-		std::string ret;
-		for (std::string::const_iterator i = s.begin(); i != s.end(); ++i)
-		{
-			ret += hex_chars[((unsigned char)*i) >> 4];
-			ret += hex_chars[((unsigned char)*i) & 0xf];
-		}
-		return ret;
-	}
-
-	TORRENT_EXTRA_EXPORT void to_hex(char const *in, int len, char* out)
-	{
-		for (char const* end = in + len; in < end; ++in)
-		{
-			*out++ = hex_chars[((unsigned char)*in) >> 4];
-			*out++ = hex_chars[((unsigned char)*in) & 0xf];
-		}
-		*out = '\0';
-	}
-
-	TORRENT_EXTRA_EXPORT int hex_to_int(char in)
-	{
-		if (in >= '0' && in <= '9') return int(in) - '0';
-		if (in >= 'A' && in <= 'F') return int(in) - 'A' + 10;
-		if (in >= 'a' && in <= 'f') return int(in) - 'a' + 10;
-		return -1;
-	}
-
-	TORRENT_EXTRA_EXPORT bool is_hex(char const *in, int len)
-	{
-		for (char const* end = in + len; in < end; ++in)
-		{
-			int t = hex_to_int(*in);
-			if (t == -1) return false;
-		}
-		return true;
-	}
-
-	TORRENT_EXTRA_EXPORT bool from_hex(char const *in, int len, char* out)
-	{
-		for (char const* end = in + len; in < end; ++in, ++out)
-		{
-			int t = hex_to_int(*in);
-			if (t == -1) return false;
-			*out = t << 4;
-			++in;
-			t = hex_to_int(*in);
-			if (t == -1) return false;
-			*out |= t & 15;
-		}
-		return true;
-	}
-
 #if defined TORRENT_WINDOWS && TORRENT_USE_WSTRING
 	std::wstring convert_to_wstring(std::string const& s)
 	{
@@ -532,6 +514,18 @@ namespace libtorrent
 #endif
 
 #if TORRENT_USE_ICONV
+namespace {
+
+	// this is a helper function to deduce the type of the second argument to
+	// the iconv() function.
+
+	template <typename Input>
+	size_t call_iconv(size_t (&fun)(iconv_t, Input**, size_t*, char**, size_t*)
+		, iconv_t cd, char const** in, size_t* insize, char** out, size_t* outsize)
+	{
+		return fun(cd, const_cast<Input**>(in), insize, out, outsize);
+	}
+
 	std::string iconv_convert_impl(std::string const& s, iconv_t h)
 	{
 		std::string ret;
@@ -540,12 +534,11 @@ namespace libtorrent
 		ret.resize(outsize);
 		char const* in = s.c_str();
 		char* out = &ret[0];
-		// posix has a weird iconv signature. implementations
-		// differ on what this signature should be, so we use
-		// a macro to let config.hpp determine it
-		size_t retval = iconv(h, TORRENT_ICONV_ARG &in, &insize,
-			&out, &outsize);
-		if (retval == (size_t)-1) return s;
+		// posix has a weird iconv() signature. implementations
+		// differ on the type of the second parameter. We use a helper template
+		// to deduce what we need to cast to.
+		size_t const retval = call_iconv(::iconv, h, &in, &insize, &out, &outsize);
+		if (retval == size_t(-1)) return s;
 		// if this string has an invalid utf-8 sequence in it, don't touch it
 		if (insize != 0) return s;
 		// not sure why this would happen, but it seems to be possible
@@ -555,6 +548,7 @@ namespace libtorrent
 		ret.resize(ret.size() - outsize);
 		return ret;
 	}
+} // anonymous namespace
 
 	std::string convert_to_native(std::string const& s)
 	{

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2006-2014, Arvid Norberg & Daniel Wallin
+Copyright (c) 2006-2016, Arvid Norberg & Daniel Wallin
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,21 +33,19 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <libtorrent/kademlia/refresh.hpp>
 #include <libtorrent/kademlia/rpc_manager.hpp>
 #include <libtorrent/kademlia/node.hpp>
+#include <libtorrent/kademlia/dht_observer.hpp>
+#include <libtorrent/performance_counters.hpp>
 
 #include <libtorrent/io.hpp>
 
 namespace libtorrent { namespace dht
 {
 
-#ifdef TORRENT_DHT_VERBOSE_LOGGING
-	TORRENT_DECLARE_LOG(traversal);
-#endif
-
 observer_ptr bootstrap::new_observer(void* ptr
 	, udp::endpoint const& ep, node_id const& id)
 {
 	observer_ptr o(new (ptr) get_peers_observer(this, ep, id));
-#if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
+#if defined TORRENT_DEBUG || defined TORRENT_RELEASE_ASSERTS
 	o->m_in_constructor = false;
 #endif
 	return o;
@@ -60,40 +58,42 @@ bool bootstrap::invoke(observer_ptr o)
 	entry& a = e["a"];
 
 	e["q"] = "get_peers";
-	a["info_hash"] = target().to_string();
+	// in case our node id changes during the bootstrap, make sure to always use
+	// the current node id (rather than the target stored in the traversal
+	// algorithm)
+	node_id target = get_node().nid();
+	make_id_secret(target);
+	a["info_hash"] = target.to_string();
+
+	if (o->flags & observer::flag_initial)
+	{
+		// if this packet is being sent to a bootstrap/router node, let it know
+		// that we're actualy bootstrapping (as opposed to being collateral
+		// traffic).
+		a["bs"] = 1;
+	}
 
 //	e["q"] = "find_node";
-//	a["target"] = target().to_string();
+//	a["target"] = target.to_string();
+	m_node.stats_counters().inc_stats_counter(counters::dht_get_peers_out);
 	return m_node.m_rpc.invoke(e, o->target_ep(), o);
 }
 
 bootstrap::bootstrap(
-	node_impl& node
+	node& dht_node
 	, node_id target
 	, done_callback const& callback)
-	: get_peers(node, target, get_peers::data_callback(), callback, false)
+	: get_peers(dht_node, target, get_peers::data_callback(), callback, false)
 {
-	// make it more resilient to nodes not responding.
-	// we don't want to terminate early when we're bootstrapping
-	m_num_target_nodes *= 2;
 }
 
 char const* bootstrap::name() const { return "bootstrap"; }
 
-void bootstrap::trim_seed_nodes()
-{
-	// when we're bootstrapping, we want to start as far away from our ID as
-	// possible, to cover as much as possible of the ID space. So, remove all
-	// nodes except for the 32 that are farthest away from us
-	if (m_results.size() > 32)
-		m_results.erase(m_results.begin(), m_results.end() - 32);
-}
-
 void bootstrap::done()
 {
-#ifdef TORRENT_DHT_VERBOSE_LOGGING
-	TORRENT_LOG(traversal) << "[" << this << "]"
-		<< " bootstrap done, pinging remaining nodes";
+#ifndef TORRENT_DISABLE_LOGGING
+	get_node().observer()->log(dht_logger::traversal, "[%p] bootstrap done, pinging remaining nodes"
+		, static_cast<void*>(this));
 #endif
 
 	for (std::vector<observer_ptr>::iterator i = m_results.begin()

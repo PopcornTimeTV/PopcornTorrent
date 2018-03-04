@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2014, Arvid Norberg
+Copyright (c) 2009-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/max.hpp"
 #include "libtorrent/assert.hpp"
 
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
+#include <boost/type_traits/aligned_storage.hpp>
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
 #ifdef TORRENT_USE_OPENSSL
 #include "libtorrent/ssl_stream.hpp"
 #endif
@@ -75,8 +81,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifdef TORRENT_USE_OPENSSL
 
 #define TORRENT_SOCKTYPE_SSL_FORWARD(x) \
-		case socket_type_int_impl<ssl_stream<stream_socket> >::value: \
-			get<ssl_stream<stream_socket> >()->x; break; \
+		case socket_type_int_impl<ssl_stream<tcp::socket> >::value: \
+			get<ssl_stream<tcp::socket> >()->x; break; \
 		case socket_type_int_impl<ssl_stream<socks5_stream> >::value: \
 			get<ssl_stream<socks5_stream> >()->x; break; \
 		case socket_type_int_impl<ssl_stream<http_stream> >::value: \
@@ -85,8 +91,8 @@ POSSIBILITY OF SUCH DAMAGE.
 			get<ssl_stream<utp_stream> >()->x; break;
 
 #define TORRENT_SOCKTYPE_SSL_FORWARD_RET(x, def) \
-		case socket_type_int_impl<ssl_stream<stream_socket> >::value: \
-			return get<ssl_stream<stream_socket> >()->x; \
+		case socket_type_int_impl<ssl_stream<tcp::socket> >::value: \
+			return get<ssl_stream<tcp::socket> >()->x; \
 		case socket_type_int_impl<ssl_stream<socks5_stream> >::value: \
 			return get<ssl_stream<socks5_stream> >()->x; \
 		case socket_type_int_impl<ssl_stream<http_stream> >::value: \
@@ -103,8 +109,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #define TORRENT_SOCKTYPE_FORWARD(x) \
 	switch (m_type) { \
-		case socket_type_int_impl<stream_socket>::value: \
-			get<stream_socket>()->x; break; \
+		case socket_type_int_impl<tcp::socket>::value: \
+			get<tcp::socket>()->x; break; \
 		case socket_type_int_impl<socks5_stream>::value: \
 			get<socks5_stream>()->x; break; \
 		case socket_type_int_impl<http_stream>::value: \
@@ -118,8 +124,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #define TORRENT_SOCKTYPE_FORWARD_RET(x, def) \
 	switch (m_type) { \
-		case socket_type_int_impl<stream_socket>::value: \
-			return get<stream_socket>()->x; \
+		case socket_type_int_impl<tcp::socket>::value: \
+			return get<tcp::socket>()->x; \
 		case socket_type_int_impl<socks5_stream>::value: \
 			return get<socks5_stream>()->x; \
 		case socket_type_int_impl<http_stream>::value: \
@@ -139,7 +145,7 @@ namespace libtorrent
 	{ enum { value = 0 }; };
 
 	template <>
-	struct socket_type_int_impl<stream_socket>
+	struct socket_type_int_impl<tcp::socket>
 	{ enum { value = 1 }; };
 
 	template <>
@@ -162,7 +168,7 @@ namespace libtorrent
 
 #ifdef TORRENT_USE_OPENSSL
 	template <>
-	struct socket_type_int_impl<ssl_stream<stream_socket> >
+	struct socket_type_int_impl<ssl_stream<tcp::socket> >
 	{ enum { value = 6 }; };
 
 	template <>
@@ -180,9 +186,12 @@ namespace libtorrent
 
 	struct TORRENT_EXTRA_EXPORT socket_type
 	{
-		typedef stream_socket::endpoint_type endpoint_type;
-		typedef stream_socket::protocol_type protocol_type;
-	
+		typedef tcp::socket::endpoint_type endpoint_type;
+		typedef tcp::socket::protocol_type protocol_type;
+
+		typedef tcp::socket::receive_buffer_size receive_buffer_size;
+		typedef tcp::socket::send_buffer_size send_buffer_size;
+
 		explicit socket_type(io_service& ios): m_io_service(ios), m_type(0) {}
 		~socket_type();
 
@@ -202,6 +211,11 @@ namespace libtorrent
 
 		void open(protocol_type const& p, error_code& ec);
 		void close(error_code& ec);
+
+		// this is only relevant for uTP connections
+		void set_close_reason(boost::uint16_t code);
+		boost::uint16_t get_close_reason();
+
 		endpoint_type local_endpoint(error_code& ec) const;
 		endpoint_type remote_endpoint(error_code& ec) const;
 		void bind(endpoint_type const& endpoint, error_code& ec);
@@ -253,6 +267,14 @@ namespace libtorrent
 		error_code set_option(SettableSocketOption const& opt, error_code& ec)
 		{ TORRENT_SOCKTYPE_FORWARD_RET(set_option(opt, ec), ec) }
 
+		void non_blocking(bool b, error_code& ec)
+		{ TORRENT_SOCKTYPE_FORWARD(non_blocking(b, ec)) }
+
+#ifndef BOOST_NO_EXCEPTIONS
+		void non_blocking(bool b)
+		{ TORRENT_SOCKTYPE_FORWARD(non_blocking(b)) }
+#endif
+
 #ifndef BOOST_NO_EXCEPTIONS
 		template <class GettableSocketOption>
 		void get_option(GettableSocketOption& opt)
@@ -263,10 +285,10 @@ namespace libtorrent
 		error_code get_option(GettableSocketOption& opt, error_code& ec)
 		{ TORRENT_SOCKTYPE_FORWARD_RET(get_option(opt, ec), ec) }
 
-
 		template <class S>
 		void instantiate(io_service& ios, void* userdata = 0)
 		{
+			TORRENT_UNUSED(ios);
 			TORRENT_ASSERT(&ios == &m_io_service);
 			construct(socket_type_int_impl<S>::value, userdata);
 		}
@@ -274,16 +296,18 @@ namespace libtorrent
 		template <class S> S* get()
 		{
 			if (m_type != socket_type_int_impl<S>::value) return 0;
-			return (S*)m_data;
+			return reinterpret_cast<S*>(&m_data);
 		}
 
-		template <class S> S const* get() const 
+		template <class S> S const* get() const
 		{
 			if (m_type != socket_type_int_impl<S>::value) return 0;
-			return (S const*)m_data;
+			return reinterpret_cast<S const*>(&m_data);
 		}
 
 	private:
+		// explicitly disallow assignment, to silence msvc warning
+		socket_type& operator=(socket_type const&);
 
 		void destruct();
 		void construct(int type, void* userdata);
@@ -291,7 +315,7 @@ namespace libtorrent
 		io_service& m_io_service;
 		int m_type;
 		enum { storage_size = max9<
-			sizeof(stream_socket)
+			sizeof(tcp::socket)
 			, sizeof(socks5_stream)
 			, sizeof(http_stream)
 			, sizeof(utp_stream)
@@ -301,7 +325,7 @@ namespace libtorrent
 			, 0
 #endif
 #ifdef TORRENT_USE_OPENSSL
-			, sizeof(ssl_stream<stream_socket>)
+			, sizeof(ssl_stream<tcp::socket>)
 			, sizeof(ssl_stream<socks5_stream>)
 			, sizeof(ssl_stream<http_stream>)
 			, sizeof(ssl_stream<utp_stream>)
@@ -311,7 +335,7 @@ namespace libtorrent
 			>::value
 		};
 
-		size_type m_data[(storage_size + sizeof(size_type) - 1) / sizeof(size_type)];
+		boost::aligned_storage<storage_size, 8>::type m_data;
 	};
 
 	// returns true if this socket is an SSL socket

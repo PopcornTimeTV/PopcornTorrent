@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2014, Arvid Norberg
+Copyright (c) 2003-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -58,30 +58,37 @@ POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
+#include "libtorrent/config.hpp"
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <map>
 #include <list>
 #include <string>
 #include <stdexcept>
-
-#include "libtorrent/size_type.hpp"
-#include "libtorrent/config.hpp"
-#include "libtorrent/assert.hpp"
-#include "libtorrent/error_code.hpp"
-#include "libtorrent/max.hpp"
-
+#include <boost/cstdint.hpp>
+#include <boost/config.hpp>
 #if TORRENT_USE_IOSTREAM
 #include <iosfwd>
 #endif
 
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
+#include "libtorrent/assert.hpp"
+#include "libtorrent/error_code.hpp"
+#include "libtorrent/max.hpp"
+
 namespace libtorrent
 {
+#ifndef TORRENT_NO_DEPRECATE
 	struct lazy_entry;
+#endif
+	struct bdecode_node;
 
 	// thrown by any accessor function of entry if the accessor
 	// function requires a type different than the actual type
 	// of the entry object.
-	struct TORRENT_EXPORT type_error: std::runtime_error
+	struct type_error : std::runtime_error
 	{
 		// internal
 		type_error(const char* error): std::runtime_error(error) {}
@@ -100,7 +107,8 @@ namespace libtorrent
 		typedef std::map<std::string, entry> dictionary_type;
 		typedef std::string string_type;
 		typedef std::list<entry> list_type;
-		typedef size_type integer_type;
+		typedef boost::int64_t integer_type;
+		typedef std::vector<char> preformatted_type;
 
 		// the types an entry can have
 		enum data_type
@@ -109,7 +117,8 @@ namespace libtorrent
 			string_t,
 			list_t,
 			dictionary_t,
-			undefined_t
+			undefined_t,
+			preformatted_t
 		};
 
 		// returns the concrete type of the entry
@@ -122,6 +131,7 @@ namespace libtorrent
 		entry(string_type const&);
 		entry(list_type const&);
 		entry(integer_type const&);
+		entry(preformatted_type const&);
 
 		// construct an empty entry of the specified type.
 		// see data_type enum.
@@ -139,15 +149,19 @@ namespace libtorrent
 		// hidden
 		bool operator==(entry const& e) const;
 		bool operator!=(entry const& e) const { return !(*this == e); }
-		
+
 		// copies the structure of the right hand side into this
 		// entry.
+#ifndef TORRENT_NO_DEPRECATE
 		void operator=(lazy_entry const&);
+#endif
+		void operator=(bdecode_node const&);
 		void operator=(entry const&);
 		void operator=(dictionary_type const&);
 		void operator=(string_type const&);
 		void operator=(list_type const&);
 		void operator=(integer_type const&);
+		void operator=(preformatted_type const&);
 
 		// The ``integer()``, ``string()``, ``list()`` and ``dict()`` functions
 		// are accessors that return the respective type. If the ``entry`` object
@@ -204,6 +218,8 @@ namespace libtorrent
 		const list_type& list() const;
 		dictionary_type& dict();
 		const dictionary_type& dict() const;
+		preformatted_type& preformatted();
+		const preformatted_type& preformatted() const;
 
 		// swaps the content of *this* with ``e``.
 		void swap(entry& e);
@@ -219,7 +235,7 @@ namespace libtorrent
 		// The const version of ``operator[]`` will only return a reference to an
 		// existing element at the given key. If the key is not found, it will
 		// throw ``libtorrent::type_error``.
- 		entry& operator[](char const* key);
+		entry& operator[](char const* key);
 		entry& operator[](std::string const& key);
 #ifndef BOOST_NO_EXCEPTIONS
 		const entry& operator[](char const* key) const;
@@ -256,17 +272,19 @@ namespace libtorrent
 		// assumes sizeof(map<string, char>) == sizeof(map<string, entry>)
 		// and sizeof(list<char>) == sizeof(list<entry>)
 		enum { union_size
-			= max4<sizeof(std::list<char>)
+			= max5<sizeof(std::list<char>)
 			, sizeof(std::map<std::string, char>)
 			, sizeof(string_type)
-			, sizeof(integer_type)>::value
+			, sizeof(integer_type)
+			, sizeof(preformatted_type)>::value
 		};
 #else
 		enum { union_size
-			= max4<sizeof(list_type)
+			= max5<sizeof(list_type)
 			, sizeof(dictionary_type)
 			, sizeof(string_type)
-			, sizeof(integer_type)>::value
+			, sizeof(integer_type)
+			, sizeof(preformatted_type)>::value
 		};
 #endif
 		integer_type data[(union_size + sizeof(integer_type) - 1)
@@ -280,11 +298,17 @@ namespace libtorrent
 
 	public:
 		// in debug mode this is set to false by bdecode to indicate that the
-		// program has not yet queried the type of this entry, and sould not
+		// program has not yet queried the type of this entry, and should not
 		// assume that it has a certain type. This is asserted in the accessor
 		// functions. This does not apply if exceptions are used.
 		mutable boost::uint8_t m_type_queried:1;
 	};
+
+	namespace detail
+	{
+		TORRENT_EXPORT char const* integer_to_str(char* buf, int size
+			, entry::integer_type val);
+	}
 
 #if TORRENT_USE_IOSTREAM
 	// prints the bencoded structure to the ostream as a JSON-style structure.
@@ -297,10 +321,9 @@ namespace libtorrent
 
 #ifndef BOOST_NO_EXCEPTIONS
 	// internal
-	inline void throw_type_error()
+	TORRENT_NO_RETURN inline void throw_type_error()
 	{
-		throw libtorrent_exception(error_code(errors::invalid_entry_type
-			, get_libtorrent_category()));
+		throw libtorrent_exception(errors::invalid_entry_type);
 	}
 #endif
 

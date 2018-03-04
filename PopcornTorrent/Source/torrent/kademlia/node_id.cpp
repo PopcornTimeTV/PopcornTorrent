@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2006-2014, Arvid Norberg
+Copyright (c) 2006-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -31,8 +31,6 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <algorithm>
-#include <ctime>
-#include <boost/crc.hpp>
 
 #include "libtorrent/kademlia/node_id.hpp"
 #include "libtorrent/kademlia/node_entry.hpp"
@@ -42,6 +40,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/socket_io.hpp" // for hash_address
 #include "libtorrent/random.hpp" // for random
 #include "libtorrent/hasher.hpp" // for hasher
+#include "libtorrent/crc32c.hpp" // for crc32c
 
 namespace libtorrent { namespace dht
 {
@@ -52,6 +51,7 @@ node_id distance(node_id const& n1, node_id const& n2)
 {
 	node_id ret;
 	node_id::iterator k = ret.begin();
+	// TODO: 3 the XORing should be done at full words instead of bytes
 	for (node_id::const_iterator i = n1.begin(), j = n2.begin()
 		, end(n1.end()); i != end; ++i, ++j, ++k)
 	{
@@ -63,6 +63,7 @@ node_id distance(node_id const& n1, node_id const& n2)
 // returns true if: distance(n1, ref) < distance(n2, ref)
 bool compare_ref(node_id const& n1, node_id const& n2, node_id const& ref)
 {
+	// TODO: 3 the XORing should be done at full words instead of bytes
 	for (node_id::const_iterator i = n1.begin(), j = n2.begin()
 		, k = ref.begin(), end(n1.end()); i != end; ++i, ++j, ++k)
 	{
@@ -78,6 +79,8 @@ bool compare_ref(node_id const& n1, node_id const& n2, node_id const& ref)
 // useful for finding out which bucket a node belongs to
 int distance_exp(node_id const& n1, node_id const& n2)
 {
+	// TODO: 3 the xoring should be done at full words and _builtin_clz() could
+	// be used as the last step
 	int byte = node_id::size - 1;
 	for (node_id::const_iterator i = n1.begin(), j = n2.begin()
 		, end(n1.end()); i != end; ++i, ++j, --byte)
@@ -88,7 +91,7 @@ int distance_exp(node_id const& n1, node_id const& n2)
 		// we have found the first non-zero byte
 		// return the bit-number of the first bit
 		// that differs
-		int bit = byte * 8;
+		int const bit = byte * 8;
 		for (int b = 7; b >= 0; --b)
 			if (t >= (1 << b)) return bit + b;
 		return bit;
@@ -97,14 +100,14 @@ int distance_exp(node_id const& n1, node_id const& n2)
 	return 0;
 }
 
-struct static_ { static_() { std::srand((unsigned int)std::time(0)); } } static__;
-
 node_id generate_id_impl(address const& ip_, boost::uint32_t r)
 {
 	boost::uint8_t* ip = 0;
-	
-	const static boost::uint8_t v4mask[] = { 0x03, 0x0f, 0x3f, 0xff };
-	const static boost::uint8_t v6mask[] = { 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff };
+
+	static const boost::uint8_t v4mask[] = { 0x03, 0x0f, 0x3f, 0xff };
+#if TORRENT_USE_IPV6
+	static const boost::uint8_t v6mask[] = { 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff };
+#endif
 	boost::uint8_t const* mask = 0;
 	int num_octets = 0;
 
@@ -133,12 +136,16 @@ node_id generate_id_impl(address const& ip_, boost::uint32_t r)
 	ip[0] |= (r & 0x7) << 5;
 
 	// this is the crc32c (Castagnoli) polynomial
-	// TODO: 2 this could be optimized if SSE 4.2 is
-	// available. It could also be optimized given
-	// that we have a fixed length
-	boost::crc_optimal<32, 0x1EDC6F41, 0xFFFFFFFF, 0xFFFFFFFF, true, true> crc;
-	crc.process_block(ip, ip + num_octets);
-	boost::uint32_t c = crc.checksum();
+	boost::uint32_t c;
+	if (num_octets == 4)
+	{
+		c = crc32c_32(*reinterpret_cast<boost::uint32_t*>(ip));
+	}
+	else
+	{
+		TORRENT_ASSERT(num_octets == 8);
+		c = crc32c(reinterpret_cast<boost::uint64_t*>(ip), 1);
+	}
 	node_id id;
 
 	id[0] = (c >> 24) & 0xff;
@@ -161,8 +168,8 @@ void make_id_secret(node_id& in)
 
 	// generate the last 4 bytes as a "signature" of the previous 4 bytes. This
 	// lets us verify whether a hash came from this function or not in the future.
-	hasher h((char*)&secret, 4);
-	h.update((char*)&rand, 4);
+	hasher h(reinterpret_cast<char*>(&secret), 4);
+	h.update(reinterpret_cast<char*>(&rand), 4);
 	sha1_hash secret_hash = h.final();
 	memcpy(&in[20-4], &secret_hash[0], 4);
 	memcpy(&in[20-8], &rand, 4);
@@ -186,8 +193,8 @@ bool verify_secret_id(node_id const& nid)
 {
 	if (secret == 0) return false;
 
-	hasher h((char*)&secret, 4);
-	h.update((char const*)&nid[20-8], 4);
+	hasher h(reinterpret_cast<char*>(&secret), 4);
+	h.update(reinterpret_cast<char const*>(&nid[20-8]), 4);
 	sha1_hash secret_hash = h.final();
 	return memcmp(&nid[20-4], &secret_hash[0], 4) == 0;
 }
@@ -209,10 +216,10 @@ node_id generate_id(address const& ip)
 	return generate_id_impl(ip, random());
 }
 
-bool matching_prefix(node_entry const& n, int mask, int prefix, int bucket_index)
+bool matching_prefix(node_entry const& n, int mask, int prefix, int offset)
 {
 	node_id id = n.id;
-	id <<= bucket_index + 1;
+	id <<= offset;
 	return (id[0] & mask) == prefix;
 }
 

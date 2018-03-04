@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2014, Arvid Norberg
+Copyright (c) 2003-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -34,15 +34,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <stdio.h>
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
-
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 #include <boost/optional.hpp>
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 #include "libtorrent/identify_client.hpp"
 #include "libtorrent/fingerprint.hpp"
@@ -145,7 +139,9 @@ namespace
 	// must be ordered alphabetically
 	map_entry name_map[] =
 	{
-		  {"A",  "ABC"}
+		  {"7T", "aTorrent for android"}
+		, {"A",  "ABC"}
+		, {"AB", "AnyEvent BitTorrent"}
 		, {"AG", "Ares"}
 		, {"AR", "Arctic Torrent"}
 		, {"AT", "Artemis"}
@@ -304,10 +300,10 @@ namespace
 				, tmp, &compare_id);
 
 #ifndef NDEBUG
-		for (int i = 1; i < size; ++i)
+		for (int j = 1; j < size; ++j)
 		{
-			TORRENT_ASSERT(compare_id(name_map[i-1]
-				, name_map[i]));
+			TORRENT_ASSERT(compare_id(name_map[j-1]
+				, name_map[j]));
 		}
 #endif
 
@@ -338,7 +334,7 @@ namespace
 		return identity;
 	}
 
-	bool find_string(unsigned char const* id, char const* search)
+	bool find_string(char const* id, char const* search)
 	{
 		return std::equal(search, search + std::strlen(search), id);
 	}
@@ -346,6 +342,8 @@ namespace
 
 namespace libtorrent
 {
+
+#ifndef TORRENT_NO_DEPRECATE
 
 	boost::optional<fingerprint> client_fingerprint(peer_id const& p)
 	{
@@ -364,9 +362,11 @@ namespace libtorrent
 		return f;
 	}
 
+#endif
+
 	std::string identify_client(peer_id const& p)
 	{
-		peer_id::const_iterator PID = p.begin();
+		char const* PID = p.data();
 		boost::optional<fingerprint> f;
 
 		if (p.is_all_zeros()) return "Unknown";
@@ -384,13 +384,12 @@ namespace libtorrent
 		}
 
 		if (find_string(PID, "-BOW") && PID[7] == '-')
-			return "Bits on Wheels " + std::string((char const*)PID + 4, (char const*)PID + 7);
-		
+			return "Bits on Wheels " + std::string(PID + 4, PID + 7);
 
 		if (find_string(PID, "eX"))
 		{
-			std::string user((char const*)PID + 2, (char const*)PID + 14);
-			return std::string("eXeem ('") + user.c_str() + "')"; 
+			std::string user(PID + 2, PID + 14);
+			return std::string("eXeem ('") + user.c_str() + "')";
 		}
 
 		if (std::equal(PID, PID + 13, "\0\0\0\0\0\0\0\0\0\0\0\0\x97"))
@@ -398,7 +397,6 @@ namespace libtorrent
 
 		if (std::equal(PID, PID + 13, "\0\0\0\0\0\0\0\0\0\0\0\0\0"))
 			return "Experimental 3.1";
-
 
 		// look for azureus style id
 		f = parse_az_style(p);
@@ -424,5 +422,5 @@ namespace libtorrent
 		unknown += "]";
 		return unknown;
 	}
-
 }
+

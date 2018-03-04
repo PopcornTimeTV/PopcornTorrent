@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2010-2014, Arvid Norberg
+Copyright (c) 2010-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,14 +35,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/http_parser.hpp"
 #include "libtorrent/http_connection.hpp"
 #include "libtorrent/aux_/session_impl.hpp"
+#include "libtorrent/aux_/session_call.hpp"
 #include "libtorrent/session.hpp"
-#include "libtorrent/settings.hpp"
 #include "libtorrent/alert_types.hpp" // for rss_alert
 
 #include <boost/bind.hpp>
 #include <set>
 #include <map>
 #include <algorithm>
+
+#ifndef TORRENT_NO_DEPRECATE
 
 namespace libtorrent {
 
@@ -74,8 +76,9 @@ struct feed_state
 		{
 			case atom: return string_equal_no_case(tag, "entry");
 			case rss2: return string_equal_no_case(tag, "item");
-			default: return false;
+			case none: return false;
 		}
+		return false;
 	}
 
 	bool is_title(char const* tag) const
@@ -84,8 +87,9 @@ struct feed_state
 		{
 			case atom:
 			case rss2: return string_equal_no_case(tag, "title");
-			default: return false;
+			case none: return false;
 		}
+		return false;
 	}
 
 	bool is_url(char const* tag) const
@@ -94,8 +98,9 @@ struct feed_state
 		{
 			case atom:
 			case rss2: return string_equal_no_case(tag, "link");
-			default: return false;
+			case none: return false;
 		}
+		return false;
 	}
 
 	bool is_desc(char const* tag) const
@@ -105,8 +110,9 @@ struct feed_state
 			case atom: return string_equal_no_case(tag, "summary");
 			case rss2: return string_equal_no_case(tag, "description")
 				|| string_equal_no_case(tag, "media:text");
-			default: return false;
+			case none: return false;
 		}
+		return false;
 	}
 
 	bool is_uuid(char const* tag) const
@@ -115,8 +121,9 @@ struct feed_state
 		{
 			case atom: return string_equal_no_case(tag, "id");
 			case rss2: return string_equal_no_case(tag, "guid");
-			default: return false;
+			case none: return false;
 		}
+		return false;
 	}
 
 	bool is_comment(char const* tag) const
@@ -125,8 +132,9 @@ struct feed_state
 		{
 			case atom: return false;
 			case rss2: return string_equal_no_case(tag, "comments");
-			default: return false;
+			case none: return false;
 		}
+		return false;
 	}
 
 	bool is_category(char const* tag) const
@@ -135,14 +143,15 @@ struct feed_state
 		{
 			case atom: return false;
 			case rss2: return string_equal_no_case(tag, "category");
-			default: return false;
+			case none: return false;
 		}
+		return false;
 	}
 
 	bool is_size(char const* tag) const
 	{
 		return string_equal_no_case(tag, "size")
-		 || string_equal_no_case(tag, "contentlength");
+			|| string_equal_no_case(tag, "contentlength");
 	}
 
 	bool is_hash(char const* tag) const
@@ -157,7 +166,8 @@ struct feed_state
 	}
 };
 
-void parse_feed(feed_state& f, int token, char const* name, char const* val)
+void parse_feed(feed_state& f, int token, char const* name, int name_len
+	, char const* val, int val_len)
 {
 	switch (token)
 	{
@@ -167,7 +177,7 @@ void parse_feed(feed_state& f, int token, char const* name, char const* val)
 		case xml_start_tag:
 		case xml_empty_tag:
 		{
-			f.current_tag = name;
+			f.current_tag.assign(name, name_len);
 			if (f.type == feed_state::none)
 			{
 				if (string_equal_no_case(f.current_tag.c_str(), "feed"))
@@ -175,20 +185,21 @@ void parse_feed(feed_state& f, int token, char const* name, char const* val)
 				else if (string_equal_no_case(f.current_tag.c_str(), "rss"))
 					f.type = feed_state::rss2;
 			}
-			if (f.is_item(name)) f.in_item = true;
+			if (f.is_item(f.current_tag.c_str())) f.in_item = true;
 			return;
 		}
 		case xml_attribute:
 		{
 			if (!f.in_item) return;
+			std::string str(name, name_len);
 			if (f.is_url(f.current_tag.c_str())
 				&& f.type == feed_state::atom)
 			{
 				// atom feeds have items like this:
 				// <link href="http://..." length="12345"/>
-				if (string_equal_no_case(name, "href"))
-					f.current_item.url = val;
-				else if (string_equal_no_case(name, "length"))
+				if (string_equal_no_case(str.c_str(), "href"))
+					f.current_item.url.assign(val, val_len);
+				else if (string_equal_no_case(str.c_str(), "length"))
 					f.current_item.size = strtoll(val, 0, 10);
 			}
 			else if (f.type == feed_state::rss2
@@ -196,9 +207,9 @@ void parse_feed(feed_state& f, int token, char const* name, char const* val)
 			{
 				// rss feeds have items like this:
 				// <enclosure url="http://..." length="12345"/>
-				if (string_equal_no_case(name, "url"))
-					f.current_item.url = val;
-				else if (string_equal_no_case(name, "length"))
+				if (string_equal_no_case(str.c_str(), "url"))
+					f.current_item.url.assign(val, val_len);
+				else if (string_equal_no_case(str.c_str(), "length"))
 					f.current_item.size = strtoll(val, 0, 10);
 			}
 			else if (f.type == feed_state::rss2
@@ -206,16 +217,16 @@ void parse_feed(feed_state& f, int token, char const* name, char const* val)
 			{
 				// rss feeds sometimes have items like this:
 				// <media:content url="http://..." filesize="12345"/>
-				if (string_equal_no_case(name, "url"))
-					f.current_item.url = val;
-				else if (string_equal_no_case(name, "filesize"))
+				if (string_equal_no_case(str.c_str(), "url"))
+					f.current_item.url.assign(val, val_len);
+				else if (string_equal_no_case(str.c_str(), "filesize"))
 					f.current_item.size = strtoll(val, 0, 10);
 			}
 			return;
 		}
 		case xml_end_tag:
 		{
-			if (f.in_item && f.is_item(name))
+			if (f.in_item && f.is_item(std::string(name, name_len).c_str()))
 			{
 				f.in_item = false;
 				if (!f.current_item.title.empty()
@@ -234,9 +245,9 @@ void parse_feed(feed_state& f, int token, char const* name, char const* val)
 			if (!f.in_item)
 			{
 				if (f.is_title(f.current_tag.c_str()))
-					f.ret.m_title = name;
+					f.ret.m_title.assign(name, name_len);
 				else if (f.is_desc(f.current_tag.c_str()))
-					f.ret.m_description = name;
+					f.ret.m_description.assign(name, name_len);
 				else if (f.is_ttl(f.current_tag.c_str()))
 				{
 					int tmp = atoi(name);
@@ -245,22 +256,22 @@ void parse_feed(feed_state& f, int token, char const* name, char const* val)
 				return;
 			}
 			if (f.is_title(f.current_tag.c_str()))
-				f.current_item.title = name;
+				f.current_item.title.assign(name, name_len);
 			else if (f.is_desc(f.current_tag.c_str()))
-				f.current_item.description = name;
+				f.current_item.description.assign(name, name_len);
 			else if (f.is_uuid(f.current_tag.c_str()))
-				f.current_item.uuid = name;
+				f.current_item.uuid.assign(name, name_len);
 			else if (f.is_url(f.current_tag.c_str()) && f.type != feed_state::atom)
-				f.current_item.url = name;
+				f.current_item.url.assign(name, name_len);
 			else if (f.is_comment(f.current_tag.c_str()))
-				f.current_item.comment = name;
+				f.current_item.comment.assign(name, name_len);
 			else if (f.is_category(f.current_tag.c_str()))
-				f.current_item.category = name;
+				f.current_item.category.assign(name, name_len);
 			else if (f.is_size(f.current_tag.c_str()))
 				f.current_item.size = strtoll(name, 0, 10);
-			else if (f.is_hash(f.current_tag.c_str()) && strlen(name) == 40)
+			else if (f.is_hash(f.current_tag.c_str()) && name_len == 40)
 			{
-				if (!from_hex(name, 40, (char*)&f.current_item.info_hash[0]))
+				if (!from_hex(name, 40, f.current_item.info_hash.data()))
 				{
 					// hex parsing failed
 					f.current_item.info_hash.clear();
@@ -336,14 +347,20 @@ void feed::on_feed(error_code const& ec
 //	TORRENT_ASSERT(m_updating);
 	m_updating = false;
 
-	if (ec && ec != asio::error::eof)
+	// rss_alert is deprecated, and so is all of this code.
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+	if (ec && ec != boost::asio::error::eof)
 	{
 		++m_failures;
 		m_error = ec;
-		if (m_ses.m_alerts.should_post<rss_alert>())
+		if (m_ses.alerts().should_post<rss_alert>())
 		{
-			m_ses.m_alerts.post_alert(rss_alert(my_handle(), m_settings.url
-				, rss_alert::state_error, m_error));
+			m_ses.alerts().emplace_alert<rss_alert>(my_handle(), m_settings.url
+				, rss_alert::state_error, m_error);
 		}
 		return;
 	}
@@ -352,20 +369,23 @@ void feed::on_feed(error_code const& ec
 	{
 		++m_failures;
 		m_error = error_code(parser.status_code(), get_http_category());
-		if (m_ses.m_alerts.should_post<rss_alert>())
+		if (m_ses.alerts().should_post<rss_alert>())
 		{
-			m_ses.m_alerts.post_alert(rss_alert(my_handle(), m_settings.url
-				, rss_alert::state_error, m_error));
+			m_ses.alerts().emplace_alert<rss_alert>(my_handle(), m_settings.url
+				, rss_alert::state_error, m_error);
 		}
 		return;
 	}
 
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
 	m_failures = 0;
 
-	char* buf = const_cast<char*>(data);
-
 	feed_state s(*this);
-	xml_parse(buf, buf + size, boost::bind(&parse_feed, boost::ref(s), _1, _2, _3));
+	xml_parse(data, data + size, boost::bind(&parse_feed, boost::ref(s)
+			, _1, _2, _3, _4, _5));
 
 	time_t now = time(NULL);
 
@@ -386,117 +406,93 @@ void feed::on_feed(error_code const& ec
 
 	m_last_update = now;
 
+	// rss_alert is deprecated, and so is all of this code.
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 	// report that we successfully updated the feed
-	if (m_ses.m_alerts.should_post<rss_alert>())
+	if (m_ses.alerts().should_post<rss_alert>())
 	{
-		m_ses.m_alerts.post_alert(rss_alert(my_handle(), m_settings.url
-			, rss_alert::state_updated, error_code()));
+		m_ses.alerts().emplace_alert<rss_alert>(my_handle(), m_settings.url
+			, rss_alert::state_updated, error_code());
 	}
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 	// update m_ses.m_next_rss_update timestamps
 	// now that we have updated our timestamp
 	m_ses.update_rss_feeds();
 }
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#endif
-
-#define TORRENT_SETTING(t, x) {#x, offsetof(feed_settings,x), t},
-	bencode_map_entry feed_settings_map[] =
-	{
-		TORRENT_SETTING(std_string, url)
-		TORRENT_SETTING(boolean, auto_download)
-		TORRENT_SETTING(boolean, auto_map_handles)
-		TORRENT_SETTING(integer, default_ttl)
-	};
-#undef TORRENT_SETTING
-
-#define TORRENT_SETTING(t, x) {#x, offsetof(feed_item,x), t},
-	bencode_map_entry feed_item_map[] =
-	{
-		TORRENT_SETTING(std_string, url)
-		TORRENT_SETTING(std_string, uuid)
-		TORRENT_SETTING(std_string, title)
-		TORRENT_SETTING(std_string, description)
-		TORRENT_SETTING(std_string, comment)
-		TORRENT_SETTING(std_string, category)
-		TORRENT_SETTING(size_integer, size)
-	};
-#undef TORRENT_SETTING
-
-#define TORRENT_SETTING(t, x) {#x, offsetof(feed,x), t},
-	bencode_map_entry feed_map[] =
-	{
-		TORRENT_SETTING(std_string, m_title)
-		TORRENT_SETTING(std_string, m_description)
-		TORRENT_SETTING(time_integer, m_last_attempt)
-		TORRENT_SETTING(time_integer, m_last_update)
-	};
-#undef TORRENT_SETTING
-
-#define TORRENT_SETTING(t, x) {#x, offsetof(add_torrent_params,x), t},
-	bencode_map_entry add_torrent_map[] =
-	{
-		TORRENT_SETTING(std_string, save_path)
-		TORRENT_SETTING(size_integer, flags)
-	};
-#undef TORRENT_SETTING
-
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-
-void feed::load_state(lazy_entry const& rd)
+void feed::load_state(bdecode_node const& rd)
 {
-	load_struct(rd, this, feed_map, sizeof(feed_map)/sizeof(feed_map[0]));
-	lazy_entry const* e = rd.dict_find_list("items");
+	m_title = rd.dict_find_string_value("m_title");
+	m_description = rd.dict_find_string_value("m_description");
+	m_last_attempt = rd.dict_find_int_value("m_last_attempt");
+	m_last_update = rd.dict_find_int_value("m_last_update");
+
+	bdecode_node e = rd.dict_find_list("items");
 	if (e)
 	{
-		m_items.reserve(e->list_size());
-		for (int i = 0; i < e->list_size(); ++i)
+		m_items.reserve(e.list_size());
+		for (int i = 0; i < e.list_size(); ++i)
 		{
-			if (e->list_at(i)->type() != lazy_entry::dict_t) continue;
+			bdecode_node entry = e.list_at(i);
+			if (entry.type() != bdecode_node::dict_t) continue;
+
 			m_items.push_back(feed_item());
-			load_struct(*e->list_at(i), &m_items.back(), feed_item_map
-				, sizeof(feed_item_map)/sizeof(feed_item_map[0]));
+			feed_item& item = m_items.back();
+			item.url = entry.dict_find_string_value("url");
+			item.uuid = entry.dict_find_string_value("uuid");
+			item.title = entry.dict_find_string_value("title");
+			item.description = entry.dict_find_string_value("description");
+			item.comment = entry.dict_find_string_value("comment");
+			item.category = entry.dict_find_string_value("category");
+			item.size = entry.dict_find_int_value("size");
 
 			// don't load duplicates
-			if (m_urls.find(m_items.back().url) != m_urls.end())
+			if (m_urls.find(item.url) != m_urls.end())
 			{
 				m_items.pop_back();
 				continue;
 			}
-			m_urls.insert(m_items.back().url);
+			m_urls.insert(item.url);
 		}
 	}
-	load_struct(rd, &m_settings, feed_settings_map
-		, sizeof(feed_settings_map)/sizeof(feed_settings_map[0]));
+
+	m_settings.url = rd.dict_find_string_value("url");
+	m_settings.auto_download = rd.dict_find_int_value("auto_download");
+	m_settings.auto_map_handles = rd.dict_find_int_value("auto_map_handles");
+	m_settings.default_ttl = rd.dict_find_int_value("default_ttl");
+
 	e = rd.dict_find_dict("add_params");
 	if (e)
 	{
-		load_struct(*e, &m_settings.add_args, add_torrent_map
-			, sizeof(add_torrent_map)/sizeof(add_torrent_map[0]));
+		m_settings.add_args.save_path = e.dict_find_string_value("save_path");
+		m_settings.add_args.flags = e.dict_find_int_value("flags");
 	}
 
 	e = rd.dict_find_list("history");
 	if (e)
 	{
-		for (int i = 0; i < e->list_size(); ++i)
+		for (int i = 0; i < e.list_size(); ++i)
 		{
-			if (e->list_at(i)->type() != lazy_entry::list_t) continue;
+			if (e.list_at(i).type() != bdecode_node::list_t) continue;
 
-			lazy_entry const* item = e->list_at(i);
+			bdecode_node item = e.list_at(i);
 
-			if (item->list_size() != 2
-				|| item->list_at(0)->type() != lazy_entry::string_t
-				|| item->list_at(1)->type() != lazy_entry::int_t)
+			if (item.list_size() != 2
+				|| item.list_at(0).type() != bdecode_node::string_t
+				|| item.list_at(1).type() != bdecode_node::int_t)
 				continue;
 
 			m_added.insert(std::pair<std::string, time_t>(
-				item->list_at(0)->string_value()
-				, item->list_at(1)->int_value()));
+				item.list_at(0).string_value()
+				, item.list_at(1).int_value()));
 		}
 	}
 }
@@ -504,7 +500,10 @@ void feed::load_state(lazy_entry const& rd)
 void feed::save_state(entry& rd) const
 {
 	// feed properties
-	save_struct(rd, this, feed_map, sizeof(feed_map)/sizeof(feed_map[0]));
+	rd["m_title"] = m_title;
+	rd["m_description"] = m_description;
+	rd["m_last_attempt"] = m_last_attempt;
+	rd["m_last_update"] = m_last_update;
 
 	// items
 	entry::list_type& items = rd["items"].list();
@@ -513,17 +512,36 @@ void feed::save_state(entry& rd) const
 	{
 		items.push_back(entry());
 		entry& item = items.back();
-		save_struct(item, &*i, feed_item_map, sizeof(feed_item_map)/sizeof(feed_item_map[0]));
+		item["url"] = i->url;
+		item["uuid"] = i->uuid;
+		item["title"] = i->title;
+		item["description"] = i->description;
+		item["comment"] = i->comment;
+		item["category"] = i->category;
+		item["size"] = i->size;
 	}
 	
 	// settings
 	feed_settings sett_def;
-	save_struct(rd, &m_settings, feed_settings_map
-		, sizeof(feed_settings_map)/sizeof(feed_settings_map[0]), &sett_def);
+#define TORRENT_WRITE_SETTING(name) \
+	if (m_settings.name != sett_def.name) rd[#name] = m_settings.name
+
+	TORRENT_WRITE_SETTING(url);
+	TORRENT_WRITE_SETTING(auto_download);
+	TORRENT_WRITE_SETTING(auto_map_handles);
+	TORRENT_WRITE_SETTING(default_ttl);
+
+#undef TORRENT_WRITE_SETTING
+
 	entry& add = rd["add_params"];
 	add_torrent_params add_def;
-	save_struct(add, &m_settings.add_args, add_torrent_map
-		, sizeof(add_torrent_map)/sizeof(add_torrent_map[0]), &add_def);
+#define TORRENT_WRITE_SETTING(name) \
+	if (m_settings.add_args.name != add_def.name) add[#name] = m_settings.add_args.name;
+
+	TORRENT_WRITE_SETTING(save_path);
+	TORRENT_WRITE_SETTING(flags);
+
+#undef TORRENT_WRITE_SETTING
 
 	entry::list_type& history = rd["history"].list();
 	for (std::map<std::string, time_t>::const_iterator i = m_added.begin()
@@ -550,8 +568,8 @@ void feed::add_item(feed_item const& item)
 	if (m_settings.auto_map_handles)
 		i.handle = torrent_handle(m_ses.find_torrent(i.uuid.empty() ? i.url : i.uuid));
 
-	if (m_ses.m_alerts.should_post<rss_item_alert>())
-		m_ses.m_alerts.post_alert(rss_item_alert(my_handle(), i));
+	if (m_ses.alerts().should_post<rss_item_alert>())
+		m_ses.alerts().emplace_alert<rss_item_alert>(my_handle(), i);
 
 	if (m_settings.auto_download)
 	{
@@ -589,19 +607,32 @@ int feed::update_feed()
 	m_last_attempt = time(0);
 	m_last_update = 0;
 
-	if (m_ses.m_alerts.should_post<rss_alert>())
+	// rss_alert is deprecated, and so is all of this code.
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+	if (m_ses.alerts().should_post<rss_alert>())
 	{
-		m_ses.m_alerts.post_alert(rss_alert(my_handle(), m_settings.url
-			, rss_alert::state_updating, error_code()));
+		m_ses.alerts().emplace_alert<rss_alert>(my_handle(), m_settings.url
+			, rss_alert::state_updating, error_code());
 	}
 
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
 	boost::shared_ptr<http_connection> feed(
-		new http_connection(m_ses.m_io_service, m_ses.m_half_open
+		new http_connection(m_ses.get_io_service()
+			, m_ses.get_resolver()
 			, boost::bind(&feed::on_feed, shared_from_this()
 			, _1, _2, _3, _4)));
 
+	std::string const user_agent = m_ses.settings().get_bool(settings_pack::anonymous_mode)
+		? "" : m_ses.settings().get_str(settings_pack::user_agent);
 	m_updating = true;
-	feed->get(m_settings.url, seconds(30), 0, 0, 5, m_ses.m_settings.user_agent);
+	feed->get(m_settings.url, seconds(30), 0, 0, 5, user_agent);
 
 	return 60 + m_failures * m_failures * 60;
 }
@@ -627,30 +658,21 @@ int feed::next_update(time_t now) const
 	return int((m_last_update + ttl * 60) - now);
 }
 
-// defined in session.cpp
-void fun_wrap(bool* done, condition_variable* e, mutex* m, boost::function<void(void)> f);
-
 #define TORRENT_ASYNC_CALL(x) \
 	boost::shared_ptr<feed> f = m_feed_ptr.lock(); \
 	if (!f) return; \
 	aux::session_impl& ses = f->session(); \
-	ses.m_io_service.post(boost::bind(&feed:: x, f))
+	ses.get_io_service().post(boost::bind(&feed:: x, f))
 
 #define TORRENT_ASYNC_CALL1(x, a1) \
 	boost::shared_ptr<feed> f = m_feed_ptr.lock(); \
 	if (!f) return; \
 	aux::session_impl& ses = f->session(); \
-	ses.m_io_service.post(boost::bind(&feed:: x, f, a1))
+	ses.get_io_service().post(boost::bind(&feed:: x, f, a1))
 
 #define TORRENT_SYNC_CALL1(x, a1) \
 	boost::shared_ptr<feed> f = m_feed_ptr.lock(); \
-	if (f) { \
-	bool done = false; \
-	aux::session_impl& ses = f->session(); \
-	mutex::scoped_lock l(ses.mut); \
-	ses.m_io_service.post(boost::bind(&fun_wrap, &done, &ses.cond, &ses.mut, boost::function<void(void)>(boost::bind(&feed:: x, f, a1)))); \
-	f.reset(); \
-	do { ses.cond.wait(l); } while(!done); }
+	if (f) aux::sync_call_handle(f, boost::bind(&feed:: x, f, a1));
 
 feed_handle::feed_handle(boost::weak_ptr<feed> const& p)
 	: m_feed_ptr(p) {}
@@ -680,4 +702,6 @@ feed_settings feed_handle::settings() const
 }
 
 }
+
+#endif // TORRENT_NO_DEPRECATE
 

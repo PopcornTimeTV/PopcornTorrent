@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,16 +33,22 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef OBSERVER_HPP
 #define OBSERVER_HPP
 
+#include <libtorrent/time.hpp>
+#include <libtorrent/address.hpp>
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
 #include <boost/pool/pool.hpp>
 #include <boost/detail/atomic_count.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/cstdint.hpp>
-#include <libtorrent/ptime.hpp>
-#include <libtorrent/address.hpp>
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 namespace libtorrent {
 namespace dht {
 
+struct dht_observer;
 struct observer;
 struct msg;
 struct traversal_algorithm;
@@ -51,18 +57,7 @@ struct traversal_algorithm;
 TORRENT_EXTRA_EXPORT void intrusive_ptr_add_ref(observer const*);
 TORRENT_EXTRA_EXPORT void intrusive_ptr_release(observer const*);
 
-// intended struct layout (on 32 bit architectures)
-// offset size  alignment field
-// 0      8     8         sent
-// 8      8     4         m_refs
-// 16     4     4         pool_allocator
-// 20     16    4         m_addr
-// 36     2     2         m_port
-// 38     1     1         flags
-// 39     1     1         <padding>
-// 40
-
-struct observer : boost::noncopyable
+struct TORRENT_EXTRA_EXPORT observer : boost::noncopyable
 {
 	friend TORRENT_EXTRA_EXPORT void intrusive_ptr_add_ref(observer const*);
 	friend TORRENT_EXTRA_EXPORT void intrusive_ptr_release(observer const*);
@@ -70,15 +65,15 @@ struct observer : boost::noncopyable
 	observer(boost::intrusive_ptr<traversal_algorithm> const& a
 		, udp::endpoint const& ep, node_id const& id)
 		: m_sent()
-		, m_refs(0)
 		, m_algorithm(a)
 		, m_id(id)
+		, m_refs(0)
 		, m_port(0)
 		, m_transaction_id()
 		, flags(0)
 	{
 		TORRENT_ASSERT(a);
-#if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
+#if defined TORRENT_DEBUG || defined TORRENT_RELEASE_ASSERTS
 		m_in_constructor = true;
 		m_was_sent = false;
 		m_was_abandoned = false;
@@ -100,16 +95,20 @@ struct observer : boost::noncopyable
 	bool has_short_timeout() const { return (flags & flag_short_timeout) != 0; }
 
 	// this is called when no reply has been received within
-	// some timeout
-	void timeout();
-	
+	// some timeout, or a reply with incorrect format.
+	virtual void timeout();
+
 	// if this is called the destructor should
 	// not invoke any new messages, and should
 	// only clean up. It means the rpc-manager
 	// is being destructed
 	void abort();
 
-	ptime sent() const { return m_sent; }
+	dht_observer* get_observer() const;
+
+	traversal_algorithm* algorithm() const { return m_algorithm.get(); }
+
+	time_point sent() const { return m_sent; }
 
 	void set_target(udp::endpoint const& ep);
 	address target_addr() const;
@@ -135,16 +134,13 @@ struct observer : boost::noncopyable
 		flag_done = 128
 	};
 
-#ifndef TORRENT_DHT_VERBOSE_LOGGING
 protected:
-#endif
 
 	void done();
 
-	ptime m_sent;
+private:
 
-	// reference counter for intrusive_ptr
-	mutable boost::detail::atomic_count m_refs;
+	time_point m_sent;
 
 	const boost::intrusive_ptr<traversal_algorithm> m_algorithm;
 
@@ -158,6 +154,9 @@ protected:
 		address_v4::bytes_type v4;
 	} m_addr;
 
+	// reference counter for intrusive_ptr
+	mutable boost::uint16_t m_refs;
+
 	boost::uint16_t m_port;
 
 	// the transaction ID for this call
@@ -165,7 +164,7 @@ protected:
 public:
 	unsigned char flags;
 
-#if defined TORRENT_DEBUG || TORRENT_RELEASE_ASSERTS
+#if defined TORRENT_DEBUG || defined TORRENT_RELEASE_ASSERTS
 	bool m_in_constructor:1;
 	bool m_was_sent:1;
 	bool m_was_abandoned:1;

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2014, Arvid Norberg, Daniel Wallin
+Copyright (c) 2003-2016, Arvid Norberg, Daniel Wallin
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,44 +30,21 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+#include "libtorrent/config.hpp"
+#include "libtorrent/error_code.hpp"
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
 #include <ctime>
 #include <algorithm>
 #include <set>
 #include <functional>
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
-
 #include <boost/ref.hpp>
 #include <boost/bind.hpp>
 #include <boost/version.hpp>
 #include <boost/scoped_array.hpp>
-#if BOOST_VERSION >= 103500
-#include <boost/system/system_error.hpp>
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
-#include "libtorrent/config.hpp"
-#include "libtorrent/storage.hpp"
-#include "libtorrent/torrent.hpp"
-#include "libtorrent/hasher.hpp"
-#include "libtorrent/session.hpp"
-#include "libtorrent/peer_id.hpp"
-#include "libtorrent/file.hpp"
-#include "libtorrent/invariant_check.hpp"
-#include "libtorrent/file_pool.hpp"
-#include "libtorrent/aux_/session_impl.hpp"
-#include "libtorrent/disk_buffer_holder.hpp"
-#include "libtorrent/alloca.hpp"
-#include "libtorrent/allocator.hpp" // page_size
-
-#include <cstdio>
-
-//#define TORRENT_PARTIAL_HASH_LOG
+#include <boost/system/error_code.hpp>
 
 #if defined(__APPLE__)
 // for getattrlist()
@@ -88,144 +65,63 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <sys/mount.h>
 #endif
 
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
+#include "libtorrent/storage.hpp"
+#include "libtorrent/torrent.hpp"
+#include "libtorrent/hasher.hpp"
+#include "libtorrent/session.hpp"
+#include "libtorrent/peer_id.hpp"
+#include "libtorrent/file.hpp"
+#include "libtorrent/invariant_check.hpp"
+#include "libtorrent/file_pool.hpp"
+#include "libtorrent/aux_/session_impl.hpp"
+#include "libtorrent/disk_buffer_holder.hpp"
+#include "libtorrent/alloca.hpp"
+#include "libtorrent/stat_cache.hpp"
+
+#include <cstdio>
+
+//#define TORRENT_PARTIAL_HASH_LOG
+
 // for convert_to_wstring and convert_to_native
-#include "libtorrent/escape_string.hpp"
+#include "libtorrent/aux_/escape_string.hpp"
+
+#define DEBUG_STORAGE 0
+#define DEBUG_DELETE_FILES 0
+
+#if __cplusplus >= 201103L || defined __clang__
+
+#if DEBUG_STORAGE
+#define DLOG(...) fprintf(__VA_ARGS__)
+#else
+#define DLOG(...) do {} while (false)
+#endif
+
+#if DEBUG_DELETE_FILES
+#define DFLOG(...) fprintf(__VA_ARGS__)
+#else
+#define DFLOG(...) do {} while (false)
+#endif
+
+#else
+
+#if DEBUG_STORAGE
+#define DLOG fprintf
+#else
+#define DLOG TORRENT_WHILE_0 fprintf
+#endif
+
+#if DEBUG_DELETE_FILES
+#define DFLOG fprintf
+#else
+#define DFLOG TORRENT_WHILE_0 fprintf
+#endif
+
+#endif // cplusplus
 
 namespace libtorrent
 {
-	std::vector<std::pair<size_type, std::time_t> > get_filesizes(
-		file_storage const& storage, std::string const& p)
-	{
-		std::string save_path = complete(p);
-		std::vector<std::pair<size_type, std::time_t> > sizes;
-		for (int i = 0; i < storage.num_files(); ++i)
-		{
-			size_type size = 0;
-			std::time_t time = 0;
-
-			if (!storage.pad_file_at(i))
-			{
-				file_status s;
-				error_code ec;
-				stat_file(storage.file_path(i, save_path), &s, ec);
-
-				if (!ec)
-				{
-					size = s.file_size;
-					time = s.mtime;
-				}
-			}
-			sizes.push_back(std::make_pair(size, time));
-		}
-		return sizes;
-	}
-
-	// matches the sizes and timestamps of the files passed in
-	// in non-compact mode, actual file sizes and timestamps
-	// are allowed to be bigger and more recent than the fast
-	// resume data. This is because full allocation will not move
-	// pieces, so any older version of the resume data will
-	// still be a correct subset of the actual data on disk.
-	enum flags_t
-	{
-		compact_mode = 1,
-		ignore_timestamps = 2
-	};
-
-	bool match_filesizes(
-		file_storage const& fs
-		, std::string p
-		, std::vector<std::pair<size_type, std::time_t> > const& sizes
-		, int flags
-		, error_code& error)
-	{
-		if ((int)sizes.size() != fs.num_files())
-		{
-			error = errors::mismatching_number_of_files;
-			return false;
-		}
-		p = complete(p);
-
-		std::vector<std::pair<size_type, std::time_t> >::const_iterator size_iter
-			= sizes.begin();
-		for (int i = 0; i < fs.num_files(); ++i, ++size_iter)
-		{
-			size_type size = 0;
-			std::time_t time = 0;
-			if (fs.pad_file_at(i)) continue;
-
-			file_status s;
-			error_code ec;
-			stat_file(fs.file_path(i, p), &s, ec);
-
-			if (!ec)
-			{
-				size = s.file_size;
-				time = s.mtime;
-			}
-
-			if (((flags & compact_mode) && size != size_iter->first)
-				|| (!(flags & compact_mode) && size < size_iter->first))
-			{
-				error = errors::mismatching_file_size;
-				return false;
-			}
-
-			if (flags & ignore_timestamps) continue;
-
-			// if there is no timestamp in the resume data, ignore it
-			if (size_iter->second == 0) continue;
-
-			// allow one second 'slack', because of FAT volumes
-			// in sparse mode, allow the files to be more recent
-			// than the resume data, but only by 5 minutes
-			if (((flags & compact_mode) && (time > size_iter->second + 1 || time < size_iter->second - 1)) ||
-				(!(flags & compact_mode) && (time > size_iter->second + 5 * 60 || time < size_iter->second - 1)))
-			{
-				error = errors::mismatching_file_timestamp;
-				return false;
-			}
-		}
-		return true;
-	}
-
-	void storage_interface::set_error(std::string const& file, error_code const& ec) const
-	{
-		m_error_file = file;
-		m_error = ec;
-	}
-
-	// for backwards compatibility, let the default readv and
-	// writev implementations be implemented in terms of the
-	// old read and write
-	int storage_interface::readv(file::iovec_t const* bufs
-		, int slot, int offset, int num_bufs, int flags)
-	{
-		int ret = 0;
-		for (file::iovec_t const* i = bufs, *end(bufs + num_bufs); i < end; ++i)
-		{
-			int r = read((char*)i->iov_base, slot, offset, i->iov_len);
-			offset += i->iov_len;
-			if (r == -1) return -1;
-			ret += r;
-		}
-		return ret;
-	}
-
-	int storage_interface::writev(file::iovec_t const* bufs, int slot
-		, int offset, int num_bufs, int flags)
-	{
-		int ret = 0;
-		for (file::iovec_t const* i = bufs, *end(bufs + num_bufs); i < end; ++i)
-		{
-			int r = write((char const*)i->iov_base, slot, offset, i->iov_len);
-			offset += i->iov_len;
-			if (r == -1) return -1;
-			ret += r;
-		}
-		return ret;
-	}
-
 	int copy_bufs(file::iovec_t const* bufs, int bytes, file::iovec_t* target)
 	{
 		int size = 0;
@@ -253,7 +149,8 @@ namespace libtorrent
 			size += bufs->iov_len;
 			if (size >= bytes)
 			{
-				((char*&)bufs->iov_base) += bufs->iov_len - (size - bytes);
+				bufs->iov_base = reinterpret_cast<char*>(bufs->iov_base)
+					+ bufs->iov_len - (size - bytes);
 				bufs->iov_len = size - bytes;
 				return;
 			}
@@ -261,21 +158,14 @@ namespace libtorrent
 		}
 	}
 
-	int bufs_size(file::iovec_t const* bufs, int num_bufs)
-	{
-		int size = 0;
-		for (file::iovec_t const* i = bufs, *end(bufs + num_bufs); i < end; ++i)
-			size += i->iov_len;
-		return size;
-	}
-	
 	void clear_bufs(file::iovec_t const* bufs, int num_bufs)
 	{
 		for (file::iovec_t const* i = bufs, *end(bufs + num_bufs); i < end; ++i)
 			std::memset(i->iov_base, 0, i->iov_len);
 	}
 
-#if TORRENT_USE_ASSERTS
+	namespace {
+
 	int count_bufs(file::iovec_t const* bufs, int bytes)
 	{
 		int size = 0;
@@ -284,141 +174,373 @@ namespace libtorrent
 		for (file::iovec_t const* i = bufs;; ++i, ++count)
 		{
 			size += i->iov_len;
-			TORRENT_ASSERT(size <= bytes);
 			if (size >= bytes) return count;
+		}
+	}
+
+#ifdef TORRENT_DISK_STATS
+	static boost::atomic<int> event_id;
+	static mutex disk_access_mutex;
+
+	// this is opened and closed by the disk_io_thread class
+	FILE* g_access_log = NULL;
+
+	enum access_log_flags_t
+	{
+		op_read = 0,
+		op_write = 1,
+		op_start = 0,
+		op_end = 2
+	};
+
+	void write_access_log(boost::uint64_t offset, boost::uint32_t fileid, int flags, time_point timestamp)
+	{
+		if (g_access_log == NULL) return;
+
+		// the event format in the log is:
+		// uint64_t timestamp (microseconds)
+		// uint64_t file offset
+		// uint32_t file-id
+		// uint8_t  event (0: start read, 1: start write, 2: complete read, 4: complete write)
+		char event[29];
+		char* ptr = event;
+		detail::write_uint64(timestamp.time_since_epoch().count(), ptr);
+		detail::write_uint64(offset, ptr);
+		detail::write_uint64(static_cast<boost::uint64_t>(event_id++), ptr);
+		detail::write_uint32(fileid, ptr);
+		detail::write_uint8(flags, ptr);
+
+		mutex::scoped_lock l(disk_access_mutex);
+		int ret = fwrite(event, 1, sizeof(event), g_access_log);
+		l.unlock();
+		if (ret != sizeof(event))
+		{
+			fprintf(stderr, "ERROR writing to disk access log: (%d) %s\n"
+				, errno, strerror(errno));
 		}
 	}
 #endif
 
-	int piece_manager::hash_for_slot(int slot, partial_hash& ph, int piece_size
-		, int small_piece_size, sha1_hash* small_hash)
+	} // anonymous namespace
+
+	struct write_fileop : fileop
 	{
-		TORRENT_ASSERT_VAL(!error(), error());
-		int num_read = 0;
-		int slot_size = piece_size - ph.offset;
-		if (slot_size > 0)
+		write_fileop(default_storage& st, int flags)
+			: m_storage(st)
+			, m_flags(flags)
+		{}
+
+		int file_op(int file_index, boost::int64_t file_offset, int size
+			, file::iovec_t const* bufs, storage_error& ec)
+			TORRENT_OVERRIDE TORRENT_FINAL
 		{
-			int block_size = 16 * 1024;
-			if (m_storage->disk_pool()) block_size = m_storage->disk_pool()->block_size();
-			int size = slot_size;
-			int num_blocks = (size + block_size - 1) / block_size;
-
-			// when we optimize for speed we allocate all the buffers we
-			// need for the rest of the piece, and read it all in one call
-			// and then hash it. When optimizing for memory usage, we read
-			// one block at a time and hash it. This ends up only using a
-			// single buffer
-			if (m_storage->settings().optimize_hashing_for_speed)
+			if (m_storage.files().pad_file_at(file_index))
 			{
-				file::iovec_t* bufs = TORRENT_ALLOCA(file::iovec_t, num_blocks);
-				for (int i = 0; i < num_blocks; ++i)
-				{
-					bufs[i].iov_base = m_storage->disk_pool()->allocate_buffer("hash temp");
-					bufs[i].iov_len = (std::min)(block_size, size);
-					size -= bufs[i].iov_len;
-				}
-				// deliberately pass in 0 as flags, to disable random_access
-				num_read = m_storage->readv(bufs, slot, ph.offset, num_blocks, 0);
-				// TODO: if the read fails, set error and exit immediately
-
-				for (int i = 0; i < num_blocks; ++i)
-				{
-					if (small_hash && small_piece_size <= block_size)
-					{
-						ph.h.update((char const*)bufs[i].iov_base, small_piece_size);
-						*small_hash = hasher(ph.h).final();
-						small_hash = 0; // avoid this case again
-						if (int(bufs[i].iov_len) > small_piece_size)
-							ph.h.update((char const*)bufs[i].iov_base + small_piece_size
-								, bufs[i].iov_len - small_piece_size);
-					}
-					else
-					{
-						ph.h.update((char const*)bufs[i].iov_base, bufs[i].iov_len);
-						small_piece_size -= bufs[i].iov_len;
-					}
-					ph.offset += bufs[i].iov_len;
-					m_storage->disk_pool()->free_buffer((char*)bufs[i].iov_base);
-				}
+				// writing to a pad-file is a no-op
+				return size;
 			}
-			else
+
+			int num_bufs = count_bufs(bufs, size);
+
+			if (file_index < int(m_storage.m_file_priority.size())
+				&& m_storage.m_file_priority[file_index] == 0)
 			{
-				file::iovec_t buf;
-				disk_buffer_holder holder(*m_storage->disk_pool()
-					, m_storage->disk_pool()->allocate_buffer("hash temp"));
-				buf.iov_base = holder.get();
-				for (int i = 0; i < num_blocks; ++i)
+				TORRENT_ASSERT(m_storage.m_part_file);
+
+				error_code e;
+				peer_request map = m_storage.files().map_file(file_index
+					, file_offset, 0);
+				int ret = m_storage.m_part_file->writev(bufs, num_bufs
+					, map.piece, map.start, e);
+
+				if (e)
 				{
-					buf.iov_len = (std::min)(block_size, size);
-					// deliberately pass in 0 as flags, to disable random_access
-					int ret = m_storage->readv(&buf, slot, ph.offset, 1, 0);
-					if (ret > 0) num_read += ret;
-					// TODO: if the read fails, set error and exit immediately
-
-					if (small_hash && small_piece_size <= block_size)
-					{
-						if (small_piece_size > 0) ph.h.update((char const*)buf.iov_base, small_piece_size);
-						*small_hash = hasher(ph.h).final();
-						small_hash = 0; // avoid this case again
-						if (int(buf.iov_len) > small_piece_size)
-							ph.h.update((char const*)buf.iov_base + small_piece_size
-								, buf.iov_len - small_piece_size);
-					}
-					else
-					{
-						ph.h.update((char const*)buf.iov_base, buf.iov_len);
-						small_piece_size -= buf.iov_len;
-					}
-
-					ph.offset += buf.iov_len;
-					size -= buf.iov_len;
+					ec.ec = e;
+					ec.file = file_index;
+					ec.operation = storage_error::partfile_write;
+					return -1;
 				}
+				return ret;
 			}
-			if (error()) return 0;
+
+			// invalidate our stat cache for this file, since
+			// we're writing to it
+			m_storage.m_stat_cache.set_dirty(file_index);
+
+			file_handle handle = m_storage.open_file(file_index
+				, file::read_write, ec);
+			if (ec) return -1;
+
+			// please ignore the adjusted_offset. It's just file_offset.
+			boost::int64_t adjusted_offset =
+#ifndef TORRENT_NO_DEPRECATE
+				m_storage.files().file_base_deprecated(file_index) +
+#endif
+				file_offset;
+
+#ifdef TORRENT_DISK_STATS
+			write_access_log(adjusted_offset, handle->file_id(), op_start | op_write, clock_type::now());
+#endif
+
+			error_code e;
+			int ret = handle->writev(adjusted_offset
+				, bufs, num_bufs, e, m_flags);
+
+			// set this unconditionally in case the upper layer would like to treat
+			// short reads as errors
+			ec.operation = storage_error::write;
+
+				// we either get an error or 0 or more bytes read
+			TORRENT_ASSERT(e || ret >= 0);
+
+#ifdef TORRENT_DISK_STATS
+			write_access_log(adjusted_offset + ret , handle->file_id(), op_end | op_write, clock_type::now());
+#endif
+			TORRENT_ASSERT(ret <= bufs_size(bufs, num_bufs));
+
+			if (e)
+			{
+				ec.ec = e;
+				ec.file = file_index;
+				return -1;
+			}
+
+			return ret;
 		}
-		return num_read;
-	}
+	private:
+		default_storage& m_storage;
+		int m_flags;
+	};
 
-	default_storage::default_storage(file_storage const& fs, file_storage const* mapped, std::string const& path
-		, file_pool& fp, std::vector<boost::uint8_t> const& file_prio)
-		: m_files(fs)
-		, m_file_priority(file_prio)
-		, m_pool(fp)
-		, m_page_size(page_size())
-		, m_allocate_files(false)
+	struct read_fileop : fileop
 	{
-		if (mapped) m_mapped_files.reset(new file_storage(*mapped));
+		read_fileop(default_storage& st, int const flags)
+			: m_storage(st)
+			, m_flags(flags)
+		{}
+
+		int file_op(int file_index, boost::int64_t file_offset, int size
+			, file::iovec_t const* bufs, storage_error& ec)
+			TORRENT_OVERRIDE TORRENT_FINAL
+		{
+			int num_bufs = count_bufs(bufs, size);
+
+			if (m_storage.files().pad_file_at(file_index))
+			{
+				// reading from a pad file yields zeroes
+				clear_bufs(bufs, num_bufs);
+				return size;
+			}
+
+			if (file_index < int(m_storage.m_file_priority.size())
+				&& m_storage.m_file_priority[file_index] == 0)
+			{
+				TORRENT_ASSERT(m_storage.m_part_file);
+
+				error_code e;
+				peer_request map = m_storage.files().map_file(file_index
+					, file_offset, 0);
+				int ret = m_storage.m_part_file->readv(bufs, num_bufs
+					, map.piece, map.start, e);
+
+				if (e)
+				{
+					ec.ec = e;
+					ec.file = file_index;
+					ec.operation = storage_error::partfile_read;
+					return -1;
+				}
+				return ret;
+			}
+
+			file_handle handle = m_storage.open_file(file_index
+				, file::read_only | m_flags, ec);
+			if (ec) return -1;
+
+			// please ignore the adjusted_offset. It's just file_offset.
+			boost::int64_t adjusted_offset =
+#ifndef TORRENT_NO_DEPRECATE
+				m_storage.files().file_base_deprecated(file_index) +
+#endif
+				file_offset;
+
+#ifdef TORRENT_DISK_STATS
+			write_access_log(adjusted_offset, handle->file_id(), op_start | op_read, clock_type::now());
+#endif
+
+			error_code e;
+			int ret = handle->readv(adjusted_offset
+				, bufs, num_bufs, e, m_flags);
+
+			// set this unconditionally in case the upper layer would like to treat
+			// short reads as errors
+			ec.operation = storage_error::read;
+
+				// we either get an error or 0 or more bytes read
+			TORRENT_ASSERT(e || ret >= 0);
+
+#ifdef TORRENT_DISK_STATS
+			write_access_log(adjusted_offset + ret , handle->file_id(), op_end | op_read, clock_type::now());
+#endif
+			TORRENT_ASSERT(ret <= bufs_size(bufs, num_bufs));
+
+			if (e)
+			{
+				ec.ec = e;
+				ec.file = file_index;
+				return -1;
+			}
+
+			return ret;
+		}
+
+	private:
+		default_storage& m_storage;
+		int const m_flags;
+	};
+
+	default_storage::default_storage(storage_params const& params)
+		: m_files(*params.files)
+		, m_pool(*params.pool)
+		, m_allocate_files(params.mode == storage_mode_allocate)
+	{
+		if (params.mapped_files) m_mapped_files.reset(new file_storage(*params.mapped_files));
+		if (params.priorities) m_file_priority = *params.priorities;
 
 		TORRENT_ASSERT(m_files.num_files() > 0);
-		m_save_path = complete(path);
+		m_save_path = complete(params.path);
+		m_part_file_name = "." + (params.info
+			? to_hex(params.info->info_hash().to_string())
+			: params.files->name()) + ".parts";
+
+		file_storage const& fs = files();
+		for (int i = 0; i < m_file_priority.size(); ++i)
+		{
+			if (m_file_priority[i] == 0 && !fs.pad_file_at(i))
+			{
+				need_partfile();
+				break;
+			}
+		}
 	}
 
-	default_storage::~default_storage() { m_pool.release(this); }
-
-	void default_storage::set_file_priority(std::vector<boost::uint8_t> const& prio)
+	default_storage::~default_storage()
 	{
-		m_file_priority = prio;
+		error_code ec;
+		if (m_part_file) m_part_file->flush_metadata(ec);
+
+		// this may be called from a different
+		// thread than the disk thread
+		m_pool.release(this);
 	}
 
-	bool default_storage::initialize(bool allocate_files)
+	void default_storage::need_partfile()
 	{
-		m_allocate_files = allocate_files;
+		if (m_part_file) return;
+
+		m_part_file.reset(new part_file(
+			m_save_path, m_part_file_name
+			, m_files.num_pieces(), m_files.piece_length()));
+	}
+
+	void default_storage::set_file_priority(std::vector<boost::uint8_t> const& prio, storage_error& ec)
+	{
+		// extend our file priorities in case it's truncated
+		// the default assumed priority is 4 (the default)
+		if (prio.size() > m_file_priority.size())
+			m_file_priority.resize(prio.size(), 4);
+
+		file_storage const& fs = files();
+		for (int i = 0; i < int(prio.size()); ++i)
+		{
+			int old_prio = m_file_priority[i];
+			int new_prio = prio[i];
+			if (old_prio == 0 && new_prio != 0)
+			{
+				// move stuff out of the part file
+				file_handle f = open_file(i, file::read_write, ec);
+				if (ec) return;
+
+				need_partfile();
+
+				m_part_file->export_file(*f, fs.file_offset(i), fs.file_size(i), ec.ec);
+				if (ec)
+				{
+					ec.file = i;
+					ec.operation = storage_error::partfile_write;
+					return;
+				}
+			}
+			else if (old_prio != 0 && new_prio == 0)
+			{
+				// move stuff into the part file
+				// this is not implemented yet.
+				// pretend that we didn't set the priority to 0.
+
+				std::string fp = fs.file_path(i, m_save_path);
+				if (exists(fp))
+					new_prio = 1;
+/*
+				file_handle f = open_file(i, file::read_only, ec);
+				if (ec.ec != boost::system::errc::no_such_file_or_directory)
+				{
+					if (ec) return;
+
+					need_partfile();
+
+					m_part_file->import_file(*f, fs.file_offset(i), fs.file_size(i), ec.ec);
+					if (ec)
+					{
+						ec.file = i;
+						ec.operation = storage_error::partfile_read;
+						return;
+					}
+					// remove the file
+					std::string p = fs.file_path(i, m_save_path);
+					delete_one_file(p, ec.ec);
+					if (ec)
+					{
+						ec.file = i;
+						ec.operation = storage_error::remove;
+					}
+				}
+*/
+			}
+			ec.ec.clear();
+			m_file_priority[i] = new_prio;
+
+			if (m_file_priority[i] == 0 && !fs.pad_file_at(i))
+				need_partfile();
+		}
+		if (m_part_file) m_part_file->flush_metadata(ec.ec);
+		if (ec)
+		{
+			ec.file = -1;
+			ec.operation = storage_error::partfile_write;
+		}
+	}
+
+	void default_storage::initialize(storage_error& ec)
+	{
+		m_stat_cache.init(files().num_files());
 
 #ifdef TORRENT_WINDOWS
 		// don't do full file allocations on network drives
 #if TORRENT_USE_WSTRING
 		std::wstring f = convert_to_wstring(m_save_path);
-		int drive_type = GetDriveTypeW(f.c_str());
+		int const drive_type = GetDriveTypeW(f.c_str());
 #else
-		int drive_type = GetDriveTypeA(m_save_path.c_str());
+		int const drive_type = GetDriveTypeA(m_save_path.c_str());
 #endif
 
 		if (drive_type == DRIVE_REMOTE)
 			m_allocate_files = false;
 #endif
 
-		error_code ec;
-		m_file_created.resize(files().num_files(), false);
+		{
+			mutex::scoped_lock l(m_file_created_mutex);
+			m_file_created.resize(files().num_files(), false);
+		}
 
 		// first, create all missing directories
 		std::string last_path;
@@ -426,108 +548,202 @@ namespace libtorrent
 		{
 			// ignore files that have priority 0
 			if (int(m_file_priority.size()) > file_index
-				&& m_file_priority[file_index] == 0) continue;
+				&& m_file_priority[file_index] == 0)
+			{
+				continue;
+			}
 
 			// ignore pad files
 			if (files().pad_file_at(file_index)) continue;
 
-			std::string file_path = files().file_path(file_index, m_save_path);
-
-			file_status s;
-			stat_file(file_path, &s, ec);
-			if (ec && ec != boost::system::errc::no_such_file_or_directory
-				&& ec != boost::system::errc::not_a_directory)
+			boost::int64_t cached_size = m_stat_cache.get_filesize(file_index);
+			if (cached_size == stat_cache::not_in_cache)
 			{
-				set_error(file_path, ec);
-				break;
+				file_status s;
+				std::string file_path = files().file_path(file_index, m_save_path);
+				stat_file(file_path, &s, ec.ec);
+				if (!ec)
+				{
+					m_stat_cache.set_cache(file_index, s.file_size, s.mtime);
+					cached_size = s.file_size;
+				}
+				else if (ec.ec != boost::system::errc::no_such_file_or_directory)
+				{
+					m_stat_cache.set_error(file_index);
+					ec.file = file_index;
+					ec.operation = storage_error::stat;
+					break;
+				}
+				else
+				{
+					cached_size = stat_cache::no_exist;
+				}
 			}
 
 			// if the file already exists, but is larger than what
 			// it's supposed to be, truncate it
-			// if the file is empty, just create it either way.
-			if ((!ec && s.file_size > files().file_size(file_index)) || files().file_size(file_index) == 0)
+			// if the file is empty and doesn't already exist, create it
+			if ((!ec && cached_size > files().file_size(file_index))
+				|| (files().file_size(file_index) == 0 && cached_size == stat_cache::no_exist))
 			{
+				std::string file_path = files().file_path(file_index, m_save_path);
 				std::string dir = parent_path(file_path);
 
 				if (dir != last_path)
 				{
 					last_path = dir;
 
-					create_directories(last_path, ec);
-					if (ec)
+					create_directories(last_path, ec.ec);
+					if (ec.ec)
 					{
-						set_error(dir, ec);
+						ec.file = file_index;
+						ec.operation = storage_error::mkdir;
 						break;
 					}
 				}
-				ec.clear();
+				ec.ec.clear();
+				file_handle f = open_file(file_index, file::read_write
+					| file::random_access, ec);
+				if (ec) return;
 
-				boost::intrusive_ptr<file> f = open_file(file_index, file::read_write | file::random_access, ec);
-				if (ec) set_error(file_path, ec);
-				else if (f)
+				boost::int64_t const size = files().file_size(file_index);
+				f->set_size(size, ec.ec);
+				if (ec)
 				{
-					f->set_size(files().file_size(file_index), ec);
-					if (ec) set_error(file_path, ec);
+					ec.file = file_index;
+					ec.operation = storage_error::fallocate;
+					break;
 				}
-				if (ec) break;
+				size_t const mtime = m_stat_cache.get_filetime(file_index);
+				m_stat_cache.set_cache(file_index, size, mtime);
 			}
-			ec.clear();
+			ec.ec.clear();
 		}
 
 		// close files that were opened in write mode
 		m_pool.release(this);
 
-		return error() ? true : false;
+#if defined TORRENT_DEBUG_FILE_LEAKS
+		print_open_files("release files", m_files.name().c_str());
+#endif
 	}
 
 #ifndef TORRENT_NO_DEPRECATE
-	void default_storage::finalize_file(int index) {}
+	void default_storage::finalize_file(int, storage_error&) {}
 #endif
 
-	bool default_storage::has_any_file()
+	bool default_storage::has_any_file(storage_error& ec)
 	{
+		m_stat_cache.init(files().num_files());
+
+		std::string file_path;
 		for (int i = 0; i < files().num_files(); ++i)
 		{
-			error_code ec;
 			file_status s;
-			stat_file(files().file_path(i, m_save_path), &s, ec);
-			if (ec) continue;
-			if (s.mode & file_status::regular_file && files().file_size(i) > 0)
+			boost::int64_t cache_status = m_stat_cache.get_filesize(i);
+			if (cache_status < 0 && cache_status != stat_cache::no_exist)
+			{
+				file_path = files().file_path(i, m_save_path);
+				stat_file(file_path, &s, ec.ec);
+				boost::int64_t r = s.file_size;
+				if (ec.ec || !(s.mode & file_status::regular_file))
+				{
+					r = stat_cache::cache_error;
+				}
+
+				if (ec && ec.ec == boost::system::errc::no_such_file_or_directory)
+				{
+					ec.ec.clear();
+					r = stat_cache::no_exist;
+				}
+				m_stat_cache.set_cache(i, r, s.mtime);
+
+				if (ec)
+				{
+					ec.file = i;
+					ec.operation = storage_error::stat;
+					m_stat_cache.clear();
+					return false;
+				}
+			}
+
+			// if we didn't find the file, check the next one
+			if (m_stat_cache.get_filesize(i) == stat_cache::no_exist) continue;
+
+			if (m_stat_cache.get_filesize(i) > 0)
 				return true;
+		}
+		file_status s;
+		stat_file(combine_path(m_save_path, m_part_file_name), &s, ec.ec);
+		if (!ec) return true;
+
+		if (ec && ec.ec == boost::system::errc::no_such_file_or_directory)
+			ec.ec.clear();
+		if (ec)
+		{
+			ec.file = -1;
+			ec.operation = storage_error::stat;
+			return false;
 		}
 		return false;
 	}
 
-	bool default_storage::rename_file(int index, std::string const& new_filename)
+	void default_storage::rename_file(int index, std::string const& new_filename
+		, storage_error& ec)
 	{
-		if (index < 0 || index >= files().num_files()) return true;
+		if (index < 0 || index >= files().num_files()) return;
 		std::string old_name = files().file_path(index, m_save_path);
 		m_pool.release(this, index);
 
-		error_code ec;
-		std::string new_path;
-		if (is_complete(new_filename)) new_path = new_filename;
-		else new_path = combine_path(m_save_path, new_filename);
-		std::string new_dir = parent_path(new_path);
-
-		// create any missing directories that the new filename
-		// lands in
-		create_directories(new_dir, ec);
-		if (ec)
+		// if the old file doesn't exist, just succeed and change the filename
+		// that will be created. This shortcut is important because the
+		// destination directory may not exist yet, which would cause a failure
+		// even though we're not moving a file (yet). It's better for it to
+		// fail later when we try to write to the file the first time, because
+		// the user then will have had a chance to make the destination directory
+		// valid.
+		if (exists(old_name, ec.ec))
 		{
-			set_error(new_dir, ec);
-			return true;
+#if defined TORRENT_DEBUG_FILE_LEAKS
+			print_open_files("release files", m_files.name().c_str());
+#endif
+
+			std::string new_path;
+			if (is_complete(new_filename)) new_path = new_filename;
+			else new_path = combine_path(m_save_path, new_filename);
+			std::string new_dir = parent_path(new_path);
+
+			// create any missing directories that the new filename
+			// lands in
+			create_directories(new_dir, ec.ec);
+			if (ec.ec)
+			{
+				ec.file = index;
+				ec.operation = storage_error::rename;
+				return;
+			}
+
+			rename(old_name, new_path, ec.ec);
+
+			// if old_name doesn't exist, that's not an error
+			// here. Once we start writing to the file, it will
+			// be written to the new filename
+			if (ec.ec == boost::system::errc::no_such_file_or_directory)
+				ec.ec.clear();
+
+			if (ec)
+			{
+				ec.file = index;
+				ec.operation = storage_error::rename;
+				return;
+			}
 		}
-
-		rename(old_name, new_path, ec);
-		
-		// if old_name doesn't exist, that's not an error
-		// here. Once we start writing to the file, it will
-		// be written to the new filename
-		if (ec && ec != boost::system::errc::no_such_file_or_directory)
+		else if (ec.ec)
 		{
-			set_error(old_name, ec);
-			return true;
+			// if exists fails, report that error
+			ec.file = index;
+			ec.operation = storage_error::rename;
+			return;
 		}
 
 		// if old path doesn't exist, just rename the file
@@ -536,185 +752,278 @@ namespace libtorrent
 		if (!m_mapped_files)
 		{ m_mapped_files.reset(new file_storage(m_files)); }
 		m_mapped_files->rename_file(index, new_filename);
-		return false;
 	}
 
-	bool default_storage::release_files()
+	void default_storage::release_files(storage_error&)
 	{
-		m_pool.release(this);
-		return false;
-	}
+		if (m_part_file)
+		{
+			error_code ignore;
+			m_part_file->flush_metadata(ignore);
+		}
 
-	void default_storage::delete_one_file(std::string const& p)
-	{
-		error_code ec;
-		remove(p, ec);
-		
-		if (ec && ec != boost::system::errc::no_such_file_or_directory)
-			set_error(p, ec);
-	}
-
-	bool default_storage::delete_files()
-	{
 		// make sure we don't have the files open
 		m_pool.release(this);
 
-		// delete the files from disk
-		std::set<std::string> directories;
-		typedef std::set<std::string>::iterator iter_t;
-		for (int i = 0; i < files().num_files(); ++i)
-		{
-			std::string fp = files().file_path(i);
-			bool complete = is_complete(fp);
-			std::string p = complete ? fp : combine_path(m_save_path, fp);
-			if (!complete)
-			{
-				std::string bp = parent_path(fp);
-				std::pair<iter_t, bool> ret;
-				ret.second = true;
-				while (ret.second && !bp.empty())
-				{
-					ret = directories.insert(combine_path(m_save_path, bp));
-					bp = parent_path(bp);
-				}
-			}
-			delete_one_file(p);
-		}
+		m_stat_cache.clear();
 
-		// remove the directories. Reverse order to delete
-		// subdirectories first
-
-		for (std::set<std::string>::reverse_iterator i = directories.rbegin()
-			, end(directories.rend()); i != end; ++i)
-		{
-			delete_one_file(*i);
-		}
-
-		if (error()) return true;
-		return false;
+#if defined TORRENT_DEBUG_FILE_LEAKS
+		print_open_files("release files", m_files.name().c_str());
+#endif
 	}
 
-	bool default_storage::write_resume_data(entry& rd) const
+	void default_storage::delete_one_file(std::string const& p, error_code& ec)
+	{
+		remove(p, ec);
+
+		DFLOG(stderr, "[%p] delete_one_file: %s [%s]\n", static_cast<void*>(this)
+			, p.c_str(), ec.message().c_str());
+
+		if (ec == boost::system::errc::no_such_file_or_directory)
+			ec.clear();
+	}
+
+	void default_storage::delete_files(int const options, storage_error& ec)
+	{
+		DFLOG(stderr, "[%p] delete_files [%x]\n", static_cast<void*>(this)
+			, options);
+
+#if TORRENT_USE_ASSERTS
+		// this is a fence job, we expect no other
+		// threads to hold any references to any files
+		// in this file storage. Assert that that's the
+		// case
+		if (!m_pool.assert_idle_files(this))
+		{
+#if defined TORRENT_DEBUG_FILE_LEAKS
+			print_open_files("delete-files idle assert failed", m_files.name().c_str());
+#endif
+			TORRENT_ASSERT(false);
+		}
+#endif
+
+		// make sure we don't have the files open
+		m_pool.release(this);
+
+		// if there's a part file open, make sure to destruct it to have it
+		// release the underlying part file. Otherwise we may not be able to
+		// delete it
+		if (m_part_file) m_part_file.reset();
+
+#if defined TORRENT_DEBUG_FILE_LEAKS
+		print_open_files("release files", m_files.name().c_str());
+#endif
+
+		if (options == session::delete_files)
+		{
+#if TORRENT_USE_ASSERTS
+			m_pool.mark_deleted(m_files);
+#endif
+			// delete the files from disk
+			std::set<std::string> directories;
+			typedef std::set<std::string>::iterator iter_t;
+			for (int i = 0; i < files().num_files(); ++i)
+			{
+				std::string const fp = files().file_path(i);
+				bool const complete = files().file_absolute_path(i);
+				std::string p = complete ? fp : combine_path(m_save_path, fp);
+				if (!complete)
+				{
+					std::string bp = parent_path(fp);
+					std::pair<iter_t, bool> ret;
+					ret.second = true;
+					while (ret.second && !bp.empty())
+					{
+						ret = directories.insert(combine_path(m_save_path, bp));
+						bp = parent_path(bp);
+					}
+				}
+				delete_one_file(p, ec.ec);
+				if (ec) { ec.file = i; ec.operation = storage_error::remove; }
+			}
+
+			// remove the directories. Reverse order to delete
+			// subdirectories first
+
+			for (std::set<std::string>::reverse_iterator i = directories.rbegin()
+				, end(directories.rend()); i != end; ++i)
+			{
+				error_code error;
+				delete_one_file(*i, error);
+				if (error && !ec) { ec.file = -1; ec.ec = error; ec.operation = storage_error::remove; }
+			}
+		}
+
+		if (options == session::delete_files
+			|| options == session::delete_partfile)
+		{
+			error_code error;
+			remove(combine_path(m_save_path, m_part_file_name), error);
+			DFLOG(stderr, "[%p] delete partfile %s/%s [%s]\n", static_cast<void*>(this)
+				, m_save_path.c_str(), m_part_file_name.c_str(), error.message().c_str());
+			if (error && error != boost::system::errc::no_such_file_or_directory)
+			{
+				ec.file = -1;
+				ec.ec = error;
+				ec.operation = storage_error::remove;
+			}
+		}
+
+		DFLOG(stderr, "[%p] delete_files result: %s\n", static_cast<void*>(this)
+			, ec.ec.message().c_str());
+
+#if defined TORRENT_DEBUG_FILE_LEAKS
+		print_open_files("delete-files done", m_files.name().c_str());
+#endif
+	}
+
+	void default_storage::write_resume_data(entry& rd, storage_error& ec) const
 	{
 		TORRENT_ASSERT(rd.type() == entry::dictionary_t);
 
-		std::vector<std::pair<size_type, std::time_t> > file_sizes
-			= get_filesizes(files(), m_save_path);
-
 		entry::list_type& fl = rd["file sizes"].list();
-		for (std::vector<std::pair<size_type, std::time_t> >::iterator i
-			= file_sizes.begin(), end(file_sizes.end()); i != end; ++i)
+
+		if (m_part_file)
 		{
-			entry::list_type p;
-			p.push_back(entry(i->first));
-			p.push_back(entry(i->second));
-			fl.push_back(entry(p));
+			error_code ignore;
+			const_cast<part_file&>(*m_part_file).flush_metadata(ignore);
 		}
-		
-		return false;
+
+		file_storage const& fs = files();
+		for (int i = 0; i < fs.num_files(); ++i)
+		{
+			boost::int64_t file_size = 0;
+			time_t file_time = 0;
+			boost::int64_t const cache_state = m_stat_cache.get_filesize(i);
+			if (cache_state != stat_cache::not_in_cache)
+			{
+				if (cache_state >= 0)
+				{
+					file_size = cache_state;
+					file_time = m_stat_cache.get_filetime(i);
+				}
+			}
+			else
+			{
+				file_status s;
+				error_code error;
+				stat_file(fs.file_path(i, m_save_path), &s, error);
+				if (!error)
+				{
+					file_size = s.file_size;
+					file_time = s.mtime;
+					m_stat_cache.set_cache(i, file_size, file_time);
+				}
+				else if (error == error_code(boost::system::errc::no_such_file_or_directory
+					, generic_category()))
+				{
+					m_stat_cache.set_noexist(i);
+				}
+				else
+				{
+					ec.ec = error;
+					ec.file = i;
+					ec.operation = storage_error::stat;
+					m_stat_cache.set_error(i);
+				}
+			}
+#if TORRENT_USE_INVARIANT_CHECKS
+			{
+				file_status s;
+				error_code error;
+				stat_file(fs.file_path(i, m_save_path), &s, error);
+				if (s.file_size >= 0 && !error)
+				{
+					TORRENT_ASSERT_VAL(s.file_size == file_size, file_size);
+				}
+				else
+				{
+					TORRENT_ASSERT_VAL(file_size == 0, file_size);
+				}
+			}
+#endif
+
+			fl.push_back(entry(entry::list_t));
+			entry::list_type& p = fl.back().list();
+			p.push_back(entry(file_size));
+			p.push_back(entry(file_time));
+		}
 	}
 
-	int default_storage::sparse_end(int slot) const
-	{
-		TORRENT_ASSERT(slot >= 0);
-		TORRENT_ASSERT(slot < files().num_pieces());
-
-		size_type file_offset = (size_type)slot * files().piece_length();
-		int file_index = 0;
-
-		for (;;)
-		{
-			if (file_offset < files().file_size(file_index))
-				break;
-
-			file_offset -= files().file_size(file_index);
-			++file_index;
-			TORRENT_ASSERT(file_index != files().num_files());
-		}
-	
-		error_code ec;
-		boost::intrusive_ptr<file> file_handle = open_file(file_index, file::read_only, ec);
-		if (!file_handle || ec) return slot;
-
-		size_type data_start = file_handle->sparse_end(file_offset);
-		return int((data_start + files().piece_length() - 1) / files().piece_length());
-	}
-
-	bool default_storage::verify_resume_data(lazy_entry const& rd, error_code& error)
+	bool default_storage::verify_resume_data(bdecode_node const& rd
+		, std::vector<std::string> const* links
+		, storage_error& ec)
 	{
 		// TODO: make this more generic to not just work if files have been
 		// renamed, but also if they have been merged into a single file for instance
 		// maybe use the same format as .torrent files and reuse some code from torrent_info
-		lazy_entry const* mapped_files = rd.dict_find_list("mapped_files");
-		if (mapped_files && mapped_files->list_size() == m_files.num_files())
+		bdecode_node mapped_files = rd.dict_find_list("mapped_files");
+		if (mapped_files && mapped_files.list_size() == m_files.num_files())
 		{
 			m_mapped_files.reset(new file_storage(m_files));
 			for (int i = 0; i < m_files.num_files(); ++i)
 			{
-				std::string new_filename = mapped_files->list_string_value_at(i);
+				std::string new_filename = mapped_files.list_string_value_at(i);
 				if (new_filename.empty()) continue;
 				m_mapped_files->rename_file(i, new_filename);
 			}
 		}
-		
-		lazy_entry const* file_priority = rd.dict_find_list("file_priority");
-		if (file_priority && file_priority->list_size()
+
+		bdecode_node file_priority = rd.dict_find_list("file_priority");
+		if (file_priority && file_priority.list_size()
 			== files().num_files())
 		{
-			m_file_priority.resize(file_priority->list_size());
-			for (int i = 0; i < file_priority->list_size(); ++i)
-				m_file_priority[i] = boost::uint8_t(file_priority->list_int_value_at(i, 1));
+			m_file_priority.resize(file_priority.list_size());
+			for (int i = 0; i < file_priority.list_size(); ++i)
+				m_file_priority[i] = boost::uint8_t(file_priority.list_int_value_at(i, 1));
 		}
 
-		std::vector<std::pair<size_type, std::time_t> > file_sizes;
-		lazy_entry const* file_sizes_ent = rd.dict_find_list("file sizes");
+		bdecode_node file_sizes_ent = rd.dict_find_list("file sizes");
 		if (file_sizes_ent == 0)
 		{
-			error = errors::missing_file_sizes;
+			ec.ec = errors::missing_file_sizes;
+			ec.file = -1;
+			ec.operation = storage_error::check_resume;
 			return false;
-		}
-		
-		for (int i = 0; i < file_sizes_ent->list_size(); ++i)
-		{
-			lazy_entry const* e = file_sizes_ent->list_at(i);
-			if (e->type() != lazy_entry::list_t
-				|| e->list_size() != 2
-				|| e->list_at(0)->type() != lazy_entry::int_t
-				|| e->list_at(1)->type() != lazy_entry::int_t)
-				continue;
-			file_sizes.push_back(std::pair<size_type, std::time_t>(
-				e->list_int_value_at(0), std::time_t(e->list_int_value_at(1))));
 		}
 
-		if (file_sizes.empty())
+		if (file_sizes_ent.list_size() == 0)
 		{
-			error = errors::no_files_in_resume_data;
+			ec.ec = errors::no_files_in_resume_data;
 			return false;
 		}
-		
+
+		file_storage const& fs = files();
+		if (file_sizes_ent.list_size() != fs.num_files())
+		{
+			ec.ec = errors::mismatching_number_of_files;
+			ec.file = -1;
+			ec.operation = storage_error::check_resume;
+			return false;
+		}
+
 		bool seed = false;
-		
-		lazy_entry const* slots = rd.dict_find_list("slots");
+		bdecode_node slots = rd.dict_find_list("slots");
 		if (slots)
 		{
-			if (int(slots->list_size()) == m_files.num_pieces())
+			if (slots.list_size() == m_files.num_pieces())
 			{
 				seed = true;
-				for (int i = 0; i < slots->list_size(); ++i)
+				for (int i = 0; i < slots.list_size(); ++i)
 				{
-					if (slots->list_int_value_at(i, -1) >= 0) continue;
+					if (slots.list_int_value_at(i, -1) >= 0) continue;
 					seed = false;
 					break;
 				}
 			}
 		}
-		else if (lazy_entry const* pieces = rd.dict_find_string("pieces"))
+		else if (bdecode_node pieces = rd.dict_find_string("pieces"))
 		{
-			if (int(pieces->string_length()) == m_files.num_pieces())
+			if (pieces.string_length() == m_files.num_pieces())
 			{
 				seed = true;
-				char const* p = pieces->string_ptr();
-				for (int i = 0; i < pieces->string_length(); ++i)
+				char const* p = pieces.string_ptr();
+				for (int i = 0; i < pieces.string_length(); ++i)
 				{
 					if ((p[i] & 1) == 1) continue;
 					seed = false;
@@ -724,1427 +1033,765 @@ namespace libtorrent
 		}
 		else
 		{
-			error = errors::missing_pieces;
+			ec.ec = errors::missing_pieces;
+			ec.file = -1;
+			ec.operation = storage_error::check_resume;
 			return false;
 		}
 
-		bool full_allocation_mode = false;
-		if (rd.dict_find_string_value("allocation") != "compact")
-			full_allocation_mode = true;
-
-		if (seed)
+		for (int i = 0; i < file_sizes_ent.list_size(); ++i)
 		{
-			if (files().num_files() != (int)file_sizes.size())
+			if (fs.pad_file_at(i)) continue;
+
+			// files with priority zero may not have been saved to disk at their
+			// expected location, but is likely to be in a partfile. Just exempt it
+			// from checking
+			if (i < int(m_file_priority.size())
+				&& m_file_priority[i] == 0)
+				continue;
+
+			bdecode_node e = file_sizes_ent.list_at(i);
+			if (e.type() != bdecode_node::list_t
+				|| e.list_size() < 2
+				|| e.list_at(0).type() != bdecode_node::int_t
+				|| e.list_at(1).type() != bdecode_node::int_t)
 			{
-				error = errors::mismatching_number_of_files;
+				ec.ec = errors::missing_file_sizes;
+				ec.file = i;
+				ec.operation = storage_error::check_resume;
 				return false;
 			}
 
-			std::vector<std::pair<size_type, std::time_t> >::iterator
-				fs = file_sizes.begin();
-			// the resume data says we have the entire torrent
-			// make sure the file sizes are the right ones
-			for (int i = 0; i < files().num_files(); ++i, ++fs)
+			boost::int64_t expected_size = e.list_int_value_at(0);
+			time_t expected_time = e.list_int_value_at(1);
+
+			// if we're a seed, the expected size should match
+			// the actual full size according to the torrent
+			if (seed && expected_size < fs.file_size(i))
 			{
-				if (!files().pad_file_at(i) && files().file_size(i) != fs->first)
+				ec.ec = errors::mismatching_file_size;
+				ec.file = i;
+				ec.operation = storage_error::check_resume;
+				return false;
+			}
+
+			boost::int64_t file_size = m_stat_cache.get_filesize(i);
+			time_t file_time;
+			if (file_size >= 0)
+			{
+				file_time = m_stat_cache.get_filetime(i);
+			}
+			else
+			{
+				file_status s;
+				error_code error;
+				std::string file_path = fs.file_path(i, m_save_path);
+				stat_file(file_path, &s, error);
+				if (error)
 				{
-					error = errors::mismatching_file_size;
-					return false;
+					if (error != boost::system::errc::no_such_file_or_directory)
+					{
+						m_stat_cache.set_error(i);
+						ec.ec = error;
+						ec.file = i;
+						ec.operation = storage_error::stat;
+						return false;
+					}
+					m_stat_cache.set_noexist(i);
+					if (expected_size != 0)
+					{
+						ec.ec = errors::mismatching_file_size;
+						ec.file = i;
+						ec.operation = storage_error::none;
+						return false;
+					}
+					file_size = 0;
+					file_time = 0;
+				}
+				else
+				{
+					file_size = s.file_size;
+					file_time = s.mtime;
 				}
 			}
+
+			if (expected_size > file_size)
+			{
+				ec.ec = errors::mismatching_file_size;
+				ec.file = i;
+				ec.operation = storage_error::none;
+				return false;
+			}
+
+			if (settings().get_bool(settings_pack::ignore_resume_timestamps)) continue;
+
+			// allow some slack, because of FAT volumes
+			if (expected_time != 0 &&
+				(file_time > expected_time + 5 * 60 || file_time < expected_time - 5))
+			{
+				ec.ec = errors::mismatching_file_timestamp;
+				ec.file = i;
+				ec.operation = storage_error::stat;
+				return false;
+			}
 		}
-		int flags = (full_allocation_mode ? 0 : compact_mode)
-			| (settings().ignore_resume_timestamps ? ignore_timestamps : 0);
 
-		return match_filesizes(files(), m_save_path, file_sizes, flags, error);
+		// TODO: 2 we probably need to do this unconditionally in this function.
+		// Even if the resume data file appears stale, we need to create these
+		// hard links, right?
+#ifndef TORRENT_DISABLE_MUTABLE_TORRENTS
+		if (links)
+		{
+			// if this is a mutable torrent, and we need to pick up some files
+			// from other torrents, do that now. Note that there is an inherent
+			// race condition here. We checked if the files existed on a different
+			// thread a while ago. These files may no longer exist or may have been
+			// moved. If so, we just fail. The user is responsible to not touch
+			// other torrents until a new mutable torrent has been completely
+			// added.
+			int idx = 0;
+			for (std::vector<std::string>::const_iterator i = links->begin();
+				i != links->end(); ++i, ++idx)
+			{
+				if (i->empty()) continue;
 
+				error_code err;
+				std::string file_path = fs.file_path(idx, m_save_path);
+				hard_link(*i, file_path, err);
+
+				// if the file already exists, that's not an error
+				// TODO: 2 is this risky? The upper layer will assume we have the
+				// whole file. Perhaps we should verify that at least the size
+				// of the file is correct
+				if (!err || err == boost::system::errc::file_exists)
+					continue;
+
+				ec.ec = err;
+				ec.file = idx;
+				ec.operation = storage_error::hard_link;
+				return false;
+			}
+		}
+#endif // TORRENT_DISABLE_MUTABLE_TORRENTS
+
+		return true;
 	}
 
-	// returns true on success
-	int default_storage::move_storage(std::string const& sp, int flags)
+	int default_storage::move_storage(std::string const& sp, int const flags
+		, storage_error& ec)
 	{
 		int ret = piece_manager::no_error;
-		std::string save_path = complete(sp);
+		std::string const save_path = complete(sp);
 
 		// check to see if any of the files exist
-		error_code ec;
 		file_storage const& f = files();
 
-		file_status s;
 		if (flags == fail_if_exist)
 		{
-			stat_file(combine_path(save_path, f.name()), &s, ec);
-			if (ec != boost::system::errc::no_such_file_or_directory)
+			file_status s;
+			error_code err;
+			stat_file(save_path, &s, err);
+			if (err != boost::system::errc::no_such_file_or_directory)
 			{
 				// the directory exists, check all the files
 				for (int i = 0; i < f.num_files(); ++i)
 				{
 					// files moved out to absolute paths are ignored
-					if (is_complete(f.file_path(i))) continue;
+					if (f.file_absolute_path(i)) continue;
 
-					std::string new_path = f.file_path(i, save_path);
-					stat_file(new_path, &s, ec);
-					if (ec != boost::system::errc::no_such_file_or_directory)
+					stat_file(f.file_path(i, save_path), &s, err);
+					if (err != boost::system::errc::no_such_file_or_directory)
+					{
+						ec.ec = err;
+						ec.file = i;
+						ec.operation = storage_error::stat;
 						return piece_manager::file_exist;
+					}
 				}
 			}
 		}
 
-		// collect all directories in to_move. This is because we
-		// try to move entire directories by default (instead of
-		// files independently).
-		std::set<std::string> to_move;
-		for (int i = 0; i < f.num_files(); ++i)
 		{
-			// files moved out to absolute paths are not moved
-			if (is_complete(f.file_path(i))) continue;
-
-			std::string split = split_path(f.file_path(i));
-			to_move.insert(to_move.begin(), split);
-		}
-
-		ec.clear();
-		stat_file(save_path, &s, ec);
-		if (ec == boost::system::errc::no_such_file_or_directory)
-		{
-			ec.clear();
-			create_directories(save_path, ec);
-		}
-
-		if (ec)
-		{
-			set_error(save_path, ec);
-			return piece_manager::fatal_disk_error;
+			file_status s;
+			error_code err;
+			stat_file(save_path, &s, err);
+			if (err == boost::system::errc::no_such_file_or_directory)
+			{
+				err.clear();
+				create_directories(save_path, err);
+				if (err)
+				{
+					ec.ec = err;
+					ec.file = -1;
+					ec.operation = storage_error::mkdir;
+					return piece_manager::fatal_disk_error;
+				}
+			}
+			else if (err)
+			{
+				ec.ec = err;
+				ec.file = -1;
+				ec.operation = storage_error::stat;
+				return piece_manager::fatal_disk_error;
+			}
 		}
 
 		m_pool.release(this);
 
-		for (std::set<std::string>::const_iterator i = to_move.begin()
-			, end(to_move.end()); i != end; ++i)
+#if defined TORRENT_DEBUG_FILE_LEAKS
+		print_open_files("release files", m_files.name().c_str());
+#endif
+
+		// indices of all files we ended up copying. These need to be deleted
+		// later
+		std::vector<bool> copied_files(f.num_files(), false);
+
+		int i;
+		error_code e;
+		for (i = 0; i < f.num_files(); ++i)
 		{
-			std::string old_path = combine_path(m_save_path, *i);
-			std::string new_path = combine_path(save_path, *i);
+			// files moved out to absolute paths are not moved
+			if (f.file_absolute_path(i)) continue;
 
-			rename(old_path, new_path, ec);
-			if (ec)
+			std::string const old_path = combine_path(m_save_path, f.file_path(i));
+			std::string const new_path = combine_path(save_path, f.file_path(i));
+
+			if (flags == dont_replace && exists(new_path))
 			{
-				if (flags == dont_replace && ec == boost::system::errc::file_exists)
-				{
-					if (ret == piece_manager::no_error) ret = piece_manager::need_full_check;
-					continue;
-				}
+				if (ret == piece_manager::no_error) ret = piece_manager::need_full_check;
+				// this is a new file, clear our cached version
+				m_stat_cache.set_dirty(i);
+				continue;
+			}
 
-				if (ec != boost::system::errc::no_such_file_or_directory)
-				{
-					error_code ec;
-					recursive_copy(old_path, new_path, ec);
-					if (ec == boost::system::errc::no_such_file_or_directory)
-					{
-						// it's a bit weird that rename() would not return
-						// ENOENT, but the file still wouldn't exist. But,
-						// in case it does, we're done.
-						ec.clear();
-						break;
-					}
-					if (ec)
-					{
-						set_error(old_path, ec);
-						ret = piece_manager::fatal_disk_error;
-					}
-					else
-					{
-						remove_all(old_path, ec);
-					}
-					break;
-				}
+			// TODO: ideally, if we end up copying files because of a move across
+			// volumes, the source should not be deleted until they've all been
+			// copied. That would let us rollback with higher confidence.
+			move_file(old_path, new_path, e);
+
+			// if the source file doesn't exist. That's not a problem
+			// we just ignore that file
+			if (e == boost::system::errc::no_such_file_or_directory)
+			{
+				e.clear();
+				// the source file doesn't exist, but it may exist at the
+				// destination, we don't know.
+				m_stat_cache.set_dirty(i);
+			}
+			else if (e
+				&& e != boost::system::errc::invalid_argument
+				&& e != boost::system::errc::permission_denied)
+			{
+				// moving the file failed
+				// on OSX, the error when trying to rename a file across different
+				// volumes is EXDEV, which will make it fall back to copying.
+				e.clear();
+				copy_file(old_path, new_path, e);
+				if (!e) copied_files[i] = true;
+			}
+
+			if (e)
+			{
+				ec.ec = e;
+				ec.file = i;
+				ec.operation = storage_error::rename;
+				break;
 			}
 		}
 
-		if (ret == piece_manager::no_error || ret == piece_manager::need_full_check)
-			m_save_path = save_path;
+		if (!e && m_part_file)
+		{
+			m_part_file->move_partfile(save_path, e);
+			if (e)
+			{
+				ec.ec = e;
+				ec.file = -1;
+				ec.operation = storage_error::partfile_move;
+			}
+		}
+
+		if (e)
+		{
+			// rollback
+			while (--i >= 0)
+			{
+				// files moved out to absolute paths are not moved
+				if (f.file_absolute_path(i)) continue;
+
+				// if we ended up copying the file, don't do anything during
+				// roll-back
+				if (copied_files[i]) continue;
+
+				std::string const old_path = combine_path(m_save_path, f.file_path(i));
+				std::string const new_path = combine_path(save_path, f.file_path(i));
+
+				// ignore errors when rolling back
+				error_code ignore;
+				move_file(new_path, old_path, ignore);
+			}
+
+			return piece_manager::fatal_disk_error;
+		}
+
+		std::string const old_save_path = m_save_path;
+		m_save_path = save_path;
+
+		std::set<std::string> subdirs;
+		for (i = 0; i < f.num_files(); ++i)
+		{
+			// files moved out to absolute paths are not moved
+			if (f.file_absolute_path(i)) continue;
+
+			if (has_parent_path(f.file_path(i)))
+				subdirs.insert(parent_path(f.file_path(i)));
+
+			// if we ended up renaming the file instead of moving it, there's no
+			// need to delete the source.
+			if (copied_files[i] == false) continue;
+
+			std::string const old_path = combine_path(old_save_path, f.file_path(i));
+
+			// we may still have some files in old old_save_path
+			// eg. if (flags == dont_replace && exists(new_path))
+			// ignore errors when removing
+			error_code ignore;
+			remove(old_path, ignore);
+		}
+
+		for (std::set<std::string>::iterator it(subdirs.begin())
+			, end(subdirs.end()); it != end; ++it)
+		{
+			error_code err;
+			std::string subdir = combine_path(old_save_path, *it);
+			while (subdir != old_save_path && !err)
+			{
+				remove(subdir, err);
+				subdir = parent_path(subdir);
+			}
+		}
 
 		return ret;
 	}
 
-#ifdef TORRENT_DEBUG
-/*
-	void default_storage::shuffle()
+	int default_storage::readv(file::iovec_t const* bufs, int num_bufs
+		, int piece, int offset, int flags, storage_error& ec)
 	{
-		int num_pieces = files().num_pieces();
+		read_fileop op(*this, flags);
 
-		std::vector<int> pieces(num_pieces);
-		for (std::vector<int>::iterator i = pieces.begin();
-			i != pieces.end(); ++i)
-		{
-			*i = static_cast<int>(i - pieces.begin());
-		}
-		std::srand((unsigned int)std::time(0));
-		std::vector<int> targets(pieces);
-		std::random_shuffle(pieces.begin(), pieces.end());
-		std::random_shuffle(targets.begin(), targets.end());
-
-		for (int i = 0; i < (std::max)(num_pieces / 50, 1); ++i)
-		{
-			const int slot_index = targets[i];
-			const int piece_index = pieces[i];
-			const int slot_size =static_cast<int>(m_files.piece_size(slot_index));
-			std::vector<char> buf(slot_size);
-			read(&buf[0], piece_index, 0, slot_size);
-			write(&buf[0], slot_index, 0, slot_size);
-		}
-	}
-*/
-#endif
-
-#define TORRENT_ALLOCATE_BLOCKS(bufs, num_blocks, piece_size) \
-	int num_blocks = (piece_size + disk_pool()->block_size() - 1) / disk_pool()->block_size(); \
-	file::iovec_t* bufs = TORRENT_ALLOCA(file::iovec_t, num_blocks); \
-	for (int i = 0, size = piece_size; i < num_blocks; ++i) \
-	{ \
-		bufs[i].iov_base = disk_pool()->allocate_buffer("move temp"); \
-		bufs[i].iov_len = (std::min)(disk_pool()->block_size(), size); \
-		size -= bufs[i].iov_len; \
-	}
-
-#define TORRENT_FREE_BLOCKS(bufs, num_blocks) \
-	for (int i = 0; i < num_blocks; ++i) \
-		disk_pool()->free_buffer((char*)bufs[i].iov_base);
-
-#define TORRENT_SET_SIZE(bufs, size, num_bufs) \
-	for (num_bufs = 0; size > 0; size -= disk_pool()->block_size(), ++num_bufs) \
-		bufs[num_bufs].iov_len = (std::min)(disk_pool()->block_size(), size)
-	
-
-	bool default_storage::move_slot(int src_slot, int dst_slot)
-	{
-		bool r = true;
-		int piece_size = m_files.piece_size(dst_slot);
-
-		TORRENT_ALLOCATE_BLOCKS(bufs, num_blocks, piece_size);
-
-		readv(bufs, src_slot, 0, num_blocks); if (error()) goto ret;
-		writev(bufs, dst_slot, 0, num_blocks); if (error()) goto ret;
-
-		r = false;
-ret:
-		TORRENT_FREE_BLOCKS(bufs, num_blocks)
-		return r;
-	}
-
-	bool default_storage::swap_slots(int slot1, int slot2)
-	{
-		bool r = true;
-
-		// the size of the target slot is the size of the piece
-		int piece1_size = m_files.piece_size(slot2);
-		int piece2_size = m_files.piece_size(slot1);
-
-		TORRENT_ALLOCATE_BLOCKS(bufs1, num_blocks1, piece1_size);
-		TORRENT_ALLOCATE_BLOCKS(bufs2, num_blocks2, piece2_size);
-
-		readv(bufs1, slot1, 0, num_blocks1); if (error()) goto ret;
-		readv(bufs2, slot2, 0, num_blocks2); if (error()) goto ret;
-		writev(bufs1, slot2, 0, num_blocks1); if (error()) goto ret;
-		writev(bufs2, slot1, 0, num_blocks2); if (error()) goto ret;
-
-		r = false;
-ret:
-		TORRENT_FREE_BLOCKS(bufs1, num_blocks1)
-		TORRENT_FREE_BLOCKS(bufs2, num_blocks2)
-		return r;
-	}
-
-	bool default_storage::swap_slots3(int slot1, int slot2, int slot3)
-	{
-		bool r = true;
-
-		// the size of the target slot is the size of the piece
-		int piece_size = m_files.piece_length();
-		int piece1_size = m_files.piece_size(slot2);
-		int piece2_size = m_files.piece_size(slot3);
-		int piece3_size = m_files.piece_size(slot1);
-
-		TORRENT_ALLOCATE_BLOCKS(bufs1, num_blocks1, piece_size);
-		TORRENT_ALLOCATE_BLOCKS(bufs2, num_blocks2, piece_size);
-
-		int tmp1 = 0;
-		int tmp2 = 0;
-		TORRENT_SET_SIZE(bufs1, piece1_size, tmp1);
-		readv(bufs1, slot1, 0, tmp1); if (error()) goto ret;
-		TORRENT_SET_SIZE(bufs2, piece2_size, tmp2);
-		readv(bufs2, slot2, 0, tmp2); if (error()) goto ret;
-		writev(bufs1, slot2, 0, tmp1); if (error()) goto ret;
-		TORRENT_SET_SIZE(bufs1, piece3_size, tmp1);
-		readv(bufs1, slot3, 0, tmp1); if (error()) goto ret;
-		writev(bufs2, slot3, 0, tmp2); if (error()) goto ret;
-		writev(bufs1, slot1, 0, tmp1); if (error()) goto ret;
-ret:
-		TORRENT_FREE_BLOCKS(bufs1, num_blocks1)
-		TORRENT_FREE_BLOCKS(bufs2, num_blocks2)
-		return r;
-	}
-
-	int default_storage::writev(file::iovec_t const* bufs, int slot, int offset
-		, int num_bufs, int flags)
-	{
-#ifdef TORRENT_DISK_STATS
-		disk_buffer_pool* pool = disk_pool();
-		if (pool)
-		{
-			pool->m_disk_access_log << log_time() << " write "
-				<< physical_offset(slot, offset) << std::endl;
-		}
-#endif
-		fileop op = { &file::writev, &default_storage::write_unaligned
-			, m_settings ? settings().disk_io_write_mode : 0, file::read_write | flags };
-#ifdef TORRENT_DISK_STATS
-		int ret = readwritev(bufs, slot, offset, num_bufs, op);
-		if (pool)
-		{
-			pool->m_disk_access_log << log_time() << " write_end "
-				<< (physical_offset(slot, offset) + ret) << std::endl;
-		}
-		return ret;
-#else
-		return readwritev(bufs, slot, offset, num_bufs, op);
-#endif
-	}
-
-	size_type default_storage::physical_offset(int slot, int offset)
-	{
-		TORRENT_ASSERT(slot >= 0);
-		TORRENT_ASSERT(slot < m_files.num_pieces());
-		TORRENT_ASSERT(offset >= 0);
-
-		// find the file and file
-		size_type tor_off = size_type(slot)
-			* files().piece_length() + offset;
-		int file_index = files().file_index_at_offset(tor_off);
-		while (files().pad_file_at(file_index))
-		{
-			++file_index;
-			if (file_index == files().num_files())
-				return size_type(slot) * files().piece_length() + offset;
-			// update offset as well, since we're moving it up ahead
-			tor_off = files().file_offset(file_index);
-
-		}
-		TORRENT_ASSERT(!files().pad_file_at(file_index));
-
-		size_type file_offset = tor_off - files().file_offset(file_index);
-		TORRENT_ASSERT(file_offset >= 0);
-
-		// open the file read only to avoid re-opening
-		// it in case it's already opened in read-only mode
-		error_code ec;
-		boost::intrusive_ptr<file> f = open_file(file_index, file::read_only | file::random_access, ec);
-
-		size_type ret = 0;
-		if (f && !ec) ret = f->phys_offset(file_offset);
-
-		if (ret == 0)
-		{
-			// this means we don't support true physical offset
-			// just make something up
-			return size_type(slot) * files().piece_length() + offset;
-		}
-		return ret;
-	}
-
-	void default_storage::hint_read(int slot, int offset, int size)
-	{
-		size_type start = slot * (size_type)m_files.piece_length() + offset;
-		TORRENT_ASSERT(start + size <= m_files.total_size());
-
-		int file_index = files().file_index_at_offset(start);
-		TORRENT_ASSERT(start >= files().file_offset(file_index));
-		TORRENT_ASSERT(start < files().file_offset(file_index) + files().file_size(file_index));
-		size_type file_offset = start - files().file_offset(file_index);
-
-		boost::intrusive_ptr<file> file_handle;
-		int bytes_left = size;
-		int slot_size = static_cast<int>(m_files.piece_size(slot));
-
-		if (offset + bytes_left > slot_size)
-			bytes_left = slot_size - offset;
-
-		TORRENT_ASSERT(bytes_left >= 0);
-
-		int file_bytes_left;
-		for (;bytes_left > 0; ++file_index, bytes_left -= file_bytes_left)
-		{
-			TORRENT_ASSERT(file_index < files().num_files());
-
-			file_bytes_left = bytes_left;
-			if (file_offset + file_bytes_left > files().file_size(file_index))
-				file_bytes_left = (std::max)(static_cast<int>(files().file_size(file_index) - file_offset), 0);
-
-			if (file_bytes_left == 0) continue;
-
-			if (files().pad_file_at(file_index)) continue;
-
-			error_code ec;
-			file_handle = open_file(file_index, file::read_only | file::random_access, ec);
-
-			// failing to hint that we want to read is not a big deal
-			// just swollow the error and keep going
-			if (!file_handle || ec) continue;
-
-			file_handle->hint_read(file_offset, file_bytes_left);
-			file_offset = 0;
-		}
-	}
-
-	int default_storage::readv(file::iovec_t const* bufs, int slot, int offset
-		, int num_bufs, int flags)
-	{
-#ifdef TORRENT_DISK_STATS
-		disk_buffer_pool* pool = disk_pool();
-		if (pool)
-		{
-			pool->m_disk_access_log << log_time() << " read "
-				<< physical_offset(slot, offset) << std::endl;
-		}
-#endif
-		fileop op = { &file::readv, &default_storage::read_unaligned
-			, m_settings ? settings().disk_io_read_mode : 0, file::read_only | flags };
 #ifdef TORRENT_SIMULATE_SLOW_READ
 		boost::thread::sleep(boost::get_system_time()
 			+ boost::posix_time::milliseconds(1000));
 #endif
-#ifdef TORRENT_DISK_STATS
-		int ret = readwritev(bufs, slot, offset, num_bufs, op);
-		if (pool)
-		{
-			pool->m_disk_access_log << log_time() << " read_end "
-				<< (physical_offset(slot, offset) + ret) << std::endl;
-		}
-		return ret;
-#else
-		return readwritev(bufs, slot, offset, num_bufs, op);
-#endif
+		return readwritev(files(), bufs, piece, offset, num_bufs, op, ec);
 	}
 
-	// much of what needs to be done when reading and writing 
-	// is buffer management and piece to file mapping. Most
-	// of that is the same for reading and writing. This function
-	// is a template, and the fileop decides what to do with the
-	// file and the buffers.
-	int default_storage::readwritev(file::iovec_t const* bufs, int slot, int offset
-		, int num_bufs, fileop const& op)
+	int default_storage::writev(file::iovec_t const* bufs, int num_bufs
+		, int piece, int offset, int flags, storage_error& ec)
+	{
+		write_fileop op(*this, flags);
+		return readwritev(files(), bufs, piece, offset, num_bufs, op, ec);
+	}
+
+	// much of what needs to be done when reading and writing is buffer
+	// management and piece to file mapping. Most of that is the same for reading
+	// and writing. This function is a template, and the fileop decides what to
+	// do with the file and the buffers.
+	int readwritev(file_storage const& files, file::iovec_t const* const bufs
+		, const int piece, const int offset, const int num_bufs, fileop& op
+		, storage_error& ec)
 	{
 		TORRENT_ASSERT(bufs != 0);
-		TORRENT_ASSERT(slot >= 0);
-		TORRENT_ASSERT(slot < m_files.num_pieces());
+		TORRENT_ASSERT(piece >= 0);
+		TORRENT_ASSERT(piece < files.num_pieces());
 		TORRENT_ASSERT(offset >= 0);
-		TORRENT_ASSERT(offset < m_files.piece_size(slot));
 		TORRENT_ASSERT(num_bufs > 0);
 
-		int size = bufs_size(bufs, num_bufs);
+		const int size = bufs_size(bufs, num_bufs);
 		TORRENT_ASSERT(size > 0);
-
-#if TORRENT_USE_ASSERTS
-		std::vector<file_slice> slices
-			= files().map_block(slot, offset, size);
-		TORRENT_ASSERT(!slices.empty());
-#endif
-
-		size_type start = slot * (size_type)m_files.piece_length() + offset;
-		TORRENT_ASSERT(start + size <= m_files.total_size());
+		TORRENT_ASSERT(files.is_loaded());
 
 		// find the file iterator and file offset
-		int file_index = files().file_index_at_offset(start);
-		TORRENT_ASSERT(start >= files().file_offset(file_index));
-		TORRENT_ASSERT(start < files().file_offset(file_index) + files().file_size(file_index));
-		size_type file_offset = start - files().file_offset(file_index);
+		boost::uint64_t torrent_offset = piece * boost::uint64_t(files.piece_length()) + offset;
+		int file_index = files.file_index_at_offset(torrent_offset);
+		TORRENT_ASSERT(torrent_offset >= files.file_offset(file_index));
+		TORRENT_ASSERT(torrent_offset < files.file_offset(file_index) + files.file_size(file_index));
+		boost::int64_t file_offset = torrent_offset - files.file_offset(file_index);
 
-		int buf_pos = 0;
-		error_code ec;
-
-		boost::intrusive_ptr<file> file_handle;
+		// the number of bytes left before this read or write operation is
+		// completely satisfied.
 		int bytes_left = size;
-		int slot_size = static_cast<int>(m_files.piece_size(slot));
-
-		if (offset + bytes_left > slot_size)
-			bytes_left = slot_size - offset;
 
 		TORRENT_ASSERT(bytes_left >= 0);
 
-#if TORRENT_USE_ASSERTS
-		int counter = 0;
-#endif
-
-		file::iovec_t* tmp_bufs = TORRENT_ALLOCA(file::iovec_t, num_bufs);
+		// copy the iovec array so we can use it to keep track of our current
+		// location by updating the head base pointer and size. (see
+		// advance_bufs())
 		file::iovec_t* current_buf = TORRENT_ALLOCA(file::iovec_t, num_bufs);
 		copy_bufs(bufs, size, current_buf);
 		TORRENT_ASSERT(count_bufs(current_buf, size) == num_bufs);
+
+		file::iovec_t* tmp_buf = TORRENT_ALLOCA(file::iovec_t, num_bufs);
+
+		// the number of bytes left to read in the current file (specified by
+		// file_index). This is the minimum of (file_size - file_offset) and
+		// bytes_left.
 		int file_bytes_left;
-		for (;bytes_left > 0; ++file_index, bytes_left -= file_bytes_left
-			, buf_pos += file_bytes_left)
-		{
-			TORRENT_ASSERT(file_index < files().num_files());
-			TORRENT_ASSERT(buf_pos >= 0);
 
+		while (bytes_left > 0)
+		{
 			file_bytes_left = bytes_left;
-			if (file_offset + file_bytes_left > files().file_size(file_index))
-				file_bytes_left = (std::max)(static_cast<int>(files().file_size(file_index) - file_offset), 0);
+			if (file_offset + file_bytes_left > files.file_size(file_index))
+				file_bytes_left = (std::max)(static_cast<int>(files.file_size(file_index) - file_offset), 0);
 
-			if (file_bytes_left == 0) continue;
-
-#if TORRENT_USE_ASSERTS
-			TORRENT_ASSERT(int(slices.size()) > counter);
-			size_type slice_size = slices[counter].size;
-			TORRENT_ASSERT(slice_size == file_bytes_left);
-			TORRENT_ASSERT(slices[counter].file_index == file_index);
-			++counter;
-#endif
-
-			if (files().pad_file_at(file_index))
+			// there are no bytes left in this file, move to the next one
+			// this loop skips over empty files
+			while (file_bytes_left == 0)
 			{
-				if ((op.mode & file::rw_mask) == file::read_only)
-				{
-					int num_tmp_bufs = copy_bufs(current_buf, file_bytes_left, tmp_bufs);
-					TORRENT_ASSERT(count_bufs(tmp_bufs, file_bytes_left) == num_tmp_bufs);
-					TORRENT_ASSERT(num_tmp_bufs <= num_bufs);
-					clear_bufs(tmp_bufs, num_tmp_bufs);
-				}
-				advance_bufs(current_buf, file_bytes_left);
-				TORRENT_ASSERT(count_bufs(current_buf, bytes_left - file_bytes_left) <= num_bufs);
+				++file_index;
 				file_offset = 0;
-				continue;
+				TORRENT_ASSERT(file_index < files.num_files());
+
+				// this should not happen. bytes_left should be clamped by the total
+				// size of the torrent, so we should never run off the end of it
+				if (file_index >= files.num_files()) return size;
+
+				file_bytes_left = bytes_left;
+				if (file_offset + file_bytes_left > files.file_size(file_index))
+					file_bytes_left = (std::max)(static_cast<int>(files.file_size(file_index) - file_offset), 0);
 			}
 
-			error_code ec;
-			file_handle = open_file(file_index, op.mode, ec);
-			if (((op.mode & file::rw_mask) != file::read_only)
-				&& ec == boost::system::errc::no_such_file_or_directory)
-			{
-				// this means the directory the file is in doesn't exist.
-				// so create it
-				ec.clear();
-				std::string path = files().file_path(file_index, m_save_path);
-				create_directories(parent_path(path), ec);
-				// if the directory creation failed, don't try to open the file again
-				// but actually just fail
-				if (!ec) file_handle = open_file(file_index, op.mode, ec);
-			}
+			// make a copy of the iovec array that _just_ covers the next
+			// file_bytes_left bytes, i.e. just this one operation
+			copy_bufs(current_buf, file_bytes_left, tmp_buf);
 
-			if (!file_handle || ec)
-			{
-				std::string path = files().file_path(file_index, m_save_path);
-				TORRENT_ASSERT(ec);
-				set_error(path, ec);
-				return -1;
-			}
+			int bytes_transferred = op.file_op(file_index, file_offset,
+				file_bytes_left, tmp_buf, ec);
+			if (ec) return -1;
 
-			// if the file has priority 0, don't allocate it
-			if (m_allocate_files && (op.mode & file::rw_mask) != file::read_only
-				&& (int(m_file_priority.size()) <= file_index || m_file_priority[file_index] > 0))
-			{
-				TORRENT_ASSERT(int(m_file_created.size()) == files().num_files());
-				if (m_file_created[file_index] == false)
-				{
-					file_handle->set_size(files().file_size(file_index), ec);
-					m_file_created.set_bit(file_index);
-					if (ec)
-					{
-						set_error(files().file_path(file_index, m_save_path), ec);
-						return -1;
-					}
-				}
-			}
-
-			int num_tmp_bufs = copy_bufs(current_buf, file_bytes_left, tmp_bufs);
-			TORRENT_ASSERT(count_bufs(tmp_bufs, file_bytes_left) == num_tmp_bufs);
-			TORRENT_ASSERT(num_tmp_bufs <= num_bufs);
-			int bytes_transferred = 0;
-			// if the file is opened in no_buffer mode, and the
-			// read is unaligned, we need to fall back on a slow
-			// special read that reads aligned buffers and copies
-			// it into the one supplied
-			size_type adjusted_offset = files().file_base(file_index) + file_offset;
-			if ((file_handle->open_mode() & file::no_buffer)
-				&& ((adjusted_offset & (file_handle->pos_alignment()-1)) != 0
-				|| (uintptr_t(tmp_bufs->iov_base) & (file_handle->buf_alignment()-1)) != 0))
-			{
-				bytes_transferred = (int)(this->*op.unaligned_op)(file_handle, adjusted_offset
-					, tmp_bufs, num_tmp_bufs, ec);
-				if ((op.mode & file::rw_mask) != file::read_only
-					&& adjusted_offset + bytes_transferred >= files().file_size(file_index)
-					&& (file_handle->pos_alignment() > 0 || file_handle->size_alignment() > 0))
-				{
-					// we were writing, and we just wrote the last block of the file
-					// we likely wrote a bit too much, since we're restricted to
-					// a specific alignment for writes. Make sure to truncate the size
-
-					// TODO: 0 what if file_base is used to merge several virtual files
-					// into a single physical file? We should probably disable this
-					// if file_base is used. This is not a widely used feature though
-					file_handle->set_size(files().file_size(file_index), ec);
-				}
-			}
-			else
-			{
-				bytes_transferred = (int)((*file_handle).*op.regular_op)(adjusted_offset
-					, tmp_bufs, num_tmp_bufs, ec);
-				TORRENT_ASSERT(bytes_transferred <= bufs_size(tmp_bufs, num_tmp_bufs));
-			}
-			file_offset = 0;
-
-			if (ec)
-			{
-				set_error(files().file_path(file_index, m_save_path), ec);
-				return -1;
-			}
-
-			if (file_bytes_left != bytes_transferred)
-				return bytes_transferred;
-
+			// advance our position in the iovec array and the file offset.
 			advance_bufs(current_buf, bytes_transferred);
-			TORRENT_ASSERT(count_bufs(current_buf, bytes_left - file_bytes_left) <= num_bufs);
+			bytes_left -= bytes_transferred;
+			file_offset += bytes_transferred;
+
+			TORRENT_ASSERT(count_bufs(current_buf, bytes_left) <= num_bufs);
+
+			// if the file operation returned 0, we've hit end-of-file. We're done
+			if (bytes_transferred == 0)
+			{
+				if (file_bytes_left > 0 )
+				{
+					// fill in this information in case the caller wants to treat
+					// a short-read as an error
+					ec.file = file_index;
+				}
+				return size - bytes_left;
+			}
 		}
 		return size;
 	}
 
-	// these functions are inefficient, but should be fairly uncommon. The read
-	// case happens if unaligned files are opened in no_buffer mode or if clients
-	// makes unaligned requests (and the disk cache is disabled or fully utilized
-	// for write cache).
-
-	// they read an unaligned buffer from a file that requires aligned access
-
-	size_type default_storage::read_unaligned(boost::intrusive_ptr<file> const& file_handle
-		, size_type file_offset, file::iovec_t const* bufs, int num_bufs, error_code& ec)
+	file_handle default_storage::open_file(int file, int mode
+		, storage_error& ec) const
 	{
-		const int pos_align = file_handle->pos_alignment()-1;
-		const int size_align = file_handle->size_alignment()-1;
-
-		const int size = bufs_size(bufs, num_bufs);
-		const int start_adjust = file_offset & pos_align;
-		TORRENT_ASSERT(start_adjust == (file_offset % file_handle->pos_alignment()));
-		const size_type aligned_start = file_offset - start_adjust;
-		const int aligned_size = ((size+start_adjust) & size_align)
-			? ((size+start_adjust) & ~size_align) + size_align + 1 : size + start_adjust;
-		TORRENT_ASSERT((aligned_size & size_align) == 0);
-
-		// allocate a temporary, aligned, buffer
-		aligned_holder aligned_buf(aligned_size);
-		file::iovec_t b = {aligned_buf.get(), size_t(aligned_size) };
-		size_type ret = file_handle->readv(aligned_start, &b, 1, ec);
-		if (ret < 0)
+		file_handle h = open_file_impl(file, mode, ec.ec);
+		if (((mode & file::rw_mask) != file::read_only)
+			&& ec.ec == boost::system::errc::no_such_file_or_directory)
 		{
-			TORRENT_ASSERT(ec);
-			return ret;
-		}
-		if (ret - start_adjust < size) return (std::max)(ret - start_adjust, size_type(0));
+			// this means the directory the file is in doesn't exist.
+			// so create it
+			ec.ec.clear();
+			std::string path = files().file_path(file, m_save_path);
+			create_directories(parent_path(path), ec.ec);
 
-		char* read_buf = aligned_buf.get() + start_adjust;
-		for (file::iovec_t const* i = bufs, *end(bufs + num_bufs); i != end; ++i)
+			if (ec.ec)
+			{
+				ec.file = file;
+				ec.operation = storage_error::mkdir;
+				return file_handle();
+			}
+
+			// if the directory creation failed, don't try to open the file again
+			// but actually just fail
+			h = open_file_impl(file, mode, ec.ec);
+		}
+		if (ec.ec)
 		{
-			memcpy(i->iov_base, read_buf, i->iov_len);
-			read_buf += i->iov_len;
+			ec.file = file;
+			ec.operation = storage_error::open;
+			return file_handle();
 		}
+		TORRENT_ASSERT(h);
 
-		return size;
+		if (m_allocate_files && (mode & file::rw_mask) != file::read_only)
+		{
+			mutex::scoped_lock l(m_file_created_mutex);
+			if (m_file_created.size() != files().num_files())
+				m_file_created.resize(files().num_files(), false);
+
+			TORRENT_ASSERT(int(m_file_created.size()) == files().num_files());
+			TORRENT_ASSERT(file < m_file_created.size());
+			// if this is the first time we open this file for writing,
+			// and we have m_allocate_files enabled, set the final size of
+			// the file right away, to allocate it on the filesystem.
+			if (m_file_created[file] == false)
+			{
+				m_file_created.set_bit(file);
+				l.unlock();
+				error_code e;
+				boost::int64_t const size = files().file_size(file);
+				h->set_size(size, e);
+				if (e)
+				{
+					ec.ec = e;
+					ec.file = file;
+					ec.operation = storage_error::fallocate;
+					return h;
+				}
+				m_stat_cache.set_dirty(file);
+			}
+		}
+		return h;
 	}
 
-	// this is the really expensive one. To write unaligned, we need to read
-	// an aligned block, overlay the unaligned buffer, and then write it back
-	size_type default_storage::write_unaligned(boost::intrusive_ptr<file> const& file_handle
-		, size_type file_offset, file::iovec_t const* bufs, int num_bufs, error_code& ec)
-	{
-		const int pos_align = file_handle->pos_alignment()-1;
-		const int size_align = file_handle->size_alignment()-1;
-
-		const int size = bufs_size(bufs, num_bufs);
-		const int start_adjust = file_offset & pos_align;
-		TORRENT_ASSERT(start_adjust == (file_offset % file_handle->pos_alignment()));
-		const size_type aligned_start = file_offset - start_adjust;
-		const int aligned_size = ((size+start_adjust) & size_align)
-			? ((size+start_adjust) & ~size_align) + size_align + 1 : size + start_adjust;
-		TORRENT_ASSERT((aligned_size & size_align) == 0);
-
-		size_type actual_file_size = file_handle->get_size(ec);
-		if (ec && ec != make_error_code(boost::system::errc::no_such_file_or_directory)) return -1;
-		ec.clear();
-
-		// allocate a temporary, aligned, buffer
-		aligned_holder aligned_buf(aligned_size);
-		file::iovec_t b = {aligned_buf.get(), size_t(aligned_size) };
-		// we have something to read
-		if (aligned_start < actual_file_size && !ec)
-		{
-			size_type ret = file_handle->readv(aligned_start, &b, 1, ec);
-			if (ec
-#ifdef TORRENT_WINDOWS
-				&& ec != error_code(ERROR_HANDLE_EOF, get_system_category())
-#endif
-				)
-				return ret;
-		}
-
-		ec.clear();
-
-		// OK, we read the portion of the file. Now, overlay the buffer we're writing 
-
-		char* write_buf = aligned_buf.get() + start_adjust;
-		for (file::iovec_t const* i = bufs, *end(bufs + num_bufs); i != end; ++i)
-		{
-			memcpy(write_buf, i->iov_base, i->iov_len);
-			write_buf += i->iov_len;
-		}
-
-		// write the buffer back to disk
-		size_type ret = file_handle->writev(aligned_start, &b, 1, ec);
-
-		if (ret < 0)
-		{
-			TORRENT_ASSERT(ec);
-			return ret;
-		}
-		if (ret - start_adjust < size) return (std::max)(ret - start_adjust, size_type(0));
-		return size;
-	}
-
-	int default_storage::write(
-		const char* buf
-		, int slot
-		, int offset
-		, int size)
-	{
-		file::iovec_t b = { (file::iovec_base_t)buf, size_t(size) };
-		return writev(&b, slot, offset, 1, 0);
-	}
-
-	int default_storage::read(
-		char* buf
-		, int slot
-		, int offset
-		, int size)
-	{
-		file::iovec_t b = { (file::iovec_base_t)buf, size_t(size) };
-		return readv(&b, slot, offset, 1);
-	}
-
-	boost::intrusive_ptr<file> default_storage::open_file(int file_index, int mode
+	file_handle default_storage::open_file_impl(int file, int mode
 		, error_code& ec) const
 	{
-		int cache_setting = m_settings ? settings().disk_io_write_mode : 0;
-		if (cache_setting == session_settings::disable_os_cache
-			|| (cache_setting == session_settings::disable_os_cache_for_aligned_files
-			&& ((files().file_offset(file_index) + files().file_base(file_index)) & (m_page_size-1)) == 0))
-			mode |= file::no_buffer;
-		bool lock_files = m_settings ? settings().lock_files : false;
+		bool lock_files = m_settings ? settings().get_bool(settings_pack::lock_files) : false;
 		if (lock_files) mode |= file::lock_file;
+
 		if (!m_allocate_files) mode |= file::sparse;
 
 		// files with priority 0 should always be sparse
-		if (int(m_file_priority.size()) > file_index && m_file_priority[file_index] == 0)
+		if (int(m_file_priority.size()) > file && m_file_priority[file] == 0)
 			mode |= file::sparse;
 
-		if (m_settings && settings().no_atime_storage) mode |= file::no_atime;
+		if (m_settings && settings().get_bool(settings_pack::no_atime_storage)) mode |= file::no_atime;
 
-		return m_pool.open_file(const_cast<default_storage*>(this), m_save_path, file_index, files(), mode, ec);
-	}
-
-	storage_interface* default_storage_constructor(file_storage const& fs
-		, file_storage const* mapped, std::string const& path, file_pool& fp
-		, std::vector<boost::uint8_t> const& file_prio)
-	{
-		return new default_storage(fs, mapped, path, fp, file_prio);
-	}
-
-	int disabled_storage::readv(file::iovec_t const* bufs, int slot, int offset, int num_bufs, int flags)
-	{
-#ifdef TORRENT_DISK_STATS
-		disk_buffer_pool* pool = disk_pool();
-		if (pool)
+		// if we have a cache already, don't store the data twice by leaving it in the OS cache as well
+		if (m_settings
+			&& settings().get_int(settings_pack::disk_io_write_mode)
+			== settings_pack::disable_os_cache)
 		{
-			pool->m_disk_access_log << log_time() << " read "
-				<< physical_offset(slot, offset) << std::endl;
+			mode |= file::no_cache;
 		}
-#endif
-		int ret = 0;
-		for (int i = 0; i < num_bufs; ++i)
-			ret += bufs[i].iov_len;
-#ifdef TORRENT_DISK_STATS
-		if (pool)
+
+		file_handle ret = m_pool.open_file(const_cast<default_storage*>(this)
+			, m_save_path, file, files(), mode, ec);
+		if (ec && (mode & file::lock_file))
 		{
-			pool->m_disk_access_log << log_time() << " read_end "
-				<< (physical_offset(slot, offset) + ret) << std::endl;
+			// we failed to open the file and we're trying to lock it. It's
+			// possible we're failing because we have another handle to this
+			// file in use (but waiting to be closed). Just retry to open it
+			// without locking.
+			mode &= ~file::lock_file;
+			ret = m_pool.open_file(const_cast<default_storage*>(this)
+				, m_save_path, file, files(), mode, ec);
 		}
-#endif
 		return ret;
 	}
 
-	int disabled_storage::writev(file::iovec_t const* bufs, int slot, int offset, int num_bufs, int flags)
+	bool default_storage::tick()
 	{
+		error_code ec;
+		if (m_part_file) m_part_file->flush_metadata(ec);
+
+		return false;
+	}
+
 #ifdef TORRENT_DISK_STATS
-		disk_buffer_pool* pool = disk_pool();
-		if (pool)
+	bool default_storage::disk_write_access_log() {
+		return g_access_log != NULL;
+	}
+
+	void default_storage::disk_write_access_log(bool enable) {
+		if (enable)
 		{
-			pool->m_disk_access_log << log_time() << " write "
-				<< physical_offset(slot, offset) << std::endl;
+			if (g_access_log == NULL)
+			{
+				g_access_log = fopen("file_access.log", "a+");
+			}
 		}
+		else
+		{
+			if (g_access_log != NULL)
+			{
+				FILE* f = g_access_log;
+				g_access_log = NULL;
+				fclose(f);
+			}
+		}
+	}
 #endif
+
+	storage_interface* default_storage_constructor(storage_params const& params)
+	{
+		return new default_storage(params);
+	}
+
+	int disabled_storage::readv(file::iovec_t const* bufs
+		, int num_bufs, int, int, int, storage_error&)
+	{
+		return bufs_size(bufs, num_bufs);
+	}
+
+	int disabled_storage::writev(file::iovec_t const* bufs
+		, int num_bufs, int, int, int, storage_error&)
+	{
+		return bufs_size(bufs, num_bufs);
+	}
+
+	storage_interface* disabled_storage_constructor(storage_params const& params)
+	{
+		TORRENT_UNUSED(params);
+		return new disabled_storage;
+	}
+
+	// -- zero_storage ------------------------------------------------------
+
+	int zero_storage::readv(file::iovec_t const* bufs, int num_bufs
+		, int /* piece */, int /* offset */, int /* flags */, storage_error&)
+	{
+		int ret = 0;
+		for (int i = 0; i < num_bufs; ++i)
+		{
+			memset(bufs[i].iov_base, 0, bufs[i].iov_len);
+			ret += bufs[i].iov_len;
+		}
+		return 0;
+	}
+
+	int zero_storage::writev(file::iovec_t const* bufs, int num_bufs
+		, int /* piece */, int /* offset */, int /* flags */, storage_error&)
+	{
 		int ret = 0;
 		for (int i = 0; i < num_bufs; ++i)
 			ret += bufs[i].iov_len;
-#ifdef TORRENT_DISK_STATS
-		if (pool)
-		{
-			pool->m_disk_access_log << log_time() << " write_end "
-				<< (physical_offset(slot, offset) + ret) << std::endl;
-		}
-#endif
-		return ret;
+		return 0;
 	}
 
-	storage_interface* disabled_storage_constructor(file_storage const& fs
-		, file_storage const* mapped, std::string const& path, file_pool& fp
-		, std::vector<boost::uint8_t> const&)
+	storage_interface* zero_storage_constructor(storage_params const&)
 	{
-		return new disabled_storage(fs.piece_length());
+		return new zero_storage;
+	}
+
+	void storage_piece_set::add_piece(cached_piece_entry* p)
+	{
+		TORRENT_ASSERT(p->in_storage == false);
+		TORRENT_ASSERT(p->storage.get() == this);
+		TORRENT_ASSERT(m_cached_pieces.count(p) == 0);
+		m_cached_pieces.insert(p);
+#if TORRENT_USE_ASSERTS
+		p->in_storage = true;
+#endif
+	}
+
+	bool storage_piece_set::has_piece(cached_piece_entry const* p) const
+	{
+		return m_cached_pieces.count(const_cast<cached_piece_entry*>(p)) > 0;
+	}
+
+	void storage_piece_set::remove_piece(cached_piece_entry* p)
+	{
+		TORRENT_ASSERT(p->in_storage == true);
+		TORRENT_ASSERT(m_cached_pieces.count(p) == 1);
+		m_cached_pieces.erase(p);
+#if TORRENT_USE_ASSERTS
+		p->in_storage = false;
+#endif
 	}
 
 	// -- piece_manager -----------------------------------------------------
 
 	piece_manager::piece_manager(
-		boost::shared_ptr<void> const& torrent
-		, boost::intrusive_ptr<torrent_info const> info
-		, std::string const& save_path
-		, file_pool& fp
-		, disk_io_thread& io
-		, storage_constructor_type sc
-		, storage_mode_t sm
-		, std::vector<boost::uint8_t> const& file_prio)
-		: m_info(info)
-		, m_files(m_info->files())
-		, m_storage(sc(m_info->orig_files(), &m_info->files() != &m_info->orig_files()
-			? &m_info->files() : 0, save_path, fp, file_prio))
-		, m_storage_mode(sm)
-		, m_save_path(complete(save_path))
-		, m_state(state_none)
-		, m_current_slot(0)
-		, m_out_of_place(false)
-		, m_scratch_piece(-1)
-		, m_last_piece(-1)
-		, m_storage_constructor(sc)
-		, m_io_thread(io)
+		storage_interface* storage_impl
+		, boost::shared_ptr<void> const& torrent
+		, file_storage* files)
+		: m_files(*files)
+		, m_storage(storage_impl)
 		, m_torrent(torrent)
 	{
-		m_storage->m_disk_pool = &m_io_thread;
 	}
 
 	piece_manager::~piece_manager()
+	{}
+
+#ifdef TORRENT_DEBUG
+	void piece_manager::assert_torrent_refcount() const
 	{
+		if (!m_torrent) return;
+		// sorry about this layer violation, but it's
+		// quite convenient to make sure the torrent won't
+		// get unloaded under our feet later
+		TORRENT_ASSERT(static_cast<torrent*>(m_torrent.get())->refcount() > 0);
 	}
-
-	void piece_manager::async_set_file_priority(
-		std::vector<boost::uint8_t> const& prios
-		, boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		std::vector<boost::uint8_t>* p = new std::vector<boost::uint8_t>(prios);
-
-		disk_io_job j;
-		j.storage = this;
-		j.buffer = (char*)p;
-		j.action = disk_io_job::file_priority;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::async_save_resume_data(
-		boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::save_resume_data;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::async_clear_read_cache(
-		boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::clear_read_cache;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::async_release_files(
-		boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::release_files;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::abort_disk_io()
-	{
-		m_io_thread.stop(this);
-	}
-
-	void piece_manager::async_delete_files(
-		boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::delete_files;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::async_move_storage(std::string const& p, int flags
-		, boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::move_storage;
-		j.str = p;
-		j.piece = flags;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::async_check_fastresume(lazy_entry const* resume_data
-		, boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		TORRENT_ASSERT(resume_data != 0);
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::check_fastresume;
-		j.buffer = (char*)resume_data;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::async_rename_file(int index, std::string const& name
-		, boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.piece = index;
-		j.str = name;
-		j.action = disk_io_job::rename_file;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::async_check_files(
-		boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::check_files;
-		m_io_thread.add_job(j, handler);
-	}
-
-	void piece_manager::async_read_and_hash(
-		peer_request const& r
-		, boost::function<void(int, disk_io_job const&)> const& handler
-		, int cache_expiry)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::read_and_hash;
-		j.piece = r.piece;
-		j.offset = r.start;
-		j.buffer_size = r.length;
-		j.buffer = 0;
-		j.cache_min_time = cache_expiry;
-		TORRENT_ASSERT(r.length <= 16 * 1024);
-		m_io_thread.add_job(j, handler);
-#ifdef TORRENT_USE_ASSERTS
-		mutex::scoped_lock l(m_mutex);
-		// if this assert is hit, it suggests
-		// that check_files was not successful
-		TORRENT_ASSERT(slot_for(r.piece) >= 0);
 #endif
-	}
 
-	void piece_manager::async_cache(int piece
-		, boost::function<void(int, disk_io_job const&)> const& handler
-		, int cache_expiry)
+	// used in torrent_handle.cpp
+	void piece_manager::write_resume_data(entry& rd, storage_error& ec) const
 	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::cache_piece;
-		j.piece = piece;
-		j.offset = 0;
-		j.buffer_size = 0;
-		j.buffer = 0;
-		j.cache_min_time = cache_expiry;
-		m_io_thread.add_job(j, handler);
+		m_storage->write_resume_data(rd, ec);
 	}
 
-	void piece_manager::async_read(
-		peer_request const& r
-		, boost::function<void(int, disk_io_job const&)> const& handler
-		, int cache_line_size
-		, int cache_expiry)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::read;
-		j.piece = r.piece;
-		j.offset = r.start;
-		j.buffer_size = r.length;
-		j.buffer = 0;
-		j.max_cache_line = cache_line_size;
-		j.cache_min_time = cache_expiry;
-
-		// if a buffer is not specified, only one block can be read
-		// since that is the size of the pool allocator's buffers
-		TORRENT_ASSERT(r.length <= 16 * 1024);
-		m_io_thread.add_job(j, handler);
-#ifdef TORRENT_USE_ASSERTS
-		mutex::scoped_lock l(m_mutex);
-		// if this assert is hit, it suggests
-		// that check_files was not successful
-		TORRENT_ASSERT(slot_for(r.piece) >= 0);
-#endif
-	}
-
-	int piece_manager::async_write(
-		peer_request const& r
-		, disk_buffer_holder& buffer
-		, boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		TORRENT_ASSERT(r.length <= 16 * 1024);
-		// the buffer needs to be allocated through the io_thread
-		TORRENT_ASSERT(m_io_thread.is_disk_buffer(buffer.get()));
-
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::write;
-		j.piece = r.piece;
-		j.offset = r.start;
-		j.buffer_size = r.length;
-		j.buffer = buffer.get();
-		int queue_size = m_io_thread.add_job(j, handler);
-		buffer.release();
-
-		return queue_size;
-	}
-
-	void piece_manager::async_hash(int piece
-		, boost::function<void(int, disk_io_job const&)> const& handler)
-	{
-		disk_io_job j;
-		j.storage = this;
-		j.action = disk_io_job::hash;
-		j.piece = piece;
-
-		m_io_thread.add_job(j, handler);
-	}
-
-	std::string piece_manager::save_path() const
-	{
-		mutex::scoped_lock l(m_mutex);
-		return m_save_path;
-	}
-
-	sha1_hash piece_manager::hash_for_piece_impl(int piece, int* readback)
-	{
-		TORRENT_ASSERT(!m_storage->error());
-
-		partial_hash ph;
-
-		std::map<int, partial_hash>::iterator i = m_piece_hasher.find(piece);
-		if (i != m_piece_hasher.end())
-		{
-			ph = i->second;
-			m_piece_hasher.erase(i);
-		}
-
-		int slot = slot_for(piece);
-		TORRENT_ASSERT(slot != has_no_slot);
-		if (slot < 0) return sha1_hash(0);
-		int read = hash_for_slot(slot, ph, m_files.piece_size(piece));
-		if (readback) *readback = read;
-		if (m_storage->error()) return sha1_hash(0);
-		return ph.h.final();
-	}
-
-	int piece_manager::move_storage_impl(std::string const& save_path, int flags)
-	{
-		int ret = m_storage->move_storage(save_path, flags);
-
-		if (ret == no_error || ret == need_full_check)
-		{
-			m_save_path = complete(save_path);
-		}
-		return ret;
-	}
-
-	void piece_manager::write_resume_data(entry& rd) const
-	{
-		mutex::scoped_lock lock(m_mutex);
-
-		INVARIANT_CHECK;
-
-		m_storage->write_resume_data(rd);
-
-		if (m_storage_mode == internal_storage_mode_compact_deprecated)
-		{
-			entry::list_type& slots = rd["slots"].list();
-			slots.clear();
-			std::vector<int>::const_reverse_iterator last; 
-			for (last = m_slot_to_piece.rbegin();
-				last != m_slot_to_piece.rend(); ++last)
-			{
-				if (*last != unallocated) break;
-			}
-
-			for (std::vector<int>::const_iterator i =
-				m_slot_to_piece.begin();
-				i != last.base(); ++i)
-			{
-				slots.push_back((*i >= 0) ? *i : unassigned);
-			}
-		}
-
-		rd["allocation"] = m_storage_mode == storage_mode_sparse?"sparse"
-			:m_storage_mode == storage_mode_allocate?"full":"compact";
-	}
-
-	void piece_manager::mark_failed(int piece_index)
-	{
-		mutex::scoped_lock lock(m_mutex);
-
-		INVARIANT_CHECK;
-
-		if (m_storage_mode != internal_storage_mode_compact_deprecated) return;
-
-		TORRENT_ASSERT(piece_index >= 0 && piece_index < (int)m_piece_to_slot.size());
-		int slot_index = m_piece_to_slot[piece_index];
-		TORRENT_ASSERT(slot_index >= 0);
-
-		m_slot_to_piece[slot_index] = unassigned;
-		m_piece_to_slot[piece_index] = has_no_slot;
-		m_free_slots.push_back(slot_index);
-	}
-
-	void piece_manager::hint_read_impl(int piece_index, int offset, int size)
-	{
-		m_last_piece = piece_index;
-		int slot = slot_for(piece_index);
-		if (slot <= 0) return;
-		m_storage->hint_read(slot, offset, size);
-	}
-
-	int piece_manager::read_impl(
-		file::iovec_t* bufs
-		, int piece_index
-		, int offset
-		, int num_bufs)
-	{
-		TORRENT_ASSERT(bufs);
-		TORRENT_ASSERT(offset >= 0);
-		TORRENT_ASSERT(num_bufs > 0);
-		m_last_piece = piece_index;
-		int slot = slot_for(piece_index);
-		TORRENT_ASSERT(slot >= 0);
-		if (slot < 0) return 0;
-		return m_storage->readv(bufs, slot, offset, num_bufs);
-	}
-
-	int piece_manager::write_impl(
-		file::iovec_t* bufs
-	  , int piece_index
-	  , int offset
-	  , int num_bufs)
-	{
-		TORRENT_ASSERT(bufs);
-		TORRENT_ASSERT(offset >= 0);
-		TORRENT_ASSERT(num_bufs > 0);
-		TORRENT_ASSERT(piece_index >= 0 && piece_index < m_files.num_pieces());
-
-		int size = bufs_size(bufs, num_bufs);
-
-		file::iovec_t* iov = TORRENT_ALLOCA(file::iovec_t, num_bufs);
-		std::copy(bufs, bufs + num_bufs, iov);
-		m_last_piece = piece_index;
-		int slot = allocate_slot_for_piece(piece_index);
-		int ret = m_storage->writev(bufs, slot, offset, num_bufs);
-		// only save the partial hash if the write succeeds
-		if (ret != size) return ret;
-
-		if (m_storage->settings().disable_hash_checks) return ret;
-
-		if (offset == 0)
-		{
-			partial_hash& ph = m_piece_hasher[piece_index];
-			TORRENT_ASSERT(ph.offset == 0);
-			ph.offset = size;
-
-			for (file::iovec_t* i = iov, *end(iov + num_bufs); i < end; ++i)
-				ph.h.update((char const*)i->iov_base, i->iov_len);
-
-		}
-		else
-		{
-			std::map<int, partial_hash>::iterator i = m_piece_hasher.find(piece_index);
-			if (i != m_piece_hasher.end())
-			{
-#ifdef TORRENT_USE_ASSERTS
-				TORRENT_ASSERT(i->second.offset > 0);
-				int hash_offset = i->second.offset;
-				TORRENT_ASSERT(offset >= hash_offset);
-#endif
-				if (offset == i->second.offset)
-				{
-#ifdef TORRENT_PARTIAL_HASH_LOG
-					out << time_now_string() << " UPDATING ["
-						" s: " << this
-						<< " p: " << piece_index
-						<< " off: " << offset
-						<< " size: " << size
-						<< " entries: " << m_piece_hasher.size()
-						<< " ]" << std::endl;
-#endif
-					for (file::iovec_t* b = iov, *end(iov + num_bufs); b < end; ++b)
-					{
-						i->second.h.update((char const*)b->iov_base, b->iov_len);
-						i->second.offset += b->iov_len;
-					}
-				}
-#ifdef TORRENT_PARTIAL_HASH_LOG
-				else
-				{
-					out << time_now_string() << " SKIPPING (out of order) ["
-						" s: " << this
-						<< " p: " << piece_index
-						<< " off: " << offset
-						<< " size: " << size
-						<< " entries: " << m_piece_hasher.size()
-						<< " ]" << std::endl;
-				}
-#endif
-			}
-#ifdef TORRENT_PARTIAL_HASH_LOG
-			else
-			{
-				out << time_now_string() << " SKIPPING (no entry) ["
-					" s: " << this
-					<< " p: " << piece_index
-					<< " off: " << offset
-					<< " size: " << size
-					<< " entries: " << m_piece_hasher.size()
-					<< " ]" << std::endl;
-			}
-#endif
-		}
-		
-		return ret;
-	}
-
-	size_type piece_manager::physical_offset(
-		int piece_index
-		, int offset)
-	{
-		TORRENT_ASSERT(offset >= 0);
-		TORRENT_ASSERT(piece_index >= 0 && piece_index < m_files.num_pieces());
-
-		int slot = slot_for(piece_index);
-		// we may not have a slot for this piece yet.
-		// assume there is no re-mapping of slots
-		if (slot < 0) slot = piece_index;
-		return m_storage->physical_offset(slot, offset);
-	}
-
-	int piece_manager::identify_data(
-		sha1_hash const& large_hash
-		, sha1_hash const& small_hash
-		, int current_slot)
-	{
-//		INVARIANT_CHECK;
-		typedef std::multimap<sha1_hash, int>::const_iterator map_iter;
-		map_iter begin1;
-		map_iter end1;
-		map_iter begin2;
-		map_iter end2;
-
-		// makes the lookups for the small digest and the large digest
-		boost::tie(begin1, end1) = m_hash_to_piece.equal_range(small_hash);
-		boost::tie(begin2, end2) = m_hash_to_piece.equal_range(large_hash);
-
-		// copy all potential piece indices into this vector
-		std::vector<int> matching_pieces;
-		for (map_iter i = begin1; i != end1; ++i)
-			matching_pieces.push_back(i->second);
-		for (map_iter i = begin2; i != end2; ++i)
-			matching_pieces.push_back(i->second);
-
-		// no piece matched the data in the slot
-		if (matching_pieces.empty())
-			return unassigned;
-
-		// ------------------------------------------
-		// CHECK IF THE PIECE IS IN ITS CORRECT PLACE
-		// ------------------------------------------
-
-		if (std::find(
-			matching_pieces.begin()
-			, matching_pieces.end()
-			, current_slot) != matching_pieces.end())
-		{
-			// the current slot is among the matching pieces, so
-			// we will assume that the piece is in the right place
-			const int piece_index = current_slot;
-
-			int other_slot = m_piece_to_slot[piece_index];
-			if (other_slot >= 0)
-			{
-				// we have already found a piece with
-				// this index.
-
-				// take one of the other matching pieces
-				// that hasn't already been assigned
-				int other_piece = -1;
-				for (std::vector<int>::iterator i = matching_pieces.begin();
-					i != matching_pieces.end(); ++i)
-				{
-					if (m_piece_to_slot[*i] >= 0 || *i == piece_index) continue;
-					other_piece = *i;
-					break;
-				}
-				if (other_piece >= 0)
-				{
-					// replace the old slot with 'other_piece'
-					m_slot_to_piece[other_slot] = other_piece;
-					m_piece_to_slot[other_piece] = other_slot;
-				}
-				else
-				{
-					// this index is the only piece with this
-					// hash. The previous slot we found with
-					// this hash must be the same piece. Mark
-					// that piece as unassigned, since this slot
-					// is the correct place for the piece.
-					m_slot_to_piece[other_slot] = unassigned;
-					if (m_storage_mode == internal_storage_mode_compact_deprecated)
-						m_free_slots.push_back(other_slot);
-				}
-				TORRENT_ASSERT(m_piece_to_slot[piece_index] != current_slot);
-				TORRENT_ASSERT(m_piece_to_slot[piece_index] >= 0);
-				m_piece_to_slot[piece_index] = has_no_slot;
-			}
-			
-			TORRENT_ASSERT(m_piece_to_slot[piece_index] == has_no_slot);
-
-			return piece_index;
-		}
-
-		// find a matching piece that hasn't
-		// already been assigned
-		int free_piece = unassigned;
-		for (std::vector<int>::iterator i = matching_pieces.begin();
-			i != matching_pieces.end(); ++i)
-		{
-			if (m_piece_to_slot[*i] >= 0) continue;
-			free_piece = *i;
-			break;
-		}
-
-		if (free_piece >= 0)
-		{
-			TORRENT_ASSERT(m_piece_to_slot[free_piece] == has_no_slot);
-			return free_piece;
-		}
-		else
-		{
-			TORRENT_ASSERT(free_piece == unassigned);
-			return unassigned;
-		}
-	}
-
-	int piece_manager::check_no_fastresume(error_code& error)
+	int piece_manager::check_no_fastresume(storage_error& ec)
 	{
 		bool has_files = false;
-		if (!m_storage->settings().no_recheck_incomplete_resume)
+		if (!m_storage->settings().get_bool(settings_pack::no_recheck_incomplete_resume))
 		{
-			has_files = m_storage->has_any_file();
-			if (m_storage->error())
+			storage_error se;
+			has_files = m_storage->has_any_file(se);
+
+			if (se)
+			{
+				ec = se;
 				return fatal_disk_error;
+			}
 
 			if (has_files)
 			{
-				m_state = state_full_check;
-				m_piece_to_slot.clear();
-				m_piece_to_slot.resize(m_files.num_pieces(), has_no_slot);
-				m_slot_to_piece.clear();
-				m_slot_to_piece.resize(m_files.num_pieces(), unallocated);
-				if (m_storage_mode == internal_storage_mode_compact_deprecated)
-				{
-					m_unallocated_slots.clear();
-					m_free_slots.clear();
-				}
-				TORRENT_ASSERT(int(m_piece_to_slot.size()) == m_files.num_pieces());
-				return need_full_check;
+				// always initialize the storage
+				int ret = check_init_storage(ec);
+				return ret != no_error ? ret : need_full_check;
 			}
 		}
 
-		if (m_storage_mode == internal_storage_mode_compact_deprecated)
-		{
-			// in compact mode without checking, we need to
-			// populate the unallocated list
-			TORRENT_ASSERT(m_unallocated_slots.empty());
-			for (int i = 0, end(m_files.num_pieces()); i < end; ++i)
-				m_unallocated_slots.push_back(i);
-			m_piece_to_slot.clear();
-			m_piece_to_slot.resize(m_files.num_pieces(), has_no_slot);
-			m_slot_to_piece.clear();
-			m_slot_to_piece.resize(m_files.num_pieces(), unallocated);
-		}
-	
-		return check_init_storage(error);
+		return check_init_storage(ec);
 	}
-	
-	int piece_manager::check_init_storage(error_code& error)
+
+	int piece_manager::check_init_storage(storage_error& ec)
 	{
-		if (m_storage->initialize(m_storage_mode == storage_mode_allocate))
+		storage_error se;
+		m_storage->initialize(se);
+		if (se)
 		{
-			error = m_storage->error();
-			TORRENT_ASSERT(error);
-			m_current_slot = 0;
+			ec = se;
 			return fatal_disk_error;
 		}
-		m_state = state_finished;
-		m_scratch_buffer.reset();
-		m_scratch_buffer2.reset();
-		if (m_storage_mode != internal_storage_mode_compact_deprecated)
-		{
-			// if no piece is out of place
-			// since we're in full allocation mode, we can
-			// forget the piece allocation tables
-			std::vector<int>().swap(m_piece_to_slot);
-			std::vector<int>().swap(m_slot_to_piece);
-			std::vector<int>().swap(m_free_slots);
-			std::vector<int>().swap(m_unallocated_slots);
-		}
+
 		return no_error;
 	}
 
 	// check if the fastresume data is up to date
-	// if it is, use it and return true. If it 
+	// if it is, use it and return true. If it
 	// isn't return false and the full check
-	// will be run
+	// will be run. If the links pointer is non-null, it has the same number
+	// of elements as there are files. Each element is either empty or contains
+	// the absolute path to a file identical to the corresponding file in this
+	// torrent. The storage must create hard links (or copy) those files. If
+	// any file does not exist or is inaccessible, the disk job must fail.
 	int piece_manager::check_fastresume(
-		lazy_entry const& rd, error_code& error)
+		bdecode_node const& rd
+		, std::vector<std::string> const* links
+		, storage_error& ec)
 	{
-		mutex::scoped_lock lock(m_mutex);
-
-		INVARIANT_CHECK;
-
 		TORRENT_ASSERT(m_files.piece_length() > 0);
-		
-		m_current_slot = 0;
 
 		// if we don't have any resume data, return
-		if (rd.type() == lazy_entry::none_t) return check_no_fastresume(error);
+		if (rd.type() == bdecode_node::none_t) return check_no_fastresume(ec);
 
-		if (rd.type() != lazy_entry::dict_t)
+		if (rd.type() != bdecode_node::dict_t)
 		{
-			error = errors::not_a_dictionary;
-			return check_no_fastresume(error);
+			ec.ec = errors::not_a_dictionary;
+			return check_no_fastresume(ec);
 		}
 
 		int block_size = (std::min)(16 * 1024, m_files.piece_length());
@@ -2152,988 +1799,207 @@ ret:
 		if (blocks_per_piece != -1
 			&& blocks_per_piece != m_files.piece_length() / block_size)
 		{
-			error = errors::invalid_blocks_per_piece;
-			return check_no_fastresume(error);
+			ec.ec = errors::invalid_blocks_per_piece;
+			return check_no_fastresume(ec);
 		}
 
-		storage_mode_t storage_mode = internal_storage_mode_compact_deprecated;
-		if (rd.dict_find_string_value("allocation") != "compact")
-			storage_mode = storage_mode_sparse;
+		if (!m_storage->verify_resume_data(rd, links, ec))
+			return check_no_fastresume(ec);
 
-		if (!m_storage->verify_resume_data(rd, error))
-			return check_no_fastresume(error);
+		return check_init_storage(ec);
+	}
 
-		// assume no piece is out of place (i.e. in a slot
-		// other than the one it should be in)
-		bool out_of_place = false;
+	// ====== disk_job_fence implementation ========
 
-		// if we don't have a piece map, we need the slots
-		// if we're in compact mode, we also need the slots map
-		if (storage_mode == internal_storage_mode_compact_deprecated || rd.dict_find("pieces") == 0)
+	disk_job_fence::disk_job_fence()
+		: m_has_fence(0)
+		, m_outstanding_jobs(0)
+	{}
+
+	int disk_job_fence::job_complete(disk_io_job* j, tailqueue<disk_io_job>& jobs)
+	{
+		mutex::scoped_lock l(m_mutex);
+
+		TORRENT_ASSERT(j->flags & disk_io_job::in_progress);
+		j->flags &= ~disk_io_job::in_progress;
+
+		TORRENT_ASSERT(m_outstanding_jobs > 0);
+		--m_outstanding_jobs;
+		if (j->flags & disk_io_job::fence)
 		{
-			// read slots map
-			lazy_entry const* slots = rd.dict_find_list("slots");
-			if (slots == 0)
-			{
-				error = errors::missing_slots;
-				return check_no_fastresume(error);
-			}
+			// a fence job just completed. Make sure the fence logic
+			// works by asserting m_outstanding_jobs is in fact 0 now
+			TORRENT_ASSERT(m_outstanding_jobs == 0);
 
-			if ((int)slots->list_size() > m_files.num_pieces())
-			{
-				error = errors::too_many_slots;
-				return check_no_fastresume(error);
-			}
+			// the fence can now be lowered
+			--m_has_fence;
 
-			if (m_storage_mode == internal_storage_mode_compact_deprecated)
+			// now we need to post all jobs that have been queued up
+			// while this fence was up. However, if there's another fence
+			// in the queue, stop there and raise the fence again
+			int ret = 0;
+			while (m_blocked_jobs.size())
 			{
-				int num_pieces = int(m_files.num_pieces());
-				m_slot_to_piece.resize(num_pieces, unallocated);
-				m_piece_to_slot.resize(num_pieces, has_no_slot);
-				for (int i = 0; i < slots->list_size(); ++i)
+				disk_io_job *bj = static_cast<disk_io_job*>(m_blocked_jobs.pop_front());
+				if (bj->flags & disk_io_job::fence)
 				{
-					lazy_entry const* e = slots->list_at(i);
-					if (e->type() != lazy_entry::int_t)
+					// we encountered another fence. We cannot post anymore
+					// jobs from the blocked jobs queue. We have to go back
+					// into a raised fence mode and wait for all current jobs
+					// to complete. The exception is that if there are no jobs
+					// executing currently, we should add the fence job.
+					if (m_outstanding_jobs == 0 && jobs.empty())
 					{
-						error = errors::invalid_slot_list;
-						return check_no_fastresume(error);
-					}
-
-					int index = int(e->int_value());
-					if (index >= num_pieces || index < -2)
-					{
-						error = errors::invalid_piece_index;
-						return check_no_fastresume(error);
-					}
-					if (index >= 0)
-					{
-						m_slot_to_piece[i] = index;
-						m_piece_to_slot[index] = i;
-						if (i != index) out_of_place = true;
-					}
-					else if (index == unassigned)
-					{
-						if (m_storage_mode == internal_storage_mode_compact_deprecated)
-							m_free_slots.push_back(i);
+						TORRENT_ASSERT((bj->flags & disk_io_job::in_progress) == 0);
+						bj->flags |= disk_io_job::in_progress;
+						++m_outstanding_jobs;
+						++ret;
+#if TORRENT_USE_ASSERTS
+						TORRENT_ASSERT(bj->blocked);
+						bj->blocked = false;
+#endif
+						jobs.push_back(bj);
 					}
 					else
 					{
-						TORRENT_ASSERT(index == unallocated);
-						if (m_storage_mode == internal_storage_mode_compact_deprecated)
-							m_unallocated_slots.push_back(i);
+						// put the fence job back in the blocked queue
+						m_blocked_jobs.push_front(bj);
 					}
+					return ret;
 				}
-			}
-			else
-			{
-				for (int i = 0; i < slots->list_size(); ++i)
-				{
-					lazy_entry const* e = slots->list_at(i);
-					if (e->type() != lazy_entry::int_t)
-					{
-						error = errors::invalid_slot_list;
-						return check_no_fastresume(error);
-					}
+				TORRENT_ASSERT((bj->flags & disk_io_job::in_progress) == 0);
+				bj->flags |= disk_io_job::in_progress;
 
-					int index = int(e->int_value());
-					if (index != i && index >= 0)
-					{
-						error = errors::invalid_piece_index;
-						return check_no_fastresume(error);
-					}
-				}
+				++m_outstanding_jobs;
+				++ret;
+#if TORRENT_USE_ASSERTS
+				TORRENT_ASSERT(bj->blocked);
+				bj->blocked = false;
+#endif
+				jobs.push_back(bj);
 			}
-
-			// This will corrupt the storage
-			// use while debugging to find
-			// states that cannot be scanned
-			// by check_pieces.
-			//		m_storage->shuffle();
-
-			if (m_storage_mode == internal_storage_mode_compact_deprecated)
-			{
-				if (m_unallocated_slots.empty()) switch_to_full_mode();
-			}
-			else
-			{
-				TORRENT_ASSERT(m_free_slots.empty());
-				TORRENT_ASSERT(m_unallocated_slots.empty());
-
-				if (out_of_place)
-				{
-					// in this case we're in full allocation mode, but
-					// we're resuming a compact allocated storage
-					m_state = state_expand_pieces;
-					m_current_slot = 0;
-					error = errors::pieces_need_reorder;
-					TORRENT_ASSERT(int(m_piece_to_slot.size()) == m_files.num_pieces());
-					return need_full_check;
-				}
-			}
-
-		}
-		else if (m_storage_mode == internal_storage_mode_compact_deprecated)
-		{
-			// read piece map
-			lazy_entry const* pieces = rd.dict_find("pieces");
-			if (pieces == 0 || pieces->type() != lazy_entry::string_t)
-			{
-				error = errors::missing_pieces;
-				return check_no_fastresume(error);
-			}
-
-			if ((int)pieces->string_length() != m_files.num_pieces())
-			{
-				error = errors::too_many_slots;
-				return check_no_fastresume(error);
-			}
-
-			int num_pieces = int(m_files.num_pieces());
-			m_slot_to_piece.resize(num_pieces, unallocated);
-			m_piece_to_slot.resize(num_pieces, has_no_slot);
-			char const* have_pieces = pieces->string_ptr();
-			for (int i = 0; i < num_pieces; ++i)
-			{
-				if (have_pieces[i] & 1)
-				{
-					m_slot_to_piece[i] = i;
-					m_piece_to_slot[i] = i;
-				}
-				else
-				{
-					m_free_slots.push_back(i);
-				}
-			}
-			if (m_unallocated_slots.empty()) switch_to_full_mode();
+			return ret;
 		}
 
-		return check_init_storage(error);
+		// there are still outstanding jobs, even if we have a
+		// fence, it's not time to lower it yet
+		// also, if we don't have a fence, we're done
+		if (m_outstanding_jobs > 0 || m_has_fence == 0) return 0;
+
+		// there's a fence raised, and no outstanding operations.
+		// it means we can execute the fence job right now.
+		TORRENT_ASSERT(m_blocked_jobs.size() > 0);
+
+		// this is the fence job
+		disk_io_job *bj = static_cast<disk_io_job*>(m_blocked_jobs.pop_front());
+		TORRENT_ASSERT(bj->flags & disk_io_job::fence);
+
+		TORRENT_ASSERT((bj->flags & disk_io_job::in_progress) == 0);
+		bj->flags |= disk_io_job::in_progress;
+
+		++m_outstanding_jobs;
+#if TORRENT_USE_ASSERTS
+		TORRENT_ASSERT(bj->blocked);
+		bj->blocked = false;
+#endif
+		// prioritize fence jobs since they're blocking other jobs
+		jobs.push_front(bj);
+		return 1;
 	}
 
-/*
-   state chart:
-
-   check_fastresume()  ----------+
-                                 |
-      |        |                 |
-      |        v                 v
-      |  +------------+   +---------------+
-      |  | full_check |-->| expand_pieses |
-      |  +------------+   +---------------+
-      |        |                 |
-      |        v                 |
-      |  +--------------+        |
-      +->|   finished   | <------+
-         +--------------+
-*/
-
-
-	// performs the full check and full allocation
-	// (if necessary). returns true if finished and
-	// false if it should be called again
-	// the second return value is the progress the
-	// file check is at. 0 is nothing done, and 1
-	// is finished
-	int piece_manager::check_files(int& current_slot, int& have_piece, error_code& error)
+	bool disk_job_fence::is_blocked(disk_io_job* j)
 	{
-		if (m_state == state_none) return check_no_fastresume(error);
+		mutex::scoped_lock l(m_mutex);
+		DLOG(stderr, "[%p] is_blocked: fence: %d num_outstanding: %d\n"
+			, static_cast<void*>(this), m_has_fence, int(m_outstanding_jobs));
 
-		if (m_piece_to_slot.empty())
+		// if this is the job that raised the fence, don't block it
+		// ignore fence can only ignore one fence. If there are several,
+		// this job still needs to get queued up
+		if (m_has_fence == 0)
 		{
-			m_piece_to_slot.clear();
-			m_piece_to_slot.resize(m_files.num_pieces(), has_no_slot);
-		}
-		if (m_slot_to_piece.empty())
-		{
-			m_slot_to_piece.clear();
-			m_slot_to_piece.resize(m_files.num_pieces(), unallocated);
-		}
-
-		current_slot = m_current_slot;
-		have_piece = -1;
-		if (m_state == state_expand_pieces)
-		{
-			INVARIANT_CHECK;
-
-			if (m_scratch_piece >= 0)
-			{
-				int piece = m_scratch_piece;
-				int other_piece = m_slot_to_piece[piece];
-				m_scratch_piece = -1;
-
-				if (other_piece >= 0)
-				{
-					if (!m_scratch_buffer2.get())
-						m_scratch_buffer2.reset(page_aligned_allocator::malloc(m_files.piece_length()));
-
-					int piece_size = m_files.piece_size(other_piece);
-					file::iovec_t b = {m_scratch_buffer2.get(), size_t(piece_size) };
-					if (m_storage->readv(&b, piece, 0, 1) != piece_size)
-					{
-						error = m_storage->error();
-						TORRENT_ASSERT(error);
-						return fatal_disk_error;
-					}
-					m_scratch_piece = other_piece;
-					m_piece_to_slot[other_piece] = unassigned;
-				}
-				
-				// the slot where this piece belongs is
-				// free. Just move the piece there.
-				int piece_size = m_files.piece_size(piece);
-				file::iovec_t b = {m_scratch_buffer.get(), size_t(piece_size) };
-				if (m_storage->writev(&b, piece, 0, 1) != piece_size)
-				{
-					error = m_storage->error();
-					TORRENT_ASSERT(error);
-					return fatal_disk_error;
-				}
-				m_piece_to_slot[piece] = piece;
-				m_slot_to_piece[piece] = piece;
-
-				if (other_piece >= 0) m_scratch_buffer.swap(m_scratch_buffer2);
-		
-				TORRENT_ASSERT(int(m_piece_to_slot.size()) == m_files.num_pieces());
-				return need_full_check;
-			}
-
-			while (m_current_slot < m_files.num_pieces()
-				&& (m_slot_to_piece[m_current_slot] == m_current_slot
-				|| m_slot_to_piece[m_current_slot] < 0))
-			{
-				++m_current_slot;
-			}
-
-			if (m_current_slot == m_files.num_pieces())
-			{
-				return check_init_storage(error);
-			}
-
-			TORRENT_ASSERT(m_current_slot < m_files.num_pieces());
-
-			int piece = m_slot_to_piece[m_current_slot];
-			TORRENT_ASSERT(piece >= 0);
-			int other_piece = m_slot_to_piece[piece];
-			if (other_piece >= 0)
-			{
-				// there is another piece in the slot
-				// where this one goes. Store it in the scratch
-				// buffer until next iteration.
-				if (!m_scratch_buffer.get())
-					m_scratch_buffer.reset(page_aligned_allocator::malloc(m_files.piece_length()));
-			
-				int piece_size = m_files.piece_size(other_piece);
-				file::iovec_t b = {m_scratch_buffer.get(), size_t(piece_size) };
-				if (m_storage->readv(&b, piece, 0, 1) != piece_size)
-				{
-					error = m_storage->error();
-					TORRENT_ASSERT(error);
-					return fatal_disk_error;
-				}
-				m_scratch_piece = other_piece;
-				m_piece_to_slot[other_piece] = unassigned;
-			}
-
-			// the slot where this piece belongs is
-			// free. Just move the piece there.
-			m_last_piece = piece;
-			m_storage->move_slot(m_current_slot, piece);
-			if (m_storage->error()) return -1;
-
-			m_piece_to_slot[piece] = piece;
-			m_slot_to_piece[m_current_slot] = unassigned;
-			m_slot_to_piece[piece] = piece;
-		
-			TORRENT_ASSERT(int(m_piece_to_slot.size()) == m_files.num_pieces());
-			return need_full_check;
+			TORRENT_ASSERT((j->flags & disk_io_job::in_progress) == 0);
+			j->flags |= disk_io_job::in_progress;
+			++m_outstanding_jobs;
+			return false;
 		}
 
-		TORRENT_ASSERT(m_state == state_full_check);
-		if (m_state == state_finished) return 0;
+		m_blocked_jobs.push_back(j);
 
-		int skip = check_one_piece(have_piece);
-		TORRENT_ASSERT(m_current_slot <= m_files.num_pieces());
+#if TORRENT_USE_ASSERTS
+		TORRENT_ASSERT(j->blocked == false);
+		j->blocked = true;
+#endif
 
-		if (skip == -1)
-		{
-			error = m_storage->error();
-			TORRENT_ASSERT(error);
-			return fatal_disk_error;
-		}
-
-		if (skip > 0)
-		{
-			clear_error();
-			// skip means that the piece we checked failed to be read from disk
-			// completely. This may be caused by the file not being there, or the
-			// piece overlapping with a sparse region. We should skip 'skip' number
-			// of pieces
-
-			if (m_storage_mode == internal_storage_mode_compact_deprecated)
-			{
-				for (int i = m_current_slot; i < m_current_slot + skip - 1; ++i)
-				{
-					TORRENT_ASSERT(m_slot_to_piece[i] == unallocated);
-					m_unallocated_slots.push_back(i);
-				}
-			}
-
-			// current slot will increase by one below
-			m_current_slot += skip - 1;
-			TORRENT_ASSERT(m_current_slot <= m_files.num_pieces());
-		}
-
-		++m_current_slot;
-		current_slot = m_current_slot;
-
-		if (m_current_slot >= m_files.num_pieces())
-		{
-			TORRENT_ASSERT(m_current_slot == m_files.num_pieces());
-
-			// clear the memory we've been using
-			std::multimap<sha1_hash, int>().swap(m_hash_to_piece);
-
-			if (m_storage_mode != internal_storage_mode_compact_deprecated)
-			{
-				if (!m_out_of_place)
-				{
-					// if no piece is out of place
-					// since we're in full allocation mode, we can
-					// forget the piece allocation tables
-
-					std::vector<int>().swap(m_piece_to_slot);
-					std::vector<int>().swap(m_slot_to_piece);
-					return check_init_storage(error);
-				}
-				else
-				{
-					// in this case we're in full allocation mode, but
-					// we're resuming a compact allocated storage
-					m_state = state_expand_pieces;
-					m_current_slot = 0;
-					current_slot = m_current_slot;
-					TORRENT_ASSERT(int(m_piece_to_slot.size()) == m_files.num_pieces());
-					return need_full_check;
-				}
-			}
-			else if (m_unallocated_slots.empty())
-			{
-				switch_to_full_mode();
-			}
-			return check_init_storage(error);
-		}
-
-		TORRENT_ASSERT(int(m_piece_to_slot.size()) == m_files.num_pieces());
-		return need_full_check;
+		return true;
 	}
 
-	int piece_manager::skip_file() const
+	bool disk_job_fence::has_fence() const
 	{
-		size_type file_offset = 0;
-		size_type current_offset = size_type(m_current_slot) * m_files.piece_length();
-		for (int i = 0; i < m_files.num_files(); ++i)
-		{
-			file_offset += m_files.file_size(i);
-			if (file_offset > current_offset) break;
-		}
-
-		TORRENT_ASSERT(file_offset > current_offset);
-		int ret = static_cast<int>(
-			(file_offset - current_offset + m_files.piece_length() - 1)
-			/ m_files.piece_length());
-		TORRENT_ASSERT(ret >= 1);
-		return ret;
+		mutex::scoped_lock l(m_mutex);
+		return m_has_fence;
 	}
 
-	// -1 = error, 0 = ok, >0 = skip this many pieces
-	int piece_manager::check_one_piece(int& have_piece)
+	int disk_job_fence::num_blocked() const
 	{
-		// ------------------------
-		//    DO THE FULL CHECK
-		// ------------------------
+		mutex::scoped_lock l(m_mutex);
+		return m_blocked_jobs.size();
+	}
 
-		TORRENT_ASSERT(int(m_piece_to_slot.size()) == m_files.num_pieces());
-		TORRENT_ASSERT(int(m_slot_to_piece.size()) == m_files.num_pieces());
-		TORRENT_ASSERT(have_piece == -1);
+	// j is the fence job. It must have exclusive access to the storage
+	// fj is the flush job. If the job j is queued, we need to issue
+	// this job
+	int disk_job_fence::raise_fence(disk_io_job* j, disk_io_job* fj
+		, counters& cnt)
+	{
+		TORRENT_ASSERT((j->flags & disk_io_job::fence) == 0);
+		j->flags |= disk_io_job::fence;
 
-		// initialization for the full check
-		if (m_hash_to_piece.empty())
+		mutex::scoped_lock l(m_mutex);
+
+		DLOG(stderr, "[%p] raise_fence: fence: %d num_outstanding: %d\n"
+			, static_cast<void*>(this), m_has_fence, int(m_outstanding_jobs));
+
+		if (m_has_fence == 0 && m_outstanding_jobs == 0)
 		{
-			for (int i = 0; i < m_files.num_pieces(); ++i)
-				m_hash_to_piece.insert(std::pair<const sha1_hash, int>(m_info->hash_for_piece(i), i));
+			++m_has_fence;
+			DLOG(stderr, "[%p] raise_fence: need posting\n"
+				, static_cast<void*>(this));
+
+			// the job j is expected to be put on the job queue
+			// after this, without being passed through is_blocked()
+			// that's why we're accounting for it here
+
+			// fj is expected to be discarded by the caller
+			j->flags |= disk_io_job::in_progress;
+			++m_outstanding_jobs;
+			return fence_post_fence;
 		}
 
-		partial_hash ph;
-		int num_read = 0;
-		int piece_size = m_files.piece_size(m_current_slot);
-		int small_piece_size = m_files.piece_size(m_files.num_pieces() - 1);
-		bool read_short = true;
-		sha1_hash small_hash;
-		if (piece_size == small_piece_size)
+		++m_has_fence;
+		if (m_has_fence > 1)
 		{
-			num_read = hash_for_slot(m_current_slot, ph, piece_size, 0, 0);
+#if TORRENT_USE_ASSERTS
+			TORRENT_ASSERT(fj->blocked == false);
+			fj->blocked = true;
+#endif
+			m_blocked_jobs.push_back(fj);
+			cnt.inc_stats_counter(counters::blocked_disk_jobs);
 		}
 		else
 		{
-			num_read = hash_for_slot(m_current_slot, ph, piece_size
-				, small_piece_size, &small_hash);
+			// in this case, fj is expected to be put on the job queue
+			fj->flags |= disk_io_job::in_progress;
+			++m_outstanding_jobs;
 		}
-		read_short = num_read != piece_size;
-
-		if (read_short)
-		{
-			if (m_storage->error()
-#ifdef TORRENT_WINDOWS
-				&& m_storage->error() != error_code(ERROR_PATH_NOT_FOUND, get_system_category())
-				&& m_storage->error() != error_code(ERROR_FILE_NOT_FOUND, get_system_category())
-				&& m_storage->error() != error_code(ERROR_HANDLE_EOF, get_system_category())
-				&& m_storage->error() != error_code(ERROR_INVALID_HANDLE, get_system_category()))
-#else
-				&& m_storage->error() != error_code(ENOENT, get_posix_category()))
+#if TORRENT_USE_ASSERTS
+		TORRENT_ASSERT(j->blocked == false);
+		j->blocked = true;
 #endif
-			{
-				return -1;
-			}
-			// if the file is incomplete, skip the rest of it
-			return skip_file();
-		}
+		m_blocked_jobs.push_back(j);
+		cnt.inc_stats_counter(counters::blocked_disk_jobs);
 
-		sha1_hash large_hash = ph.h.final();
-		int piece_index = identify_data(large_hash, small_hash, m_current_slot);
-
-		if (piece_index >= 0) have_piece = piece_index;
-
-		if (piece_index != m_current_slot
-			&& piece_index >= 0)
-			m_out_of_place = true;
-
-		TORRENT_ASSERT(piece_index == unassigned || piece_index >= 0);
-
-		const bool this_should_move = piece_index >= 0 && m_slot_to_piece[piece_index] != unallocated;
-		const bool other_should_move = m_piece_to_slot[m_current_slot] != has_no_slot;
-
-		// check if this piece should be swapped with any other slot
-		// this section will ensure that the storage is correctly sorted
-		// libtorrent will never leave the storage in a state that
-		// requires this sorting, but other clients may.
-
-		// example of worst case:
-		//                          | m_current_slot = 5
-		//                          V
-		//  +---+- - - +---+- - - +---+- -
-		//  | x |      | 5 |      | 3 |     <- piece data in slots
-		//  +---+- - - +---+- - - +---+- -
-		//    3          y          5       <- slot index
-
-		// in this example, the data in the m_current_slot (5)
-		// is piece 3. It has to be moved into slot 3. The data
-		// in slot y (piece 5) should be moved into the m_current_slot.
-		// and the data in slot 3 (piece x) should be moved to slot y.
-
-		// there are three possible cases.
-		// 1. There's another piece that should be placed into this slot
-		// 2. This piece should be placed into another slot.
-		// 3. There's another piece that should be placed into this slot
-		//    and this piece should be placed into another slot
-
-		// swap piece_index with this slot
-
-		// case 1
-		if (this_should_move && !other_should_move)
-		{
-			TORRENT_ASSERT(piece_index != m_current_slot);
-
-			const int other_slot = piece_index;
-			TORRENT_ASSERT(other_slot >= 0);
-			int other_piece = m_slot_to_piece[other_slot];
-
-			m_slot_to_piece[other_slot] = piece_index;
-			m_slot_to_piece[m_current_slot] = other_piece;
-			m_piece_to_slot[piece_index] = piece_index;
-			if (other_piece >= 0) m_piece_to_slot[other_piece] = m_current_slot;
-
-			if (other_piece == unassigned)
-			{
-				std::vector<int>::iterator i =
-					std::find(m_free_slots.begin(), m_free_slots.end(), other_slot);
-				TORRENT_ASSERT(i != m_free_slots.end());
-				if (m_storage_mode == internal_storage_mode_compact_deprecated)
-				{
-					m_free_slots.erase(i);
-					m_free_slots.push_back(m_current_slot);
-				}
-			}
-
-			bool ret = false;
-			m_last_piece = piece_index;
-			if (other_piece >= 0)
-				ret |= m_storage->swap_slots(other_slot, m_current_slot);
-			else
-				ret |= m_storage->move_slot(m_current_slot, other_slot);
-
-			if (ret) return skip_file();
-
-			TORRENT_ASSERT(m_slot_to_piece[m_current_slot] == unassigned
-				|| m_piece_to_slot[m_slot_to_piece[m_current_slot]] == m_current_slot);
-		}
-		// case 2
-		else if (!this_should_move && other_should_move)
-		{
-			TORRENT_ASSERT(piece_index != m_current_slot);
-
-			const int other_piece = m_current_slot;
-			const int other_slot = m_piece_to_slot[other_piece];
-			TORRENT_ASSERT(other_slot >= 0);
-
-			m_slot_to_piece[m_current_slot] = other_piece;
-			m_slot_to_piece[other_slot] = piece_index;
-			m_piece_to_slot[other_piece] = m_current_slot;
-
-			if (piece_index == unassigned
-				&& m_storage_mode == internal_storage_mode_compact_deprecated)
-				m_free_slots.push_back(other_slot);
-
-			bool ret = false;
-			if (piece_index >= 0)
-			{
-				m_piece_to_slot[piece_index] = other_slot;
-				ret |= m_storage->swap_slots(other_slot, m_current_slot);
-			}
-			else
-			{
-				ret |= m_storage->move_slot(other_slot, m_current_slot);
-
-			}
-			m_last_piece = other_piece;
-			if (ret) return skip_file();
-
-			TORRENT_ASSERT(m_slot_to_piece[m_current_slot] == unassigned
-				|| m_piece_to_slot[m_slot_to_piece[m_current_slot]] == m_current_slot);
-		}
-		else if (this_should_move && other_should_move)
-		{
-			TORRENT_ASSERT(piece_index != m_current_slot);
-			TORRENT_ASSERT(piece_index >= 0);
-
-			const int piece1 = m_slot_to_piece[piece_index];
-			const int piece2 = m_current_slot;
-			const int slot1 = piece_index;
-			const int slot2 = m_piece_to_slot[piece2];
-
-			TORRENT_ASSERT(slot1 >= 0);
-			TORRENT_ASSERT(slot2 >= 0);
-			TORRENT_ASSERT(piece2 >= 0);
-
-			if (slot1 == slot2)
-			{
-				// this means there are only two pieces involved in the swap
-				TORRENT_ASSERT(piece1 >= 0);
-
-				// movement diagram:
-				// +-------------------------------+
-				// |                               |
-				// +--> slot1 --> m_current_slot --+
-
-				m_slot_to_piece[slot1] = piece_index;
-				m_slot_to_piece[m_current_slot] = piece1;
-
-				m_piece_to_slot[piece_index] = slot1;
-				m_piece_to_slot[piece1] = m_current_slot;
-
-				TORRENT_ASSERT(piece1 == m_current_slot);
-				TORRENT_ASSERT(piece_index == slot1);
-
-				m_last_piece = piece_index;
-				m_storage->swap_slots(m_current_slot, slot1);
-
-				TORRENT_ASSERT(m_slot_to_piece[m_current_slot] == unassigned
-					|| m_piece_to_slot[m_slot_to_piece[m_current_slot]] == m_current_slot);
-			}
-			else
-			{
-				TORRENT_ASSERT(slot1 != slot2);
-				TORRENT_ASSERT(piece1 != piece2);
-
-				// movement diagram:
-				// +-----------------------------------------+
-				// |                                         |
-				// +--> slot1 --> slot2 --> m_current_slot --+
-
-				m_slot_to_piece[slot1] = piece_index;
-				m_slot_to_piece[slot2] = piece1;
-				m_slot_to_piece[m_current_slot] = piece2;
-
-				m_piece_to_slot[piece_index] = slot1;
-				m_piece_to_slot[m_current_slot] = piece2;
-
-				if (piece1 == unassigned)
-				{
-					std::vector<int>::iterator i =
-						std::find(m_free_slots.begin(), m_free_slots.end(), slot1);
-					TORRENT_ASSERT(i != m_free_slots.end());
-					if (m_storage_mode == internal_storage_mode_compact_deprecated)
-					{
-						m_free_slots.erase(i);
-						m_free_slots.push_back(slot2);
-					}
-				}
-
-				bool ret = false;
-				if (piece1 >= 0)
-				{
-					m_piece_to_slot[piece1] = slot2;
-					ret |= m_storage->swap_slots3(m_current_slot, slot1, slot2);
-				}
-				else
-				{
-					ret |= m_storage->move_slot(m_current_slot, slot1);
-					ret |= m_storage->move_slot(slot2, m_current_slot);
-				}
-
-				m_last_piece = piece_index;
-				if (ret) return skip_file();
-
-				TORRENT_ASSERT(m_slot_to_piece[m_current_slot] == unassigned
-					|| m_piece_to_slot[m_slot_to_piece[m_current_slot]] == m_current_slot);
-			}
-		}
-		else
-		{
-			TORRENT_ASSERT(m_piece_to_slot[m_current_slot] == has_no_slot || piece_index != m_current_slot);
-			TORRENT_ASSERT(m_slot_to_piece[m_current_slot] == unallocated);
-			TORRENT_ASSERT(piece_index == unassigned || m_piece_to_slot[piece_index] == has_no_slot);
-
-			// the slot was identified as piece 'piece_index'
-			if (piece_index != unassigned)
-				m_piece_to_slot[piece_index] = m_current_slot;
-			else if (m_storage_mode == internal_storage_mode_compact_deprecated)
-				m_free_slots.push_back(m_current_slot);
-
-			m_slot_to_piece[m_current_slot] = piece_index;
-
-			TORRENT_ASSERT(m_slot_to_piece[m_current_slot] == unassigned
-				|| m_piece_to_slot[m_slot_to_piece[m_current_slot]] == m_current_slot);
-		}
-
-		if (piece_index == unassigned)
-		{
-			// the data did not match any piece. Maybe we're reading
-			// from a sparse region, see if we are and skip
-			if (m_current_slot == m_files.num_pieces() -1) return 0;
-
-			int next_slot = m_storage->sparse_end(m_current_slot + 1);
-			if (next_slot > m_current_slot + 1) return next_slot - m_current_slot;
-		}
-
-		return 0;
+		return m_has_fence > 1 ? fence_post_none : fence_post_flush;
 	}
-
-	void piece_manager::switch_to_full_mode()
-	{
-		TORRENT_ASSERT(m_storage_mode == internal_storage_mode_compact_deprecated);	
-		TORRENT_ASSERT(m_unallocated_slots.empty());	
-		// we have allocated all slots, switch to
-		// full allocation mode in order to free
-		// some unnecessary memory.
-		m_storage_mode = storage_mode_sparse;
-		std::vector<int>().swap(m_unallocated_slots);
-		std::vector<int>().swap(m_free_slots);
-		std::vector<int>().swap(m_piece_to_slot);
-		std::vector<int>().swap(m_slot_to_piece);
-	}
-
-	int piece_manager::allocate_slot_for_piece(int piece_index)
-	{
-		mutex::scoped_lock lock(m_mutex);
-
-		if (m_storage_mode != internal_storage_mode_compact_deprecated) return piece_index;
-
-#ifdef TORRENT_EXPENSIVE_INVARIANT_CHECKS
-		INVARIANT_CHECK;
-#endif
-
-		TORRENT_ASSERT(piece_index >= 0);
-		TORRENT_ASSERT(piece_index < (int)m_piece_to_slot.size());
-		TORRENT_ASSERT(m_piece_to_slot.size() == m_slot_to_piece.size());
-
-		int slot_index = m_piece_to_slot[piece_index];
-
-		if (slot_index != has_no_slot)
-		{
-			TORRENT_ASSERT(slot_index >= 0);
-			TORRENT_ASSERT(slot_index < (int)m_slot_to_piece.size());
-			return slot_index;
-		}
-
-		if (m_free_slots.empty())
-		{
-			allocate_slots_impl(1, lock);
-			TORRENT_ASSERT(!m_free_slots.empty());
-		}
-
-		std::vector<int>::iterator iter(
-			std::find(
-				m_free_slots.begin()
-				, m_free_slots.end()
-				, piece_index));
-
-		if (iter == m_free_slots.end())
-		{
-			TORRENT_ASSERT(m_slot_to_piece[piece_index] != unassigned);
-			TORRENT_ASSERT(!m_free_slots.empty());
-			iter = m_free_slots.end() - 1;
-
-			// special case to make sure we don't use the last slot
-			// when we shouldn't, since it's smaller than ordinary slots
-			if (*iter == m_files.num_pieces() - 1 && piece_index != *iter)
-			{
-				if (m_free_slots.size() == 1)
-					allocate_slots_impl(1, lock);
-				TORRENT_ASSERT(m_free_slots.size() > 1);
-				// assumes that all allocated slots
-				// are put at the end of the free_slots vector
-				iter = m_free_slots.end() - 1;
-			}
-		}
-
-		slot_index = *iter;
-		m_free_slots.erase(iter);
-
-		TORRENT_ASSERT(m_slot_to_piece[slot_index] == unassigned);
-
-		m_slot_to_piece[slot_index] = piece_index;
-		m_piece_to_slot[piece_index] = slot_index;
-
-		// there is another piece already assigned to
-		// the slot we are interested in, swap positions
-		if (slot_index != piece_index
-			&& m_slot_to_piece[piece_index] >= 0)
-		{
-			int piece_at_our_slot = m_slot_to_piece[piece_index];
-			TORRENT_ASSERT(m_piece_to_slot[piece_at_our_slot] == piece_index);
-
-			std::swap(
-				m_slot_to_piece[piece_index]
-				, m_slot_to_piece[slot_index]);
-
-			std::swap(
-				m_piece_to_slot[piece_index]
-				, m_piece_to_slot[piece_at_our_slot]);
-
-			m_last_piece = piece_index;
-			m_storage->move_slot(piece_index, slot_index);
-
-			TORRENT_ASSERT(m_slot_to_piece[piece_index] == piece_index);
-			TORRENT_ASSERT(m_piece_to_slot[piece_index] == piece_index);
-
-			slot_index = piece_index;
-
-#if defined TORRENT_DEBUG && defined TORRENT_STORAGE_DEBUG
-			debug_log();
-#endif
-		}
-		TORRENT_ASSERT(slot_index >= 0);
-		TORRENT_ASSERT(slot_index < (int)m_slot_to_piece.size());
-
-		if (m_free_slots.empty() && m_unallocated_slots.empty())
-			switch_to_full_mode();
-		
-		return slot_index;
-	}
-
-	bool piece_manager::allocate_slots_impl(int num_slots, mutex::scoped_lock& l
-		, bool abort_on_disk)
-	{
-		TORRENT_ASSERT(num_slots > 0);
-
-#ifdef TORRENT_EXPENSIVE_INVARIANT_CHECKS
-		INVARIANT_CHECK;
-#endif
-
-		TORRENT_ASSERT(!m_unallocated_slots.empty());
-		TORRENT_ASSERT(m_storage_mode == internal_storage_mode_compact_deprecated);
-
-		bool written = false;
-
-		for (int i = 0; i < num_slots && !m_unallocated_slots.empty(); ++i)
-		{
-			int pos = m_unallocated_slots.front();
-			TORRENT_ASSERT(m_slot_to_piece[pos] == unallocated);
-			TORRENT_ASSERT(m_piece_to_slot[pos] != pos);
-
-			int new_free_slot = pos;
-			if (m_piece_to_slot[pos] != has_no_slot)
-			{
-				m_last_piece = pos;
-				new_free_slot = m_piece_to_slot[pos];
-				m_storage->move_slot(new_free_slot, pos);
-				m_slot_to_piece[pos] = pos;
-				m_piece_to_slot[pos] = pos;
-				written = true;
-			}
-			m_unallocated_slots.erase(m_unallocated_slots.begin());
-			m_slot_to_piece[new_free_slot] = unassigned;
-			m_free_slots.push_back(new_free_slot);
-			if (abort_on_disk && written) break;
-		}
-
-		TORRENT_ASSERT(m_free_slots.size() > 0);
-		return written;
-	}
-
-	int piece_manager::slot_for(int piece) const
-	{
-		if (m_storage_mode != internal_storage_mode_compact_deprecated) return piece;
-		// this happens in seed mode, where we skip checking fastresume
-		if (m_piece_to_slot.empty()) return piece;
-		TORRENT_ASSERT(piece < int(m_piece_to_slot.size()));
-		TORRENT_ASSERT(piece >= 0);
-		return m_piece_to_slot[piece];
-	}
-
-	int piece_manager::piece_for(int slot) const
-	{
-		if (m_storage_mode != internal_storage_mode_compact_deprecated) return slot;
-		TORRENT_ASSERT(slot < int(m_slot_to_piece.size()));
-		TORRENT_ASSERT(slot >= 0);
-		return m_slot_to_piece[slot];
-	}
-		
-#if TORRENT_USE_INVARIANT_CHECKS
-	void piece_manager::check_invariant() const
-	{
-		TORRENT_ASSERT(m_current_slot <= m_files.num_pieces());
-		
-		if (m_unallocated_slots.empty()
-			&& m_free_slots.empty()
-			&& m_state == state_finished)
-		{
-			TORRENT_ASSERT(m_storage_mode != internal_storage_mode_compact_deprecated
-				|| m_files.num_pieces() == 0);
-		}
-		
-		if (m_storage_mode != internal_storage_mode_compact_deprecated)
-		{
-			TORRENT_ASSERT(m_unallocated_slots.empty());
-			TORRENT_ASSERT(m_free_slots.empty());
-		}
-		
-		if (m_storage_mode != internal_storage_mode_compact_deprecated
-			&& m_state != state_expand_pieces
-			&& m_state != state_full_check)
-		{
-			TORRENT_ASSERT(m_piece_to_slot.empty());
-			TORRENT_ASSERT(m_slot_to_piece.empty());
-		}
-		else
-		{
-			if (m_piece_to_slot.empty()) return;
-
-			TORRENT_ASSERT((int)m_piece_to_slot.size() == m_files.num_pieces());
-			TORRENT_ASSERT((int)m_slot_to_piece.size() == m_files.num_pieces());
-
-			for (std::vector<int>::const_iterator i = m_free_slots.begin();
-					i != m_free_slots.end(); ++i)
-			{
-				TORRENT_ASSERT(*i < (int)m_slot_to_piece.size());
-				TORRENT_ASSERT(*i >= 0);
-				TORRENT_ASSERT(m_slot_to_piece[*i] == unassigned);
-				TORRENT_ASSERT(std::find(i+1, m_free_slots.end(), *i)
-						== m_free_slots.end());
-			}
-
-			for (std::vector<int>::const_iterator i = m_unallocated_slots.begin();
-					i != m_unallocated_slots.end(); ++i)
-			{
-				TORRENT_ASSERT(*i < (int)m_slot_to_piece.size());
-				TORRENT_ASSERT(*i >= 0);
-				TORRENT_ASSERT(m_slot_to_piece[*i] == unallocated);
-				TORRENT_ASSERT(std::find(i+1, m_unallocated_slots.end(), *i)
-						== m_unallocated_slots.end());
-			}
-
-			for (int i = 0; i < m_files.num_pieces(); ++i)
-			{
-				// Check domain of piece_to_slot's elements
-				if (m_piece_to_slot[i] != has_no_slot)
-				{
-					TORRENT_ASSERT(m_piece_to_slot[i] >= 0);
-					TORRENT_ASSERT(m_piece_to_slot[i] < (int)m_slot_to_piece.size());
-				}
-
-				// Check domain of slot_to_piece's elements
-				if (m_slot_to_piece[i] != unallocated
-						&& m_slot_to_piece[i] != unassigned)
-				{
-					TORRENT_ASSERT(m_slot_to_piece[i] >= 0);
-					TORRENT_ASSERT(m_slot_to_piece[i] < (int)m_piece_to_slot.size());
-				}
-
-				// do more detailed checks on piece_to_slot
-				if (m_piece_to_slot[i] >= 0)
-				{
-					TORRENT_ASSERT(m_slot_to_piece[m_piece_to_slot[i]] == i);
-					if (m_piece_to_slot[i] != i)
-					{
-						TORRENT_ASSERT(m_slot_to_piece[i] == unallocated);
-					}
-				}
-				else
-				{
-					TORRENT_ASSERT(m_piece_to_slot[i] == has_no_slot);
-				}
-
-				// do more detailed checks on slot_to_piece
-
-				if (m_slot_to_piece[i] >= 0)
-				{
-					TORRENT_ASSERT(m_slot_to_piece[i] < (int)m_piece_to_slot.size());
-					TORRENT_ASSERT(m_piece_to_slot[m_slot_to_piece[i]] == i);
-#ifdef TORRENT_STORAGE_DEBUG
-					TORRENT_ASSERT(
-							std::find(
-								m_unallocated_slots.begin()
-								, m_unallocated_slots.end()
-								, i) == m_unallocated_slots.end()
-							);
-					TORRENT_ASSERT(
-							std::find(
-								m_free_slots.begin()
-								, m_free_slots.end()
-								, i) == m_free_slots.end()
-							);
-#endif
-				}
-				else if (m_slot_to_piece[i] == unallocated)
-				{
-#ifdef TORRENT_STORAGE_DEBUG
-					TORRENT_ASSERT(m_unallocated_slots.empty()
-							|| (std::find(
-									m_unallocated_slots.begin()
-									, m_unallocated_slots.end()
-									, i) != m_unallocated_slots.end())
-							);
-#endif
-				}
-				else if (m_slot_to_piece[i] == unassigned)
-				{
-#ifdef TORRENT_STORAGE_DEBUG
-					TORRENT_ASSERT(
-							std::find(
-								m_free_slots.begin()
-								, m_free_slots.end()
-								, i) != m_free_slots.end()
-							);
-#endif
-				}
-				else
-				{
-					TORRENT_ASSERT(false && "m_slot_to_piece[i] is invalid");
-				}
-			}
-		}
-	}
-
-#endif
 } // namespace libtorrent
 

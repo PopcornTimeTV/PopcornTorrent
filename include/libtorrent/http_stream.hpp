@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,10 +33,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_HTTP_STREAM_HPP_INCLUDED
 #define TORRENT_HTTP_STREAM_HPP_INCLUDED
 
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
 #include <boost/function/function1.hpp>
-#include "libtorrent/proxy_base.hpp"
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
+#include "libtorrent/proxy_base.hpp"
+#include "libtorrent/string_util.hpp"
 
 namespace libtorrent {
 
@@ -76,8 +82,6 @@ public:
 		proxy_base::close();
 	}
 #endif
-
-	typedef boost::function<void(error_code const&)> handler_type;
 
 	template <class Handler>
 	void async_connect(endpoint_type const& endpoint, Handler const& handler)

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2011-2014, Arvid Norberg
+Copyright (c) 2011-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace libtorrent
 {
-	void TORRENT_EXTRA_EXPORT random_seed(boost::uint32_t v);
 	boost::uint32_t TORRENT_EXTRA_EXPORT random();
+	boost::uint32_t TORRENT_EXTRA_EXPORT randint(int i);
 }

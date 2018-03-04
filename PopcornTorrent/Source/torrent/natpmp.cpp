@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 #include "libtorrent/config.hpp"
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
 #if defined TORRENT_OS2
 #include <pthread.h>
 #endif
@@ -37,19 +40,18 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/version.hpp>
 #include <boost/bind.hpp>
 
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
 #include "libtorrent/natpmp.hpp"
 #include "libtorrent/io.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/enum_net.hpp"
 #include "libtorrent/socket_io.hpp"
 #include "libtorrent/io_service.hpp"
-//#include "libtorrent/random.hpp"
+#include "libtorrent/aux_/time.hpp"
+#include "libtorrent/aux_/escape_string.hpp"
 
-#if BOOST_VERSION < 103500
-#include <asio/ip/host_name.hpp>
-#else
 #include <boost/asio/ip/host_name.hpp>
-#endif
 
 //#define NATPMP_LOG
 
@@ -63,7 +65,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 using namespace libtorrent;
 
-natpmp::natpmp(io_service& ios, address const& listen_interface
+natpmp::natpmp(io_service& ios
 	, portmap_callback_t const& cb, log_callback_t const& lcb)
 	: m_callback(cb)
 	, m_log_callback(lcb)
@@ -80,10 +82,9 @@ natpmp::natpmp(io_service& ios, address const& listen_interface
 	// for this array not to be reallocated, by passing
 	// around pointers to its elements. so reserve size for now
 	m_mappings.reserve(10);
-	rebind(listen_interface);
 }
 
-void natpmp::rebind(address const& listen_interface)
+void natpmp::start()
 {
 	mutex::scoped_lock l(m_mutex);
 
@@ -126,14 +127,15 @@ void natpmp::rebind(address const& listen_interface)
 #if defined TORRENT_ASIO_DEBUGGING
 	add_outstanding_async("natpmp::on_reply");
 #endif
-	m_socket.async_receive_from(asio::buffer(&m_response_buffer, 16)
+	m_socket.async_receive_from(boost::asio::buffer(&m_response_buffer[0]
+		, sizeof(m_response_buffer))
 		, m_remote, boost::bind(&natpmp::on_reply, self(), _1, _2));
 	send_get_ip_address_request(l);
 
 	for (std::vector<mapping_t>::iterator i = m_mappings.begin()
 		, end(m_mappings.end()); i != end; ++i)
 	{
-		if (i->protocol != none
+		if (i->protocol == none
 			|| i->action != mapping_t::action_none)
 			continue;
 		i->action = mapping_t::action_add;
@@ -152,7 +154,7 @@ void natpmp::send_get_ip_address_request(mutex::scoped_lock& l)
 	log("==> get public IP address", l);
 
 	error_code ec;
-	m_socket.send_to(asio::buffer(buf, sizeof(buf)), m_nat_endpoint, 0, ec);
+	m_socket.send_to(boost::asio::buffer(buf, sizeof(buf)), m_nat_endpoint, 0, ec);
 }
 
 bool natpmp::get_mapping(int index, int& local_port, int& external_port, int& protocol) const
@@ -184,10 +186,11 @@ void natpmp::disable(error_code const& ec, mutex::scoped_lock& l)
 		, end(m_mappings.end()); i != end; ++i)
 	{
 		if (i->protocol == none) continue;
+		int const proto = i->protocol;
 		i->protocol = none;
 		int index = i - m_mappings.begin();
 		l.unlock();
-		m_callback(index, address(), 0, ec);
+		m_callback(index, address(), 0, proto, ec);
 		l.lock();
 	}
 	close_impl(l);
@@ -234,7 +237,7 @@ int natpmp::add_mapping(protocol_type p, int external_port, int local_port)
 	int mapping_index = i - m_mappings.begin();
 
 #ifdef NATPMP_LOG
-	ptime now = time_now();
+	time_point now = aux::time_now();
 	for (std::vector<mapping_t>::iterator m = m_mappings.begin()
 		, end(m_mappings.end()); m != end; ++m)
 	{
@@ -255,7 +258,7 @@ int natpmp::add_mapping(protocol_type p, int external_port, int local_port)
 void natpmp::try_next_mapping(int i, mutex::scoped_lock& l)
 {
 #ifdef NATPMP_LOG
-	ptime now = time_now();
+	time_point now = aux::time_now();
 	for (std::vector<mapping_t>::iterator m = m_mappings.begin()
 		, end(m_mappings.end()); m != end; ++m)
 	{
@@ -276,7 +279,8 @@ void natpmp::try_next_mapping(int i, mutex::scoped_lock& l)
 
 	std::vector<mapping_t>::iterator m = std::find_if(
 		m_mappings.begin(), m_mappings.end()
-		, boost::bind(&mapping_t::action, _1) != int(mapping_t::action_none));
+		, boost::bind(&mapping_t::action, _1) != int(mapping_t::action_none)
+		&& boost::bind(&mapping_t::protocol, _1) != int(none));
 
 	if (m == m_mappings.end())
 	{
@@ -360,7 +364,7 @@ void natpmp::send_map_request(int i, mutex::scoped_lock& l)
 	log(msg, l);
 
 	error_code ec;
-	m_socket.send_to(asio::buffer(buf, sizeof(buf)), m_nat_endpoint, 0, ec);
+	m_socket.send_to(boost::asio::buffer(buf, sizeof(buf)), m_nat_endpoint, 0, ec);
 	m.map_sent = true;
 	m.outstanding_request = true;
 	if (m_abort)
@@ -400,7 +404,7 @@ void natpmp::resend_request(int i, error_code const& e)
 		m_currently_mapping = -1;
 		m_mappings[i].action = mapping_t::action_none;
 		// try again in two hours
-		m_mappings[i].expires = time_now() + hours(2);
+		m_mappings[i].expires = aux::time_now() + hours(2);
 		try_next_mapping(i, l);
 		return;
 	}
@@ -431,10 +435,11 @@ void natpmp::on_reply(error_code const& e
 #endif
 	// make a copy of the response packet buffer
 	// to avoid overwriting it in the next receive call
-	char msg_buf[16];
+	char msg_buf[sizeof(m_response_buffer)];
 	memcpy(msg_buf, m_response_buffer, bytes_transferred);
 
-	m_socket.async_receive_from(asio::buffer(&m_response_buffer, 16)
+	m_socket.async_receive_from(boost::asio::buffer(&m_response_buffer[0]
+		, sizeof(m_response_buffer))
 		, m_remote, boost::bind(&natpmp::on_reply, self(), _1, _2));
 
 	// simulate packet loss
@@ -483,7 +488,7 @@ void natpmp::on_reply(error_code const& e
 
 	}
 
-	if (bytes_transferred < 16)
+	if (bytes_transferred != 16)
 	{
 		char msg[200];
 		snprintf(msg, sizeof(msg), "received packet of invalid size: %d", int(bytes_transferred));
@@ -544,13 +549,14 @@ void natpmp::on_reply(error_code const& e
 	}
 	else
 	{
-		m->expires = time_now() + seconds(int(lifetime * 0.7f));
+		m->expires = aux::time_now() + seconds(int(lifetime * 0.7f));
 		m->external_port = public_port;
 	}
 
 	if (result != 0)
 	{
-		int errors[] =
+		// TODO: 3 it would be nice to have a separate NAT-PMP error category
+		errors::error_code_enum errors[] =
 		{
 			errors::unsupported_protocol_version,
 			errors::natpmp_not_authorized,
@@ -558,19 +564,21 @@ void natpmp::on_reply(error_code const& e
 			errors::no_resources,
 			errors::unsupported_opcode,
 		};
-		int ev = errors::no_error;
+		errors::error_code_enum ev = errors::no_error;
 		if (result >= 1 && result <= 5) ev = errors[result - 1];
 
-		m->expires = time_now() + hours(2);
+		m->expires = aux::time_now() + hours(2);
+		int const proto = m->protocol;
 		l.unlock();
-		m_callback(index, address(), 0, error_code(ev, get_libtorrent_category()));
+		m_callback(index, address(), 0, proto, ev);
 		l.lock();
 	}
 	else if (m->action == mapping_t::action_add)
 	{
+		int const proto = m->protocol;
 		l.unlock();
-		m_callback(index, m_external_ip, m->external_port,
-			error_code(errors::no_error, get_libtorrent_category()));
+		m_callback(index, m_external_ip, m->external_port, proto
+			, errors::no_error);
 		l.lock();
 	}
 
@@ -587,7 +595,7 @@ void natpmp::update_expiration_timer(mutex::scoped_lock& l)
 {
 	if (m_abort) return;
 
-	ptime now = time_now() + milliseconds(100);
+	time_point now = aux::time_now() + milliseconds(100);
 #ifdef NATPMP_LOG
 	std::cout << time_now_string() << " update_expiration_timer " << std::endl;
 	for (std::vector<mapping_t>::iterator i = m_mappings.begin()
@@ -602,7 +610,7 @@ void natpmp::update_expiration_timer(mutex::scoped_lock& l)
 			<< " ]" << std::endl;
 	}
 #endif
-	ptime min_expire = now + seconds(3600);
+	time_point min_expire = now + seconds(3600);
 	int min_index = -1;
 	for (std::vector<mapping_t>::iterator i = m_mappings.begin()
 		, end(m_mappings.end()); i != end; ++i)
@@ -634,7 +642,7 @@ void natpmp::update_expiration_timer(mutex::scoped_lock& l)
 #ifdef NATPMP_LOG
 	std::cout << time_now_string() << " next expiration ["
 			" i: " << min_index
-			<< " ttl: " << total_seconds(min_expire - time_now())
+			<< " ttl: " << total_seconds(min_expire - aux::time_now())
 			<< " ]" << std::endl;
 #endif
 		error_code ec;
@@ -676,7 +684,7 @@ void natpmp::close_impl(mutex::scoped_lock& l)
 	log("closing", l);
 #ifdef NATPMP_LOG
 	std::cout << time_now_string() << " close" << std::endl;
-	ptime now = time_now();
+	time_point now = aux::time_now();
 #endif
 	if (m_disabled) return;
 	for (std::vector<mapping_t>::iterator i = m_mappings.begin()

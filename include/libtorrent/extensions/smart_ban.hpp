@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,21 +35,17 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef TORRENT_DISABLE_EXTENSIONS
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <boost/shared_ptr.hpp>
 #include "libtorrent/config.hpp"
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 namespace libtorrent
 {
 	struct torrent_plugin;
-	class torrent;
+	struct torrent_handle;
 
 	// constructor function for the smart ban extension. The extension keeps
 	// track of the data peers have sent us for failing pieces and once the
@@ -57,7 +53,7 @@ namespace libtorrent
 	// out to have sent corrupt data.
 	// This function can either be passed in the add_torrent_params::extensions
 	// field, or via torrent_handle::add_extension().
-	TORRENT_EXPORT boost::shared_ptr<torrent_plugin> create_smart_ban_plugin(torrent*, void*);
+	TORRENT_EXPORT boost::shared_ptr<torrent_plugin> create_smart_ban_plugin(torrent_handle const&, void*);
 }
 
 #endif // TORRENT_DISABLE_EXTENSIONS

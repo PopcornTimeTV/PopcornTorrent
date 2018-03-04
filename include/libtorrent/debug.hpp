@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2014, Arvid Norberg
+Copyright (c) 2003-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,13 +33,34 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_DEBUG_HPP_INCLUDED
 #define TORRENT_DEBUG_HPP_INCLUDED
 
+#include "libtorrent/config.hpp"
+#include "libtorrent/assert.hpp"
+
+#if TORRENT_USE_ASSERTS && defined BOOST_HAS_PTHREADS
+#include <pthread.h>
+#endif
+
 #if defined TORRENT_ASIO_DEBUGGING
 
 #include "libtorrent/assert.hpp"
 #include "libtorrent/thread.hpp"
+#include "libtorrent/time.hpp"
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <map>
 #include <cstring>
+#include <deque>
+
+#ifdef __MACH__
+#include <mach/task_info.h>
+#include <mach/task.h>
+#include <mach/mach_init.h>
+
+const mach_msg_type_number_t task_events_info_count = TASK_EVENTS_INFO_COUNT;
+#endif
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 std::string demangle(char const* name);
 
@@ -52,9 +73,26 @@ namespace libtorrent
 		int refs;
 	};
 
+	// defined in session_impl.cpp
 	extern std::map<std::string, async_t> _async_ops;
 	extern int _async_ops_nthreads;
 	extern mutex _async_ops_mutex;
+
+	// timestamp -> operation
+	struct wakeup_t
+	{
+		time_point timestamp;
+		boost::uint64_t context_switches;
+		char const* operation;
+	};
+	extern std::deque<wakeup_t> _wakeups;
+
+	inline bool has_outstanding_async(char const* name)
+	{
+		mutex::scoped_lock l(_async_ops_mutex);
+		std::map<std::string, async_t>::iterator i = _async_ops.find(name);
+		return i != _async_ops.end();
+	}
 
 	inline void add_outstanding_async(char const* name)
 	{
@@ -64,7 +102,12 @@ namespace libtorrent
 		{
 			char stack_text[10000];
 			print_backtrace(stack_text, sizeof(stack_text), 9);
-			a.stack = stack_text;
+
+			// skip the stack frame of 'add_outstanding_async'
+			char* ptr = strchr(stack_text, '\n');
+			if (ptr != NULL) ++ptr;
+			else ptr = stack_text;
+			a.stack = ptr;
 		}
 		++a.refs;
 	}
@@ -75,6 +118,24 @@ namespace libtorrent
 		async_t& a = _async_ops[name];
 		TORRENT_ASSERT(a.refs > 0);
 		--a.refs;
+
+		// don't let this grow indefinitely
+		if (_wakeups.size() < 100000)
+		{
+			_wakeups.push_back(wakeup_t());
+			wakeup_t& w = _wakeups.back();
+			w.timestamp = clock_type::now();
+#ifdef __MACH__
+			task_events_info teinfo;
+			mach_msg_type_number_t t_info_count = task_events_info_count;
+			task_info(mach_task_self(), TASK_EVENTS_INFO,
+				reinterpret_cast<task_info_t>(&teinfo), &t_info_count);
+			w.context_switches = teinfo.csw;
+#else
+			w.context_switches = 0;
+#endif
+			w.operation = name;
+		}
 	}
 
 	inline void async_inc_threads()
@@ -104,116 +165,62 @@ namespace libtorrent
 	}
 }
 
-#endif
-
-#if defined TORRENT_VERBOSE_LOGGING || defined TORRENT_LOGGING || defined TORRENT_ERROR_LOGGING
-
-#include <cstring>
-#include "libtorrent/config.hpp"
-#include "libtorrent/file.hpp"
-#include "libtorrent/thread.hpp"
-
-#if TORRENT_USE_IOSTREAM
-#include <string>
-#include <fstream>
-#include <iostream>
-#endif
+#endif // TORRENT_ASIO_DEBUGGING
 
 namespace libtorrent
 {
-	// DEBUG API
-	
-	struct logger
+#if TORRENT_USE_ASSERTS && defined BOOST_HAS_PTHREADS
+	struct single_threaded
 	{
-#if TORRENT_USE_IOSTREAM
-		// all log streams share a single file descriptor
-		// and re-opens the file for each log line
-		// these members are defined in session_impl.cpp
-		static std::ofstream log_file;
-		static std::string open_filename;
-		static mutex file_mutex;
-#endif
-
-		~logger()
+		single_threaded(): m_single_thread(0) {}
+		~single_threaded() { m_single_thread = 0; }
+		bool is_single_thread() const
 		{
-			mutex::scoped_lock l(file_mutex);
-			log_file.close();
-			open_filename.clear();
-		}
-
-		logger(std::string const& logpath, std::string const& filename
-			, int instance, bool append)
-		{
-			char log_name[512];
-			snprintf(log_name, sizeof(log_name), "libtorrent_logs%d", instance);
-			std::string dir(complete(combine_path(combine_path(logpath, log_name), filename)) + ".log");
-			error_code ec;
-			if (!exists(parent_path(dir)))
-				create_directories(parent_path(dir), ec);
-			m_filename = dir;
-
-			mutex::scoped_lock l(file_mutex);
-			open(!append);
-			log_file << "\n\n\n*** starting log ***\n";
-		}
-
-		void move_log_file(std::string const& logpath, std::string const& new_name, int instance)
-		{
-			mutex::scoped_lock l(file_mutex);
-			if (open_filename == m_filename)
+			if (m_single_thread == 0)
 			{
-				log_file.close();
-				open_filename.clear();
+				m_single_thread = pthread_self();
+				return true;
 			}
-
-			char log_name[512];
-			snprintf(log_name, sizeof(log_name), "libtorrent_logs%d", instance);
-			std::string dir(combine_path(combine_path(complete(logpath), log_name), new_name) + ".log");
-
-			error_code ec;
-			create_directories(parent_path(dir), ec);
-
-			if (ec)
-				fprintf(stderr, "Failed to create logfile directory %s: %s\n"
-					, parent_path(dir).c_str(), ec.message().c_str());
-			ec.clear();
-			rename(m_filename, dir, ec);
-			if (ec)
-				fprintf(stderr, "Failed to move logfile %s: %s\n"
-					, parent_path(dir).c_str(), ec.message().c_str());
-
-			m_filename = dir;
+			return m_single_thread == pthread_self();
 		}
-
-#if TORRENT_USE_IOSTREAM
-		void open(bool truncate)
+		bool is_not_thread() const
 		{
-			if (open_filename == m_filename) return;
-			log_file.close();
-			log_file.clear();
-			log_file.open(m_filename.c_str(), truncate ? std::ios_base::trunc : std::ios_base::app);
-			open_filename = m_filename;
-			if (!log_file.good())
-				fprintf(stderr, "Failed to open logfile %s: %s\n", m_filename.c_str(), strerror(errno));
-		}
-#endif
-
-		template <class T>
-		logger& operator<<(T const& v)
-		{
-#if TORRENT_USE_IOSTREAM
-			mutex::scoped_lock l(file_mutex);
-			open(false);
-			log_file << v;
-#endif
-			return *this;
+			if (m_single_thread == 0) return true;
+			return m_single_thread != pthread_self();
 		}
 
-		std::string m_filename;
+		void thread_started()
+		{ m_single_thread = pthread_self(); }
+
+		void transfer_ownership()
+		{ m_single_thread = 0; }
+
+	private:
+		mutable pthread_t m_single_thread;
 	};
+#else
+	struct single_threaded {
+		bool is_single_thread() const { return true; }
+		void thread_started() {}
+		bool is_not_thread() const {return true; }
+	};
+#endif
 
+#if TORRENT_USE_ASSERTS
+	struct increment_guard
+	{
+		int& m_cnt;
+		increment_guard(int& c) : m_cnt(c) { TORRENT_ASSERT(m_cnt >= 0); ++m_cnt; }
+		~increment_guard() { --m_cnt; TORRENT_ASSERT(m_cnt >= 0); }
+	private:
+		increment_guard(increment_guard const&);
+		increment_guard operator=(increment_guard const&);
+	};
+#define TORRENT_INCREMENT(x) increment_guard inc_(x)
+#else
+#define TORRENT_INCREMENT(x) do {} while (false)
+#endif
 }
 
-#endif // TORRENT_VERBOSE_LOGGING || TORRENT_LOGGING || TORRENT_ERROR_LOGGING
 #endif // TORRENT_DEBUG_HPP_INCLUDED
 

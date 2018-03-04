@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,10 +33,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/magnet_uri.hpp"
 #include "libtorrent/session.hpp"
 #include "libtorrent/torrent_handle.hpp"
-#include "libtorrent/escape_string.hpp"
+#include "libtorrent/aux_/escape_string.hpp"
 #include "libtorrent/error_code.hpp"
+#include "libtorrent/torrent_status.hpp"
+#include "libtorrent/torrent_info.hpp"
+#include "libtorrent/announce_entry.hpp"
 
 #include <string>
+#include "libtorrent/socket_io.hpp"
 
 namespace libtorrent
 {
@@ -53,14 +57,14 @@ namespace libtorrent
 		if (!st.name.empty())
 		{
 			ret += "&dn=";
-			ret += escape_string(st.name.c_str(), st.name.length());
+			ret += escape_string(st.name.c_str(), int(st.name.length()));
 		}
 
 		std::vector<announce_entry> const& tr = handle.trackers();
 		for (std::vector<announce_entry>::const_iterator i = tr.begin(), end(tr.end()); i != end; ++i)
 		{
 			ret += "&tr=";
-			ret += escape_string(i->url.c_str(), i->url.length());
+			ret += escape_string(i->url.c_str(), int(i->url.length()));
 		}
 
 		std::set<std::string> seeds = handle.url_seeds();
@@ -68,7 +72,7 @@ namespace libtorrent
 			, end(seeds.end()); i != end; ++i)
 		{
 			ret += "&ws=";
-			ret += escape_string(i->c_str(), i->length());
+			ret += escape_string(i->c_str(), int(i->length()));
 		}
 
 		return ret;
@@ -112,16 +116,18 @@ namespace libtorrent
 
 #ifndef TORRENT_NO_DEPRECATE
 
-	torrent_handle add_magnet_uri_deprecated(session& ses, std::string const& uri
-		, add_torrent_params p, error_code& ec)
-	{
-		parse_magnet_uri(uri, p, ec);
-		if (ec) return torrent_handle();
-		return ses.add_torrent(p, ec);
+	namespace {
+		torrent_handle add_magnet_uri_deprecated(session& ses, std::string const& uri
+			, add_torrent_params p, error_code& ec)
+		{
+			parse_magnet_uri(uri, p, ec);
+			if (ec) return torrent_handle();
+			return ses.add_torrent(p, ec);
+		}
 	}
 
 	torrent_handle add_magnet_uri(session& ses, std::string const& uri
-		, add_torrent_params p, error_code& ec)
+		, add_torrent_params const& p, error_code& ec)
 	{
 		return add_magnet_uri_deprecated(ses, uri, p, ec);
 	}
@@ -147,20 +153,20 @@ namespace libtorrent
 		if (!display_name.empty()) params.name = unescape_string(display_name.c_str(), ec);
 		std::string tracker_string = url_has_argument(uri, "tr");
 		if (!tracker_string.empty()) params.trackers.push_back(unescape_string(tracker_string.c_str(), ec));
-	
+
 		std::string btih = url_has_argument(uri, "xt");
 		if (btih.empty()) return torrent_handle();
 
 		if (btih.compare(0, 9, "urn:btih:") != 0) return torrent_handle();
 
-		if (btih.size() == 40 + 9) from_hex(&btih[9], 40, (char*)&params.info_hash[0]);
+		if (btih.size() == 40 + 9) from_hex(&btih[9], 40, params.info_hash.data());
 		else params.info_hash.assign(base32decode(btih.substr(9)));
 
 		return ses.add_torrent(params);
 	}
 
 	torrent_handle add_magnet_uri(session& ses, std::string const& uri
-		, add_torrent_params p)
+		, add_torrent_params const& p)
 	{
 		error_code ec;
 		torrent_handle ret = add_magnet_uri_deprecated(ses, uri, p, ec);
@@ -175,9 +181,11 @@ namespace libtorrent
 		ec.clear();
 		std::string name;
 
-		error_code e;
-		std::string display_name = url_has_argument(uri, "dn");
-		if (!display_name.empty()) name = unescape_string(display_name.c_str(), e);
+		{
+			error_code e;
+			std::string display_name = url_has_argument(uri, "dn");
+			if (!display_name.empty()) name = unescape_string(display_name.c_str(), e);
+		}
 
 		// parse trackers out of the magnet link
 		std::string::size_type pos = std::string::npos;
@@ -186,8 +194,7 @@ namespace libtorrent
 		{
 			error_code e;
 			url = unescape_string(url, e);
-			if (e) continue;
-			p.trackers.push_back(url);
+			if (!e) p.trackers.push_back(url);
 			pos = uri.find("&tr=", pos);
 			if (pos == std::string::npos) break;
 			pos += 4;
@@ -201,8 +208,7 @@ namespace libtorrent
 		{
 			error_code e;
 			url = unescape_string(url, e);
-			if (e) continue;
-			p.url_seeds.push_back(url);
+			if (!e) p.url_seeds.push_back(url);
 			pos = uri.find("&ws=", pos);
 			if (pos == std::string::npos) break;
 			pos += 4;
@@ -234,7 +240,7 @@ namespace libtorrent
 				if (port != 0)
 					p.dht_nodes.push_back(std::make_pair(node.substr(0, divider), port));
 			}
-			
+
 			node_pos = uri.find("&dht=", node_pos);
 			if (node_pos == std::string::npos) break;
 			node_pos += 5;
@@ -243,11 +249,43 @@ namespace libtorrent
 #endif
 
 		sha1_hash info_hash;
-		if (btih.size() == 40 + 9) from_hex(&btih[9], 40, (char*)&info_hash[0]);
-		else info_hash.assign(base32decode(btih.substr(9)));
+		if (btih.size() == 40 + 9) from_hex(&btih[9], 40, info_hash.data());
+		else if (btih.size() == 32 + 9)
+		{
+			std::string ih = base32decode(btih.substr(9));
+			if (ih.size() != 20)
+			{
+				ec = errors::invalid_info_hash;
+				return;
+			}
+			info_hash.assign(ih);
+		}
+		else
+		{
+			ec = errors::invalid_info_hash;
+			return;
+		}
 
 		p.info_hash = info_hash;
 		if (!name.empty()) p.name = name;
+	}
+
+	void parse_magnet_uri_peers(std::string const& uri, std::vector<tcp::endpoint>& peers)
+	{
+		std::string::size_type peer_pos = std::string::npos;
+		std::string peer = url_has_argument(uri, "x.pe", &peer_pos);
+		while (!peer.empty())
+		{
+			error_code e;
+			tcp::endpoint endp = parse_endpoint(peer, e);
+			if (!e)
+				peers.push_back(endp);
+
+			peer_pos = uri.find("&x.pe=", peer_pos);
+			if (peer_pos == std::string::npos) break;
+			peer_pos += 6;
+			peer = uri.substr(peer_pos, uri.find('&', peer_pos) - peer_pos);
+		}
 	}
 }
 

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -34,17 +34,25 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/session_settings.hpp"
 #include "libtorrent/socket_type.hpp"
 #include "libtorrent/utp_socket_manager.hpp"
+#include "libtorrent/instantiate_connection.hpp"
 #include <boost/shared_ptr.hpp>
 #include <stdexcept>
 
 namespace libtorrent
 {
-	TORRENT_EXPORT bool instantiate_connection(io_service& ios
-		, proxy_settings const& ps, socket_type& s
+	// TODO: 2 peer_connection and tracker_connection should probably be flags
+	// TODO: 2 move this function into libtorrent::aux namespace
+	bool instantiate_connection(io_service& ios
+		, aux::proxy_settings const& ps, socket_type& s
 		, void* ssl_context
 		, utp_socket_manager* sm
-		, bool peer_connection)
+		, bool peer_connection
+		, bool tracker_connection)
 	{
+#ifndef TORRENT_USE_OPENSSL
+		TORRENT_UNUSED(ssl_context);
+#endif
+
 		if (sm)
 		{
 			utp_stream* str;
@@ -63,7 +71,7 @@ namespace libtorrent
 			str->set_impl(sm->new_utp_socket(str));
 		}
 #if TORRENT_USE_I2P
-		else if (ps.type == proxy_settings::i2p_proxy)
+		else if (ps.type == settings_pack::i2p_proxy)
 		{
 			// it doesn't make any sense to try ssl over i2p
 			TORRENT_ASSERT(ssl_context == 0);
@@ -71,22 +79,23 @@ namespace libtorrent
 			s.get<i2p_stream>()->set_proxy(ps.hostname, ps.port);
 		}
 #endif
-		else if (ps.type == proxy_settings::none
-			|| (peer_connection && !ps.proxy_peer_connections))
+		else if (ps.type == settings_pack::none
+			|| (peer_connection && !ps.proxy_peer_connections)
+			|| (tracker_connection && !ps.proxy_tracker_connections))
 		{
 #ifdef TORRENT_USE_OPENSSL
 			if (ssl_context)
 			{
-				s.instantiate<ssl_stream<stream_socket> >(ios, ssl_context);
+				s.instantiate<ssl_stream<tcp::socket> >(ios, ssl_context);
 			}
 			else
 #endif
 			{
-				s.instantiate<stream_socket>(ios);
+				s.instantiate<tcp::socket>(ios);
 			}
 		}
-		else if (ps.type == proxy_settings::http
-			|| ps.type == proxy_settings::http_pw)
+		else if (ps.type == settings_pack::http
+			|| ps.type == settings_pack::http_pw)
 		{
 			http_stream* str;
 #ifdef TORRENT_USE_OPENSSL
@@ -103,12 +112,12 @@ namespace libtorrent
 			}
 
 			str->set_proxy(ps.hostname, ps.port);
-			if (ps.type == proxy_settings::http_pw)
+			if (ps.type == settings_pack::http_pw)
 				str->set_username(ps.username, ps.password);
 		}
-		else if (ps.type == proxy_settings::socks5
-			|| ps.type == proxy_settings::socks5_pw
-			|| ps.type == proxy_settings::socks4)
+		else if (ps.type == settings_pack::socks5
+			|| ps.type == settings_pack::socks5_pw
+			|| ps.type == settings_pack::socks4)
 		{
 			socks5_stream* str;
 #ifdef TORRENT_USE_OPENSSL
@@ -124,9 +133,9 @@ namespace libtorrent
 				str = s.get<socks5_stream>();
 			}
 			str->set_proxy(ps.hostname, ps.port);
-			if (ps.type == proxy_settings::socks5_pw)
+			if (ps.type == settings_pack::socks5_pw)
 				str->set_username(ps.username, ps.password);
-			if (ps.type == proxy_settings::socks4)
+			if (ps.type == settings_pack::socks4)
 				str->set_version(4);
 		}
 		else

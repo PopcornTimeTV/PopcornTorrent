@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -36,35 +36,47 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/socket.hpp"
 #include "libtorrent/peer_id.hpp"
 #include "libtorrent/broadcast_socket.hpp"
-#include "libtorrent/intrusive_ptr_base.hpp"
 #include "libtorrent/deadline_timer.hpp"
+
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <boost/function/function2.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
-#if defined(TORRENT_LOGGING) || defined(TORRENT_VERBOSE_LOGGING)
-#include <stdio.h>
+#ifndef TORRENT_DISABLE_LOGGING
+#include <boost/function/function1.hpp>
 #endif
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 namespace libtorrent
 {
 
 typedef boost::function<void(tcp::endpoint, sha1_hash)> peer_callback_t;
+#ifndef TORRENT_DISABLE_LOGGING
+typedef boost::function<void(char const*)> log_callback_t;
+#endif
 
-class lsd : public intrusive_ptr_base<lsd>
+class lsd : public boost::enable_shared_from_this<lsd>
 {
 public:
-	lsd(io_service& ios, address const& listen_interface
-		, peer_callback_t const& cb);
+	lsd(io_service& ios, peer_callback_t const& cb
+#ifndef TORRENT_DISABLE_LOGGING
+		, log_callback_t const& log
+#endif
+		);
 	~lsd();
 
-//	void rebind(address const& listen_interface);
+	void start(error_code& ec);
 
 	void announce(sha1_hash const& ih, int listen_port, bool broadcast = false);
 	void close();
 
 private:
+
+	boost::shared_ptr<lsd> self() { return shared_from_this(); }
 
 	void announce_impl(sha1_hash const& ih, int listen_port
 		, bool broadcast, int retry_count);
@@ -81,6 +93,10 @@ private:
 #if TORRENT_USE_IPV6
 	broadcast_socket m_socket6;
 #endif
+#ifndef TORRENT_DISABLE_LOGGING
+	log_callback_t m_log_cb;
+	void debug_log(char const* fmt, ...) const TORRENT_FORMAT(2,3);
+#endif
 
 	// used to resend udp packets in case
 	// they time out
@@ -96,9 +112,6 @@ private:
 	bool m_disabled;
 #if TORRENT_USE_IPV6
 	bool m_disabled6;
-#endif
-#if defined(TORRENT_LOGGING) || defined(TORRENT_VERBOSE_LOGGING)
-	FILE* m_log;
 #endif
 };
 

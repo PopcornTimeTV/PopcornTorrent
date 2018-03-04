@@ -36,7 +36,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <libtorrent/ed25519.hpp>
 
 #ifdef TORRENT_DEBUG
-#include "libtorrent/lazy_entry.hpp"
+#include "libtorrent/bdecode.hpp"
 #endif
 
 #ifdef TORRENT_USE_VALGRIND
@@ -54,9 +54,9 @@ namespace
 	{
 		// v must be valid bencoding!
 #ifdef TORRENT_DEBUG
-		lazy_entry e;
+		bdecode_node e;
 		error_code ec;
-		TORRENT_ASSERT(lazy_bdecode(v.first, v.first + v.second, e, ec) == 0);
+		TORRENT_ASSERT(bdecode(v.first, v.first + v.second, e, ec) == 0);
 #endif
 		char* ptr = out;
 
@@ -98,11 +98,11 @@ sha1_hash item_target_id(std::pair<char const*, int> salt
 }
 
 bool verify_mutable_item(
-	std::pair<char const*, int> v,
-	std::pair<char const*, int> salt,
-	boost::uint64_t seq,
-	char const* pk,
-	char const* sig)
+	std::pair<char const*, int> v
+	, std::pair<char const*, int> salt
+	, boost::uint64_t seq
+	, char const* pk
+	, char const* sig)
 {
 #ifdef TORRENT_USE_VALGRIND
 	VALGRIND_CHECK_MEM_IS_DEFINED(v.first, v.second);
@@ -113,10 +113,10 @@ bool verify_mutable_item(
 	char str[canonical_length];
 	int len = canonical_string(v, seq, salt, str);
 
-	return ed25519_verify((unsigned char const*)sig,
-		(unsigned char const*)str,
-		len,
-		(unsigned char const*)pk) == 1;
+	return ed25519_verify(reinterpret_cast<unsigned char const*>(sig)
+		, reinterpret_cast<unsigned char const*>(str)
+		, len
+		, reinterpret_cast<unsigned char const*>(pk)) == 1;
 }
 
 // given the bencoded buffer ``v``, the salt (which is optional and may have
@@ -126,12 +126,12 @@ bool verify_mutable_item(
 // at least 64 bytes of available space. This space is where the signature is
 // written.
 void sign_mutable_item(
-	std::pair<char const*, int> v,
-	std::pair<char const*, int> salt,
-	boost::uint64_t seq,
-	char const* pk,
-	char const* sk,
-	char* sig)
+	std::pair<char const*, int> v
+	, std::pair<char const*, int> salt
+	, boost::uint64_t seq
+	, char const* pk
+	, char const* sk
+	, char* sig)
 {
 #ifdef TORRENT_USE_VALGRIND
 	VALGRIND_CHECK_MEM_IS_DEFINED(v.first, v.second);
@@ -142,11 +142,11 @@ void sign_mutable_item(
 	char str[canonical_length];
 	int len = canonical_string(v, seq, salt, str);
 
-	ed25519_sign((unsigned char*)sig,
-		(unsigned char const*)str,
-		len,
-		(unsigned char const*)pk,
-		(unsigned char const*)sk
+	ed25519_sign(reinterpret_cast<unsigned char*>(sig)
+		, reinterpret_cast<unsigned char const*>(str)
+		, len
+		, reinterpret_cast<unsigned char const*>(pk)
+		, reinterpret_cast<unsigned char const*>(sk)
 	);
 }
 
@@ -185,14 +185,14 @@ void item::assign(entry const& v, std::pair<char const*, int> salt
 		m_mutable = false;
 }
 
-bool item::assign(lazy_entry const* v
+bool item::assign(bdecode_node const& v
 	, std::pair<char const*, int> salt
 	, boost::uint64_t seq, char const* pk, char const* sig)
 {
-	TORRENT_ASSERT(v->data_section().second <= 1000);
+	TORRENT_ASSERT(v.data_section().second <= 1000);
 	if (pk && sig)
 	{
-		if (!verify_mutable_item(v->data_section(), salt, seq, pk, sig))
+		if (!verify_mutable_item(v.data_section(), salt, seq, pk, sig))
 			return false;
 		memcpy(m_pk.c_array(), pk, item_pk_len);
 		memcpy(m_sig.c_array(), sig, item_sig_len);
@@ -206,13 +206,24 @@ bool item::assign(lazy_entry const* v
 	else
 		m_mutable = false;
 
-	m_value = *v;
+	m_value = v;
 	return true;
 }
 
 void item::assign(entry const& v, std::string salt, boost::uint64_t seq
 	, char const* pk, char const* sig)
 {
+#if TORRENT_USE_ASSERTS
+	TORRENT_ASSERT(pk && sig);
+	char buffer[1000];
+	int bsize = bencode(buffer, v);
+	TORRENT_ASSERT(bsize <= 1000);
+	TORRENT_ASSERT(verify_mutable_item(
+		std::make_pair(buffer, bsize)
+		, std::make_pair(salt.data(), int(salt.size()))
+		, seq, pk, sig));
+#endif
+
 	memcpy(m_pk.c_array(), pk, item_pk_len);
 	memcpy(m_sig.c_array(), sig, item_sig_len);
 	m_salt = salt;

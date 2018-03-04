@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2010-2014, Arvid Norberg
+Copyright (c) 2010-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/cstdint.hpp>
 #endif
 
+#include <algorithm>
+
 namespace libtorrent
 {
+
 	void sleep(int milliseconds)
 	{
 #if defined TORRENT_WINDOWS || defined TORRENT_CYGWIN
@@ -71,7 +74,7 @@ namespace libtorrent
 	{
 		TORRENT_ASSERT(l.locked());
 		// wow, this is quite a hack
-		pthread_cond_wait(&m_cond, (::pthread_mutex_t*)&l.mutex());
+		pthread_cond_wait(&m_cond, reinterpret_cast<pthread_mutex_t*>(&l.mutex()));
 	}
 
 	void condition_variable::wait_for(mutex::scoped_lock& l, time_duration rel_time)
@@ -84,20 +87,29 @@ namespace libtorrent
 		boost::uint64_t microseconds = tv.tv_usec + total_microseconds(rel_time) % 1000000;
 		ts.tv_nsec = (microseconds % 1000000) * 1000;
 		ts.tv_sec = tv.tv_sec + total_seconds(rel_time) + microseconds / 1000000;
-		
+
 		// wow, this is quite a hack
-		pthread_cond_timedwait(&m_cond, (::pthread_mutex_t*)&l.mutex(), &ts);
+		pthread_cond_timedwait(&m_cond, reinterpret_cast<pthread_mutex_t*>(&l.mutex()), &ts);
 	}
 
 	void condition_variable::notify_all()
 	{
 		pthread_cond_broadcast(&m_cond);
 	}
+
+	void condition_variable::notify()
+	{
+		pthread_cond_signal(&m_cond);
+	}
 #elif defined TORRENT_WINDOWS || defined TORRENT_CYGWIN
 	condition_variable::condition_variable()
 		: m_num_waiters(0)
 	{
+#if _WIN32_WINNT <= 0x0501
 		m_sem = CreateSemaphore(0, 0, INT_MAX, 0);
+#else
+		m_sem = CreateSemaphoreEx(0, 0, INT_MAX, 0, 0, SEMAPHORE_ALL_ACCESS);
+#endif
 	}
 
 	condition_variable::~condition_variable()
@@ -110,7 +122,7 @@ namespace libtorrent
 		TORRENT_ASSERT(l.locked());
 		++m_num_waiters;
 		l.unlock();
-		WaitForSingleObject(m_sem, INFINITE);
+		WaitForSingleObjectEx(m_sem, INFINITE, FALSE);
 		l.lock();
 		--m_num_waiters;
 	}
@@ -120,7 +132,7 @@ namespace libtorrent
 		TORRENT_ASSERT(l.locked());
 		++m_num_waiters;
 		l.unlock();
-		WaitForSingleObject(m_sem, total_milliseconds(rel_time));
+		WaitForSingleObjectEx(m_sem, total_milliseconds(rel_time), FALSE);
 		l.lock();
 		--m_num_waiters;
 	}
@@ -128,6 +140,11 @@ namespace libtorrent
 	void condition_variable::notify_all()
 	{
 		ReleaseSemaphore(m_sem, m_num_waiters, 0);
+	}
+
+	void condition_variable::notify()
+	{
+		ReleaseSemaphore(m_sem, (std::min)(m_num_waiters, 1), 0);
 	}
 #elif defined TORRENT_BEOS
 	condition_variable::condition_variable()
@@ -150,7 +167,7 @@ namespace libtorrent
 		l.lock();
 		--m_num_waiters;
 	}
-	
+
 	void condition_variable::wait_for(mutex::scoped_lock& l, time_duration rel_time)
 	{
 		TORRENT_ASSERT(l.locked());
@@ -164,6 +181,11 @@ namespace libtorrent
 	void condition_variable::notify_all()
 	{
 		release_sem_etc(m_sem, m_num_waiters, 0);
+	}
+
+	void condition_variable::notify()
+	{
+		release_sem_etc(m_sem, (std::min)(m_num_waiters, 1), 0);
 	}
 #else
 #error not implemented

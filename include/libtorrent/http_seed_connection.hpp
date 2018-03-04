@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2008-2014, Arvid Norberg
+Copyright (c) 2008-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -40,9 +40,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/debug.hpp"
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <boost/smart_ptr.hpp>
 #include <boost/weak_ptr.hpp>
@@ -51,9 +49,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/optional.hpp>
 #include <boost/cstdint.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 #include "libtorrent/config.hpp"
 #include "libtorrent/web_connection_base.hpp"
@@ -81,26 +77,23 @@ namespace libtorrent
 		// this is the constructor where the we are the active part.
 		// The peer_conenction should handshake and verify that the
 		// other end has the correct id
-		http_seed_connection(
-			aux::session_impl& ses
-			, boost::weak_ptr<torrent> t
-			, boost::shared_ptr<socket_type> s
-			, tcp::endpoint const& remote
-			, web_seed_entry& web);
+		http_seed_connection(peer_connection_args const& pack
+			, web_seed_t& web);
 
-		virtual int type() const { return peer_connection::http_seed_connection; }
+		virtual int type() const TORRENT_OVERRIDE
+		{ return peer_connection::http_seed_connection; }
 
 		// called from the main loop when this connection has any
 		// work to do.
-		void on_receive(error_code const& error
-			, std::size_t bytes_transferred);
-			
-		std::string const& url() const { return m_url; }
-		
-		virtual void get_specific_peer_info(peer_info& p) const;
-		virtual void disconnect(error_code const& ec, int error = 0);
+		virtual void on_receive(error_code const& error
+			, std::size_t bytes_transferred) TORRENT_OVERRIDE;
 
-		void write_request(peer_request const& r);
+		std::string const& url() const TORRENT_OVERRIDE { return m_url; }
+
+		virtual void get_specific_peer_info(peer_info& p) const TORRENT_OVERRIDE;
+		virtual void disconnect(error_code const& ec, operation_t op, int error = 0) TORRENT_OVERRIDE;
+
+		virtual void write_request(peer_request const& r) TORRENT_OVERRIDE;
 
 	private:
 
@@ -109,15 +102,17 @@ namespace libtorrent
 		// block. If the peer isn't downloading
 		// a piece for the moment, the boost::optional
 		// will be invalid.
-		boost::optional<piece_block_progress> downloading_piece_progress() const;
+		boost::optional<piece_block_progress> downloading_piece_progress() const TORRENT_OVERRIDE;
 
 		// this is const since it's used as a key in the web seed list in the torrent
 		// if it's changed referencing back into that list will fail
 		const std::string m_url;
 
+		web_seed_t* m_web;
+
 		// the number of bytes left to receive of the response we're
 		// currently parsing
-		size_type m_response_left;
+		boost::int64_t m_response_left;
 
 		// this is the offset inside the current receive
 		// buffer where the next chunk header will be.
@@ -125,7 +120,7 @@ namespace libtorrent
 		// parsed. It does not necessarily point to a valid
 		// offset in the receive buffer, if we haven't received
 		// it yet. This offset never includes the HTTP header
-		size_type m_chunk_pos;
+		boost::int64_t m_chunk_pos;
 
 		// this is the number of bytes we've already received
 		// from the next chunk header we're waiting for

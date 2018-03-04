@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2014, Arvid Norberg
+Copyright (c) 2009-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 
-#include "libtorrent/escape_string.hpp"
 #include "libtorrent/error_code.hpp"
 #include "libtorrent/socket.hpp"
 #include "libtorrent/socket_io.hpp"
@@ -84,19 +83,77 @@ namespace libtorrent
 		return print_endpoint(tcp::endpoint(ep.address(), ep.port()));
 	}
 
+	tcp::endpoint parse_endpoint(std::string str, error_code& ec)
+	{
+		tcp::endpoint ret;
+
+		std::string::iterator start = str.begin();
+		std::string::iterator port_pos;
+		// remove white spaces in front of the string
+		while (start != str.end() && is_space(*start))
+			++start;
+
+		// this is for IPv6 addresses
+		if (start != str.end() && *start == '[')
+		{
+			++start;
+			port_pos = std::find(start, str.end(), ']');
+			if (port_pos == str.end())
+			{
+				ec = errors::expected_close_bracket_in_address;
+				return ret;
+			}
+			*port_pos = '\0';
+			++port_pos;
+			if (port_pos == str.end() || *port_pos != ':')
+			{
+				ec = errors::invalid_port;
+				return ret;
+			}
+#if TORRENT_USE_IPV6
+			ret.address(address_v6::from_string(&*start, ec));
+#else
+			ec = boost::asio::error::address_family_not_supported;
+#endif
+			if (ec) return ret;
+		}
+		else
+		{
+			port_pos = std::find(start, str.end(), ':');
+			if (port_pos == str.end())
+			{
+				ec = errors::invalid_port;
+				return ret;
+			}
+			*port_pos = '\0';
+			ret.address(address_v4::from_string(&*start, ec));
+			if (ec) return ret;
+		}
+
+		++port_pos;
+		if (port_pos == str.end())
+		{
+			ec = errors::invalid_port;
+			return ret;
+		}
+
+		ret.port(std::atoi(&*port_pos));
+		return ret;
+	}
+
 	void hash_address(address const& ip, sha1_hash& h)
 	{
 #if TORRENT_USE_IPV6
 		if (ip.is_v6())
 		{
 			address_v6::bytes_type b = ip.to_v6().to_bytes();
-			h = hasher((char*)&b[0], b.size()).final();
+			h = hasher(reinterpret_cast<char*>(&b[0]), b.size()).final();
 		}
 		else
 #endif
 		{
 			address_v4::bytes_type b = ip.to_v4().to_bytes();
-			h = hasher((char*)&b[0], b.size()).final();
+			h = hasher(reinterpret_cast<char*>(&b[0]), b.size()).final();
 		}
 	}
 

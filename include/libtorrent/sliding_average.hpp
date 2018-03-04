@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2010-2014, Arvid Norberg
+Copyright (c) 2010-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@ struct sliding_average
 	{
 		// fixed point
 		s *= 64;
-		int deviation;
+		int deviation = 0;
 
 		if (m_num_samples > 0)
 			deviation = std::abs(m_mean - s);
@@ -71,6 +71,7 @@ struct sliding_average
 
 	int mean() const { return m_num_samples > 0 ? (m_mean + 32) / 64 : 0; }
 	int avg_deviation() const { return m_num_samples > 1 ? (m_average_deviation + 32) / 64 : 0; }
+	int num_samples() const { return m_num_samples; }
 
 private:
 	// both of these are fixed point values (* 64)
@@ -99,8 +100,11 @@ struct average_accumulator
 		int ret;
 		if (m_num_samples == 0) ret = 0;
 		else ret = int(m_sample_sum / m_num_samples);
-		m_num_samples = 0;
-		m_sample_sum = 0;
+		// in case we don't get any more samples, at least
+		// let the average roll over, but only be worth a
+		// single sample
+		m_num_samples = 1;
+		m_sample_sum = ret;
 		return ret;
 	}
 

@@ -1,55 +1,61 @@
 includedir = @includedir@/libtorrent
 
-if WITH_SHIPPED_GEOIP
-GEOIP_H = GeoIP.h
-endif
-
 nobase_include_HEADERS = \
   address.hpp                  \
   add_torrent_params.hpp       \
   alert.hpp                    \
   alert_manager.hpp            \
-  alert_dispatcher.hpp         \
   alert_types.hpp              \
   alloca.hpp                   \
   allocator.hpp                \
+  announce_entry.hpp           \
   assert.hpp                   \
   bandwidth_limit.hpp          \
   bandwidth_manager.hpp        \
   bandwidth_socket.hpp         \
   bandwidth_queue_entry.hpp    \
   bencode.hpp                  \
+  bdecode.hpp                  \
   bitfield.hpp                 \
+  block_cache.hpp              \
   bloom_filter.hpp             \
   broadcast_socket.hpp         \
   bt_peer_connection.hpp       \
   buffer.hpp                   \
   build_config.hpp             \
   chained_buffer.hpp           \
+  choker.hpp                   \
+  close_reason.hpp             \
   config.hpp                   \
-  connection_queue.hpp         \
   ConvertUTF.h                 \
   copy_ptr.hpp                 \
+  crc32c.hpp                   \
   create_torrent.hpp           \
   deadline_timer.hpp           \
   debug.hpp                    \
   disk_buffer_holder.hpp       \
   disk_buffer_pool.hpp         \
+  disk_interface.hpp           \
+  disk_io_job.hpp              \
   disk_io_thread.hpp           \
+  disk_observer.hpp            \
+  disk_job_pool.hpp            \
   ed25519.hpp                  \
   entry.hpp                    \
   enum_net.hpp                 \
   error.hpp                    \
   error_code.hpp               \
-  escape_string.hpp            \
   export.hpp                   \
   extensions.hpp               \
   file.hpp                     \
   file_pool.hpp                \
   file_storage.hpp             \
   fingerprint.hpp              \
+  fwd.hpp                      \
   gzip.hpp                     \
   hasher.hpp                   \
+  hex.hpp                      \
+  heterogeneous_queue.hpp      \
   http_connection.hpp          \
   http_parser.hpp              \
   http_seed_connection.hpp     \
@@ -58,7 +64,6 @@ nobase_include_HEADERS = \
   i2p_stream.hpp               \
   identify_client.hpp          \
   instantiate_connection.hpp   \
-  intrusive_ptr_base.hpp       \
   invariant_check.hpp          \
   io.hpp                       \
   io_service.hpp               \
@@ -66,32 +71,50 @@ nobase_include_HEADERS = \
   ip_filter.hpp                \
   ip_voter.hpp                 \
   lazy_entry.hpp               \
+  link.hpp                     \
+  linked_list.hpp              \
   lsd.hpp                      \
   magnet_uri.hpp               \
   max.hpp                      \
   natpmp.hpp                   \
+  network_thread_pool.hpp      \
+  operations.hpp               \
   packet_buffer.hpp            \
   parse_url.hpp                \
+  part_file.hpp                \
   pe_crypto.hpp                \
+  performance_counters.hpp     \
   peer_connection.hpp          \
+  peer_connection_handle.hpp   \
+  peer_connection_interface.hpp \
   peer.hpp                     \
+  peer_class.hpp               \
+  peer_class_set.hpp           \
+  peer_class_type_filter.hpp   \
   peer_id.hpp                  \
   peer_info.hpp                \
   peer_request.hpp             \
   piece_block_progress.hpp     \
   piece_picker.hpp             \
-  policy.hpp                   \
+  platform_util.hpp            \
+  peer_list.hpp                \
   proxy_base.hpp               \
-  ptime.hpp                    \
   puff.hpp                     \
   random.hpp                   \
+  receive_buffer.hpp           \
+  resolve_links.hpp            \
+  resolver.hpp                 \
+  resolver_interface.hpp       \
+  request_blocks.hpp           \
   rss.hpp                      \
   session.hpp                  \
+  session_handle.hpp           \
   session_settings.hpp         \
+  session_stats.hpp            \
   session_status.hpp           \
-  settings.hpp                 \
+  settings_pack.hpp            \
+  sha1.hpp                     \
   sha1_hash.hpp                \
-  size_type.hpp                \
   sliding_average.hpp          \
   socket.hpp                   \
   socket_io.hpp                \
@@ -99,47 +122,73 @@ nobase_include_HEADERS = \
   socket_type_fwd.hpp          \
   socks5_stream.hpp            \
   ssl_stream.hpp               \
+  stack_allocator.hpp          \
   stat.hpp                     \
+  stat_cache.hpp               \
   storage.hpp                  \
   storage_defs.hpp             \
+  tailqueue.hpp                \
   string_util.hpp              \
   thread.hpp                   \
+  thread_pool.hpp              \
   time.hpp                     \
   timestamp_history.hpp        \
   torrent_handle.hpp           \
   torrent.hpp                  \
   torrent_info.hpp             \
+  torrent_peer.hpp             \
+  torrent_peer_allocator.hpp   \
   tracker_manager.hpp          \
+  torrent_status.hpp           \
   udp_socket.hpp               \
   udp_tracker_connection.hpp   \
+  uncork_interface.hpp         \
   union_endpoint.hpp           \
   upnp.hpp                     \
   utp_socket_manager.hpp       \
   utp_stream.hpp               \
   utf8.hpp                     \
+  vector_utils.hpp             \
   version.hpp                  \
   web_connection_base.hpp      \
   web_peer_connection.hpp      \
   xml_parse.hpp                \
   \
-  $(GEOIP_H) \
-  tommath.h \
-  tommath_class.h \
-  tommath_superclass.h \
+  tommath.h                         \
+  tommath_class.h                   \
+  tommath_superclass.h              \
+  tommath_private.h                 \
   \
-  aux_/session_impl.hpp        \
+  aux_/alert_manager_variadic_emplace.hpp \
+  aux_/allocating_handler.hpp       \
+  aux_/cpuid.hpp                    \
+  aux_/disable_warnings_push.hpp    \
+  aux_/disable_warnings_pop.hpp     \
+  aux_/escape_string.hpp            \
+  aux_/merkle.hpp                   \
+  aux_/session_call.hpp             \
+  aux_/session_impl.hpp             \
+  aux_/session_settings.hpp         \
+  aux_/proxy_settings.hpp           \
+  aux_/session_interface.hpp        \
+  aux_/time.hpp                     \
+  aux_/file_progress.hpp            \
+  aux_/openssl.hpp                  \
+  aux_/byteswap.hpp                 \
   \
-  extensions/logger.hpp             \
   extensions/lt_trackers.hpp        \
   extensions/metadata_transfer.hpp  \
   extensions/smart_ban.hpp          \
   extensions/ut_metadata.hpp        \
   extensions/ut_pex.hpp             \
   \
+  kademlia/dht_storage.hpp          \
   kademlia/dht_tracker.hpp          \
   kademlia/dht_observer.hpp         \
+  kademlia/direct_request.hpp       \
+  kademlia/dos_blocker.hpp          \
   kademlia/find_data.hpp            \
-  kademlia/logging.hpp              \
+  kademlia/put_data.hpp             \
   kademlia/msg.hpp                  \
   kademlia/node.hpp                 \
   kademlia/node_entry.hpp           \
@@ -152,4 +201,3 @@ nobase_include_HEADERS = \
   kademlia/item.hpp                 \
   kademlia/get_item.hpp             \
   kademlia/get_peers.hpp
-

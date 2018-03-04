@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -32,16 +32,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef TORRENT_DISABLE_EXTENSIONS
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 #include <vector>
 #include <map>
@@ -49,8 +43,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <numeric>
 #include <cstdio>
 
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
 #include "libtorrent/hasher.hpp"
 #include "libtorrent/torrent.hpp"
+#include "libtorrent/torrent_handle.hpp"
 #include "libtorrent/extensions.hpp"
 #include "libtorrent/extensions/smart_ban.hpp"
 #include "libtorrent/disk_io_thread.hpp"
@@ -58,13 +55,19 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/peer_connection.hpp"
 #include "libtorrent/peer_info.hpp"
 #include "libtorrent/random.hpp"
+#include "libtorrent/operations.hpp" // for operation_t enum
 
 //#define TORRENT_LOG_HASH_FAILURES
+
+#ifndef TORRENT_DISABLE_LOGGING
+#include "libtorrent/socket_io.hpp"
+#endif
 
 #ifdef TORRENT_LOG_HASH_FAILURES
 
 #include "libtorrent/peer_id.hpp" // sha1_hash
-#include "libtorrent/escape_string.hpp" // to_hex
+#include "libtorrent/hex.hpp" // to_hex
+#include "libtorrent/socket_io.hpp"
 
 void log_hash_block(FILE** f, libtorrent::torrent const& t, int piece, int block
 	, libtorrent::address a, char const* bytes, int len, bool corrupt)
@@ -83,7 +86,7 @@ void log_hash_block(FILE** f, libtorrent::torrent const& t, int piece, int block
 
 	file_storage const& fs = t.torrent_file().files();
 	std::vector<file_slice> files = fs.map_block(piece, block * 0x4000, len);
-	
+
 	std::string fn = fs.file_path(fs.internal_at(files[0].file_index));
 
 	char filename[4094];
@@ -91,7 +94,7 @@ void log_hash_block(FILE** f, libtorrent::torrent const& t, int piece, int block
 	for (int i = 0; i < files.size(); ++i)
 	{
 		offset += snprintf(filename+offset, sizeof(filename)-offset
-			, "%s[%"PRId64",%d]", libtorrent::filename(fn).c_str(), files[i].offset, int(files[i].size));
+			, "%s[%" PRId64 ",%d]", libtorrent::filename(fn).c_str(), files[i].offset, int(files[i].size));
 		if (offset >= sizeof(filename)) break;
 	}
 
@@ -115,7 +118,9 @@ namespace libtorrent {
 namespace
 {
 
-	struct smart_ban_plugin : torrent_plugin, boost::enable_shared_from_this<smart_ban_plugin>
+	struct smart_ban_plugin TORRENT_FINAL
+		: torrent_plugin
+		, boost::enable_shared_from_this<smart_ban_plugin>
 	{
 		smart_ban_plugin(torrent& t)
 			: m_torrent(t)
@@ -131,11 +136,11 @@ namespace
 		{ fclose(m_log_file); }
 #endif
 
-		void on_piece_pass(int p)
+		virtual void on_piece_pass(int p) TORRENT_OVERRIDE
 		{
-#ifdef TORRENT_LOGGING
-			(*m_torrent.session().m_logger) << time_now_string() << " PIECE PASS [ p: " << p
-				<< " | block_hash_size: " << m_block_hashes.size() << " ]\n";
+#ifndef TORRENT_DISABLE_LOGGING
+			m_torrent.debug_log(" PIECE PASS [ p: %d | block_hash_size: %d ]"
+				, p, int(m_block_hashes.size()));
 #endif
 			// has this piece failed earlier? If it has, go through the
 			// CRCs from the time it failed and ban the peers that
@@ -150,8 +155,10 @@ namespace
 			{
 				if (i->first.block_index == pb.block_index)
 				{
-					m_torrent.filesystem().async_read(r, boost::bind(&smart_ban_plugin::on_read_ok_block
-						, shared_from_this(), *i, _1, _2));
+					m_torrent.session().disk_thread().async_read(&m_torrent.storage()
+						, r, boost::bind(&smart_ban_plugin::on_read_ok_block
+						, shared_from_this(), *i, i->second.peer->address(), _1)
+						, reinterpret_cast<void*>(1));
 					m_block_hashes.erase(i++);
 				}
 				else
@@ -181,7 +188,7 @@ namespace
 			}
 		}
 
-		void on_piece_failed(int p)
+		virtual void on_piece_failed(int p) TORRENT_OVERRIDE
 		{
 			// The piece failed the hash check. Record
 			// the CRC and origin peer of every block
@@ -190,19 +197,26 @@ namespace
 			// a bunch of read operations on it
 			if (m_torrent.is_aborted()) return;
 
-			std::vector<void*> downloaders;
+			std::vector<torrent_peer*> downloaders;
 			m_torrent.picker().get_downloaders(downloaders, p);
 
 			int size = m_torrent.torrent_file().piece_size(p);
 			peer_request r = {p, 0, (std::min)(16*1024, size)};
 			piece_block pb(p, 0);
-			for (std::vector<void*>::iterator i = downloaders.begin()
+			for (std::vector<torrent_peer*>::iterator i = downloaders.begin()
 				, end(downloaders.end()); i != end; ++i)
 			{
-				if (*i != 0)
+				if (*i != NULL)
 				{
-					m_torrent.filesystem().async_read(r, boost::bind(&smart_ban_plugin::on_read_failed_block
-						, shared_from_this(), pb, ((policy::peer*)*i)->address(), _1, _2));
+					// for very sad and involved reasons, this read need to force a copy out of the cache
+					// since the piece has failed, this block is very likely to be replaced with a newly
+					// downloaded one very soon, and to get a block by reference would fail, since the
+					// block read will have been deleted by the time it gets back to the network thread
+					m_torrent.session().disk_thread().async_read(&m_torrent.storage(), r
+						, boost::bind(&smart_ban_plugin::on_read_failed_block
+						, shared_from_this(), pb, (*i)->address(), _1)
+						, reinterpret_cast<torrent_peer*>(1)
+						, disk_io_job::force_copy);
 				}
 
 				r.start += 16*1024;
@@ -219,35 +233,35 @@ namespace
 		// a peer.
 		struct block_entry
 		{
-			policy::peer* peer;
+			torrent_peer* peer;
 			sha1_hash digest;
 		};
 
-		void on_read_failed_block(piece_block b, address a, int ret, disk_io_job const& j)
+		void on_read_failed_block(piece_block b, address a, disk_io_job const* j)
 		{
-			TORRENT_ASSERT(m_torrent.session().is_network_thread());
-			
-			disk_buffer_holder buffer(m_torrent.session(), j.buffer);
+			TORRENT_ASSERT(m_torrent.session().is_single_thread());
+
+			disk_buffer_holder buffer(m_torrent.session(), *j);
 
 			// ignore read errors
-			if (ret != j.buffer_size) return;
+			if (j->ret != j->d.io.buffer_size) return;
 
 			hasher h;
-			h.update(j.buffer, j.buffer_size);
-			h.update((char const*)&m_salt, sizeof(m_salt));
+			h.update(j->buffer.disk_block, j->d.io.buffer_size);
+			h.update(reinterpret_cast<char const*>(&m_salt), sizeof(m_salt));
 
-			std::pair<policy::iterator, policy::iterator> range
-				= m_torrent.get_policy().find_peers(a);
+			std::pair<peer_list::iterator, peer_list::iterator> range
+				= m_torrent.find_peers(a);
 
 			// there is no peer with this address anymore
 			if (range.first == range.second) return;
 
-			policy::peer* p = (*range.first);
+			torrent_peer* p = (*range.first);
 			block_entry e = {p, h.final()};
 
 #ifdef TORRENT_LOG_HASH_FAILURES
 			log_hash_block(&m_log_file, m_torrent, b.piece_index
-				, b.block_index, p->address(), j.buffer, j.buffer_size, true);
+				, b.block_index, p->address(), j->buffer.disk_block, j->buffer_size, true);
 #endif
 
 			std::map<piece_block, block_entry>::iterator i = m_block_hashes.lower_bound(b);
@@ -255,19 +269,14 @@ namespace
 			if (i != m_block_hashes.end() && i->first == b && i->second.peer == p)
 			{
 				// this peer has sent us this block before
-				if (i->second.digest != e.digest)
+				// if the peer is already banned, it doesn't matter if it sent
+				// good or bad data. Nothings going to change it
+				if (!p->banned && i->second.digest != e.digest)
 				{
 					// this time the digest of the block is different
 					// from the first time it sent it
 					// at least one of them must be bad
-
-					// verify that this is not a dangling pointer
-					// if the pointer is in the policy's list, it
-					// still live, if it's not, it has been removed
-					// and we can't use this pointer
-					if (!m_torrent.get_policy().has_peer(p)) return;
-
-#if defined TORRENT_LOGGING || defined TORRENT_VERBOSE_LOGGING || defined TORRENT_ERROR_LOGGING
+#ifndef TORRENT_DISABLE_LOGGING
 					char const* client = "-";
 					peer_info info;
 					if (p->connection)
@@ -275,16 +284,16 @@ namespace
 						p->connection->get_peer_info(info);
 						client = info.client.c_str();
 					}
-					(*m_torrent.session().m_logger) << time_now_string() << " BANNING PEER [ p: " << b.piece_index
-						<< " | b: " << b.block_index
-						<< " | c: " << client
-						<< " | hash1: " << i->second.digest
-						<< " | hash2: " << e.digest
-						<< " | ip: " << p->ip() << " ]\n";
+					m_torrent.debug_log(" BANNING PEER [ p: %d | b: %d | c: %s"
+						" | hash1: %s | hash2: %s | ip: %s ]"
+						, b.piece_index, b.block_index, client
+						, to_hex(i->second.digest.to_string()).c_str()
+						, to_hex(e.digest.to_string()).c_str()
+						, print_endpoint(p->ip()).c_str());
 #endif
-					m_torrent.get_policy().ban_peer(p);
+					m_torrent.ban_peer(p);
 					if (p->connection) p->connection->disconnect(
-						errors::peer_banned);
+						errors::peer_banned, op_bittorrent);
 				}
 				// we already have this exact entry in the map
 				// we don't have to insert it
@@ -293,7 +302,7 @@ namespace
 			
 			m_block_hashes.insert(i, std::pair<const piece_block, block_entry>(b, e));
 
-#ifdef TORRENT_LOGGING
+#ifndef TORRENT_DISABLE_LOGGING
 			char const* client = "-";
 			peer_info info;
 			if (p->connection)
@@ -301,41 +310,48 @@ namespace
 				p->connection->get_peer_info(info);
 				client = info.client.c_str();
 			}
-			(*m_torrent.session().m_logger) << time_now_string() << " STORE BLOCK CRC [ p: " << b.piece_index
-				<< " | b: " << b.block_index
-				<< " | c: " << client
-				<< " | digest: " << e.digest
-				<< " | ip: " << p->ip() << " ]\n";
+			m_torrent.debug_log(" STORE BLOCK CRC [ p: %d | b: %d | c: %s"
+				" | digest: %s | ip: %s ]"
+				, b.piece_index, b.block_index, client
+				, to_hex(e.digest.to_string()).c_str()
+				, print_address(p->ip().address()).c_str());
 #endif
 		}
-		
-		void on_read_ok_block(std::pair<piece_block, block_entry> b, int ret, disk_io_job const& j)
-		{
-			TORRENT_ASSERT(m_torrent.session().is_network_thread());
 
-			disk_buffer_holder buffer(m_torrent.session(), j.buffer);
+		void on_read_ok_block(std::pair<piece_block, block_entry> b, address a, disk_io_job const* j)
+		{
+			TORRENT_ASSERT(m_torrent.session().is_single_thread());
+
+			disk_buffer_holder buffer(m_torrent.session(), *j);
 
 			// ignore read errors
-			if (ret != j.buffer_size) return;
+			if (j->ret != j->d.io.buffer_size) return;
 
 			hasher h;
-			h.update(j.buffer, j.buffer_size);
-			h.update((char const*)&m_salt, sizeof(m_salt));
+			h.update(j->buffer.disk_block, j->d.io.buffer_size);
+			h.update(reinterpret_cast<char const*>(&m_salt), sizeof(m_salt));
 			sha1_hash ok_digest = h.final();
 
-			policy::peer* p = b.second.peer;
-
 			if (b.second.digest == ok_digest) return;
-			if (p == 0) return;
 
 #ifdef TORRENT_LOG_HASH_FAILURES
 			log_hash_block(&m_log_file, m_torrent, b.first.piece_index
-				, b.first.block_index, p->address(), j.buffer, j.buffer_size, false);
+				, b.first.block_index, a, j->buffer.disk_block, j->buffer_size, false);
 #endif
 
-			if (!m_torrent.get_policy().has_peer(p)) return;
+			// find the peer
+			std::pair<peer_list::iterator, peer_list::iterator> range
+				= m_torrent.find_peers(a);
+			if (range.first == range.second) return;
+			torrent_peer* p = NULL;
+			for (; range.first != range.second; ++range.first)
+			{
+				if (b.second.peer != *range.first) continue;
+				p = *range.first;
+			}
+			if (p == NULL) return;
 
-#ifdef TORRENT_LOGGING
+#ifndef TORRENT_DISABLE_LOGGING
 			char const* client = "-";
 			peer_info info;
 			if (p->connection)
@@ -343,18 +359,18 @@ namespace
 				p->connection->get_peer_info(info);
 				client = info.client.c_str();
 			}
-			(*m_torrent.session().m_logger) << time_now_string() << " BANNING PEER [ p: " << b.first.piece_index
-				<< " | b: " << b.first.block_index
-				<< " | c: " << client
-				<< " | ok_digest: " << ok_digest
-				<< " | bad_digest: " << b.second.digest
-				<< " | ip: " << p->ip() << " ]\n";
+			m_torrent.debug_log(" BANNING PEER [ p: %d | b: %d | c: %s"
+				" | ok_digest: %s | bad_digest: %s | ip: %s ]"
+				, b.first.piece_index, b.first.block_index, client
+				, to_hex(ok_digest.to_string()).c_str()
+				, to_hex(b.second.digest.to_string()).c_str()
+				, print_address(p->ip().address()).c_str());
 #endif
-			m_torrent.get_policy().ban_peer(p);
+			m_torrent.ban_peer(p);
 			if (p->connection) p->connection->disconnect(
-				errors::peer_banned);
+				errors::peer_banned, op_bittorrent);
 		}
-		
+
 		torrent& m_torrent;
 
 		// This table maps a piece_block (piece and block index
@@ -371,6 +387,8 @@ namespace
 #ifdef TORRENT_LOG_HASH_FAILURES
 		FILE* m_log_file;
 #endif
+		// explicitly disallow assignment, to silence msvc warning
+		smart_ban_plugin& operator=(smart_ban_plugin const&);
 	};
 
 } }
@@ -378,8 +396,9 @@ namespace
 namespace libtorrent
 {
 
-	boost::shared_ptr<torrent_plugin> create_smart_ban_plugin(torrent* t, void*)
+	boost::shared_ptr<torrent_plugin> create_smart_ban_plugin(torrent_handle const& th, void*)
 	{
+		torrent* t = th.native_handle().get();
 		return boost::shared_ptr<torrent_plugin>(new smart_ban_plugin(*t));
 	}
 

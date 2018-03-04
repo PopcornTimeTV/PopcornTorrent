@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2010-2014, Arvid Norberg
+Copyright (c) 2010-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,15 +35,18 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/torrent_handle.hpp"
 #include "libtorrent/add_torrent_params.hpp"
-#include "libtorrent/size_type.hpp"
 
 #include <boost/enable_shared_from_this.hpp>
 #include <string>
 
+#ifndef TORRENT_NO_DEPRECATE
 namespace libtorrent
 {
 	namespace aux
 	{ struct session_impl; }
+
+	class session;
+	struct bdecode_node;
 
 	// represents one item from an RSS feed. Specifically
 	// a feed of torrents.
@@ -51,6 +54,10 @@ namespace libtorrent
 	struct TORRENT_EXPORT feed_item
 	{
 		feed_item();
+#if __cplusplus >= 201103L
+		feed_item(feed_item const&) = default;
+		feed_item & operator=(feed_item const&) = default;
+#endif
 		~feed_item();
 
 		// these are self explanatory and may be empty if the feed does not specify
@@ -64,7 +71,7 @@ namespace libtorrent
 
 		// the total size of the content the torrent refers to, or -1
 		// if no size was specified by the feed.
-		size_type size;
+		boost::int64_t size;
 
 		// the handle to the torrent, if the session is already downloading
 		// this torrent.
@@ -95,7 +102,7 @@ namespace libtorrent
 			, default_ttl(30)
 		{}
 
-   	std::string url;
+		std::string url;
 
 		// By default ``auto_download`` is true, which means all torrents in
 		// the feed will be downloaded. Set this to false in order to manually
@@ -213,28 +220,33 @@ namespace libtorrent
 	// are posted to the network thread
 	struct TORRENT_EXTRA_EXPORT feed : boost::enable_shared_from_this<feed>
 	{
-		friend void parse_feed(feed_state& f, int token, char const* name, char const* val);
+		friend void parse_feed(feed_state& f, int token, char const* name, int len
+			, char const* val, int val_len);
 
 		feed(aux::session_impl& ses, feed_settings const& feed);
 
 		void on_feed(error_code const& ec, http_parser const& parser
 			, char const* data, int size);
-	
+
 		int update_feed();
-	
+
 		aux::session_impl& session() const { return m_ses; }
-	
+
 		void set_settings(feed_settings const& s);
 		void get_settings(feed_settings* s) const;
-   	void get_feed_status(feed_status* ret) const;
+		void get_feed_status(feed_status* ret) const;
 
 		int next_update(time_t now) const;
 
-		void load_state(lazy_entry const& rd);
+		void load_state(bdecode_node const& rd);
 		void save_state(entry& rd) const;
-	
-//	private:
-	
+
+	private:
+		friend struct aux::session_impl;
+
+		// explicitly disallow assignment, to silence msvc warning
+		feed& operator=(feed const&);
+
 		void add_item(feed_item const& item);
 
 		feed_handle my_handle();
@@ -257,9 +269,9 @@ namespace libtorrent
 		std::map<std::string, time_t> m_added;
 
 		std::string m_title;
-   	std::string m_description;
+		std::string m_description;
 		time_t m_last_attempt;
-   	time_t m_last_update;
+		time_t m_last_update;
 		// refresh rate of this feed in minutes
 		int m_ttl;
 		// the number of update failures in a row
@@ -267,11 +279,12 @@ namespace libtorrent
 		// true while waiting for the server to respond
 		bool m_updating;
 		feed_settings m_settings;
-	
+
 		aux::session_impl& m_ses;
 	};
-	
+
 }
-	
+#endif // TORRENT_NO_DEPRECATE
+
 #endif
 

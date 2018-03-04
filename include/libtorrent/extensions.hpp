@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2006-2014, Arvid Norberg
+Copyright (c) 2006-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -63,7 +63,7 @@ POSSIBILITY OF SUCH DAMAGE.
 // mutex locked. And they are always called from the libtorrent network thread. In
 // case portions of your plugin are called from other threads, typically the main
 // thread, you cannot use any of the member functions on the internal structures
-// in libtorrent, since those require the mutex to be locked. Futhermore, you would
+// in libtorrent, since those require the mutex to be locked. Furthermore, you would
 // also need to have a mutex on your own shared data within the plugin, to make
 // sure it is not accessed at the same time from the libtorrent thread (through a
 // callback). See `boost thread's mutex`_. If you need to send out a message from
@@ -71,7 +71,7 @@ POSSIBILITY OF SUCH DAMAGE.
 // sending in ``tick()``.
 // 
 // Since the plugin interface gives you easy access to internal structures, it
-// is not supported as a stable API. Plugins should be considered spcific to a
+// is not supported as a stable API. Plugins should be considered specific to a
 // specific version of libtorrent. Although, in practice the internals mostly
 // don't change that dramatically.
 // 
@@ -96,10 +96,9 @@ POSSIBILITY OF SUCH DAMAGE.
 // 
 // The signature of the function is::
 // 
-// 	boost::shared_ptr<torrent_plugin> (*)(torrent*, void*);
+// 	boost::shared_ptr<torrent_plugin> (*)(torrent_handle const&, void*);
 // 
-// The first argument is the internal torrent object, the second argument
-// is the userdata passed to ``session::add_torrent()`` or
+// The second argument is the userdata passed to ``session::add_torrent()`` or
 // ``torrent_handle::add_extension()``.
 // 
 // The function should return a ``boost::shared_ptr<torrent_plugin>`` which
@@ -123,7 +122,7 @@ POSSIBILITY OF SUCH DAMAGE.
 // 
 // .. parsed-literal::
 // 
-// 	const static int alert_type = *<unique alert ID>*;
+// 	static const int alert_type = *<unique alert ID>*;
 // 	virtual int type() const { return alert_type; }
 // 
 // 	virtual std::string message() const;
@@ -131,7 +130,7 @@ POSSIBILITY OF SUCH DAMAGE.
 // 	virtual std::auto_ptr<alert> clone() const
 // 	{ return std::auto_ptr<alert>(new name(\*this)); }
 // 
-// 	const static int static_category = *<bitmask of alert::category_t flags>*;
+// 	static const int static_category = *<bitmask of alert::category_t flags>*;
 // 	virtual int category() const { return static_category; }
 // 
 // 	virtual char const* what() const { return *<string literal of the name of this alert>*; }
@@ -151,7 +150,7 @@ POSSIBILITY OF SUCH DAMAGE.
 // of simply allocating a new instance as a copy of ``*this`` is all that's
 // expected.
 // 
-// The static category is required for checking wether or not the category
+// The static category is required for checking whether or not the category
 // for a specific alert is enabled or not, without instantiating the alert.
 // The ``category`` virtual function is the run-time equivalence.
 // 
@@ -165,39 +164,41 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef TORRENT_DISABLE_EXTENSIONS
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <boost/weak_ptr.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 #include <vector>
 #include "libtorrent/config.hpp"
 #include "libtorrent/buffer.hpp"
 #include "libtorrent/socket.hpp"
+#include "libtorrent/sha1_hash.hpp" // for sha1_hash
 #include "libtorrent/error_code.hpp"
-#include "libtorrent/policy.hpp" // for policy::peer
+#include "libtorrent/session_handle.hpp"
 
 namespace libtorrent
 {
-	namespace aux { struct session_impl; }
-
 	struct peer_plugin;
-	class bt_peer_connection;
 	struct peer_request;
-	class peer_connection;
 	class entry;
-	struct lazy_entry;
+	struct bdecode_node;
 	struct disk_buffer_holder;
 	struct bitfield;
 	class alert;
 	struct torrent_plugin;
-	class torrent;
-	struct torrent_peer;
+	struct add_torrent_params;
+	struct peer_connection_handle;
+	struct torrent_handle;
+
+	// Functions of this type are called to handle incoming DHT requests
+	typedef boost::function<bool(udp::endpoint const& source
+		, bdecode_node const& request, entry& response)> dht_extension_handler_t;
+
+	// Map of query strings to handlers. Note that query strings are limited to 15 bytes.
+	// see max_dht_query_length
+	typedef std::vector<std::pair<std::string, dht_extension_handler_t> > dht_extensions_t;
 
 	// this is the base class for a session plugin. One primary feature
 	// is that it is notified of all torrents that are added to the session,
@@ -207,6 +208,27 @@ namespace libtorrent
 		// hidden
 		virtual ~plugin() {}
 
+		// these are flags that can be returned by implemented_features()
+		// indicating which callbacks this plugin is interested in
+		enum feature_flags_t
+		{
+			// include this bit if your plugin needs to alter the order of the
+			// optimistic unchoke of peers. i.e. have the on_optimistic_unchoke()
+			// callback be called.
+			optimistic_unchoke_feature = 1,
+
+			// include this bit if your plugin needs to have on_tick() called
+			tick_feature = 2
+		};
+
+		// This function is expected to return a bitmask indicating which features
+		// this plugin implements. Some callbacks on this object may not be called
+		// unless the corresponding feature flag is returned here. Note that
+		// callbacks may still be called even if the corresponding feature is not
+		// specified in the return value here. See feature_flags_t for possible
+		// flags to return.
+		virtual boost::uint32_t implemented_features() { return 0; }
+
 		// this is called by the session every time a new torrent is added.
 		// The ``torrent*`` points to the internal torrent object created
 		// for the new torrent. The ``void*`` is the userdata pointer as
@@ -215,34 +237,42 @@ namespace libtorrent
 		// If the plugin returns a torrent_plugin instance, it will be added
 		// to the new torrent. Otherwise, return an empty shared_ptr to a
 		// torrent_plugin (the default).
-		virtual boost::shared_ptr<torrent_plugin> new_torrent(torrent*, void*)
+		virtual boost::shared_ptr<torrent_plugin> new_torrent(torrent_handle const&, void*)
 		{ return boost::shared_ptr<torrent_plugin>(); }
 
 		// called when plugin is added to a session
-		virtual void added(aux::session_impl*) {}
+		virtual void added(session_handle) {}
 
-		// called when an alert is posted
-		// alerts that are filtered are not
-		// posted
+		// called after a plugin is added
+		// allows the plugin to register DHT requests it would like to handle
+		virtual void register_dht_extensions(dht_extensions_t&) {}
+
+		// called when an alert is posted alerts that are filtered are not posted
 		virtual void on_alert(alert const*) {}
+
+		// return true if the add_torrent_params should be added
+		virtual bool on_unknown_torrent(sha1_hash const& /* info_hash */
+			, peer_connection_handle const& /* pc */, add_torrent_params& /* p */)
+		{ return false; }
 
 		// called once per second
 		virtual void on_tick() {}
 
-		// called when choosing peers to optimisticly unchoke
-		// peer's will be unchoked in the order they appear in the given
-		// vector which is initiallity sorted by when they were last
-		// optimistically unchoked.
-		// if the plugin returns true then the ordering provided will be
-		// used and no other plugin will be allowed to change it.
-		virtual bool on_optimistic_unchoke(std::vector<policy::peer*>& /* peers */)
+		// called when choosing peers to optimistically unchoke. peer's will be
+		// unchoked in the order they appear in the given vector. if
+		// the plugin returns true then the ordering provided will be used and no
+		// other plugin will be allowed to change it. If your plugin expects this
+		// to be called, make sure to include the flag
+		// ``optimistic_unchoke_feature`` in the return value from
+		// implemented_features().
+		virtual bool on_optimistic_unchoke(std::vector<peer_connection_handle>& /* peers */)
 		{ return false; }
 
 		// called when saving settings state
 		virtual void save_state(entry&) const {}
 
 		// called when loading settings state
-		virtual void load_state(lazy_entry const&) {}
+		virtual void load_state(bdecode_node const&) {}
 	};
 
 	// Torrent plugins are associated with a single torrent and have a number
@@ -262,13 +292,13 @@ namespace libtorrent
 		// are supposed to return an instance of your peer_plugin class. Which in
 		// turn will have its hook functions called on event specific to that peer.
 		// 
-		// The ``peer_connection`` will be valid as long as the ``shared_ptr`` is being
-		// held by the torrent object. So, it is generally a good idea to not keep a
-		// ``shared_ptr`` to your own peer_plugin. If you want to keep references to it,
-		// use ``weak_ptr``.
+		// The ``peer_connection_handle`` will be valid as long as the ``shared_ptr``
+		// is being held by the torrent object. So, it is generally a good idea to not
+		// keep a ``shared_ptr`` to your own peer_plugin. If you want to keep references
+		// to it, use ``weak_ptr``.
 		// 
 		// If this function throws an exception, the connection will be closed.
-		virtual boost::shared_ptr<peer_plugin> new_connection(peer_connection*)
+		virtual boost::shared_ptr<peer_plugin> new_connection(peer_connection_handle const&)
 		{ return boost::shared_ptr<peer_plugin>(); }
 
 		// These hooks are called when a piece passes the hash check or fails the hash
@@ -282,12 +312,12 @@ namespace libtorrent
 		// easy for plugins to do timed events, for sending messages or whatever.
 		virtual void tick() {}
 
-		// These hooks are called when the torrent is paused and unpaused respectively.
+		// These hooks are called when the torrent is paused and resumed respectively.
 		// The return value indicates if the event was handled. A return value of
 		// ``true`` indicates that it was handled, and no other plugin after this one
 		// will have this hook function called, and the standard handler will also not be
 		// invoked. So, returning true effectively overrides the standard behavior of
-		// pause or unpause.
+		// pause or resume.
 		// 
 		// Note that if you call ``pause()`` or ``resume()`` on the torrent from your
 		// handler it will recurse back into your handler, so in order to invoke the
@@ -307,6 +337,19 @@ namespace libtorrent
 		// the state is one of torrent_status::state_t
 		// enum members
 		virtual void on_state(int /*s*/) {}
+
+		// called when the torrent is unloaded from RAM
+		// and loaded again, respectively
+		// unload is called right before the torrent is
+		// unloaded and load is called right after it's
+		// loaded. i.e. the full torrent state is available
+		// when these callbacks are called.
+		virtual void on_unload() {}
+		virtual void on_load() {}
+
+		// called every time policy::add_peer is called
+		// src is a bitmask of which sources this peer
+		// has been seen from. flags is a bitmask of:
 
 		enum flags_t {
 			// this is the first time we see this peer
@@ -344,7 +387,7 @@ namespace libtorrent
 		// can add entries to the extension handshake
 		// this is not called for web seeds
 		virtual void add_handshake(entry&) {}
-		
+
 		// called when the peer is being disconnected.
 		virtual void on_disconnect(error_code const& /*ec*/) {}
 
@@ -356,22 +399,22 @@ namespace libtorrent
 
 		// throwing an exception from any of the handlers (except add_handshake)
 		// closes the connection
-		
-		// this is called when the initial BT handshake is received. Returning false
-		// means that the other end doesn't support this extension and will remove
-		// it from the list of plugins.
-		// this is not called for web seeds
+
+		// this is called when the initial bittorrent handshake is received.
+		// Returning false means that the other end doesn't support this extension
+		// and will remove it from the list of plugins. this is not called for web
+		// seeds
 		virtual bool on_handshake(char const* /*reserved_bits*/) { return true; }
-		
+
 		// called when the extension handshake from the other end is received
 		// if this returns false, it means that this extension isn't
 		// supported by this peer. It will result in this peer_plugin
-		// being removed from the peer_connection and destructed. 
+		// being removed from the peer_connection and destructed.
 		// this is not called for web seeds
-		virtual bool on_extension_handshake(lazy_entry const&) { return true; }
+		virtual bool on_extension_handshake(bdecode_node const&) { return true; }
 
 		// returning true from any of the message handlers
-		// indicates that the plugin has handeled the message.
+		// indicates that the plugin has handled the message.
 		// it will break the plugin chain traversing and not let
 		// anyone else handle the message, including the default
 		// handler.
@@ -394,6 +437,10 @@ namespace libtorrent
 
 		// called after a choke message has been sent to the peer
 		virtual void sent_unchoke() {}
+
+		// called after piece data has been sent to the peer
+		// this can be used for stats book keeping
+		virtual void sent_payload(int /* bytes */) {}
 
 		// called when libtorrent think this peer should be disconnected.
 		// if the plugin returns false, the peer will not be disconnected.
@@ -423,7 +470,7 @@ namespace libtorrent
 		virtual void on_piece_pass(int /*index*/) {}
 		virtual void on_piece_failed(int /*index*/) {}
 
-		// called aproximately once every second
+		// called approximately once every second
 		virtual void tick() {}
 
 		// called each time a request message is to be sent. If true
@@ -432,6 +479,34 @@ namespace libtorrent
 		virtual bool write_request(peer_request const&) { return false; }
 	};
 
+	struct TORRENT_EXPORT crypto_plugin
+	{
+		// hidden
+		virtual ~crypto_plugin() {}
+
+		virtual void set_incoming_key(unsigned char const* key, int len) = 0;
+		virtual void set_outgoing_key(unsigned char const* key, int len) = 0;
+
+		// encrypted the provided buffers and returns the number of bytes which
+		// are now ready to be sent to the lower layer. This must be at least
+		// as large as the number of bytes passed in and may be larger if there
+		// is additional data to be inserted at the head of the send buffer.
+		// The additional data is retrieved from the passed in vector. The
+		// vector must be cleared if no additional data is to be inserted.
+		virtual int encrypt(std::vector<boost::asio::mutable_buffer>& /*send_vec*/) = 0;
+
+		// decrypt the provided buffers.
+		// consume is set to the number of bytes which should be trimmed from the
+		// head of the buffers, default is 0
+		//
+		// produce is set to the number of bytes of payload which are now ready to
+		// be sent to the upper layer. default is the number of bytes passed in receive_vec
+		//
+		// packet_size is set to the minimum number of bytes which must be read to
+		// advance the next step of decryption. default is 0
+		virtual void decrypt(std::vector<boost::asio::mutable_buffer>& /*receive_vec*/
+			, int& /* consume */, int& /*produce*/, int& /*packet_size*/) = 0;
+	};
 }
 
 #endif

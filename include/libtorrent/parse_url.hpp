@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2008-2014, Arvid Norberg
+Copyright (c) 2008-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,15 +33,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_PARSE_URL_HPP_INCLUDED
 #define TORRENT_PARSE_URL_HPP_INCLUDED
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <boost/tuple/tuple.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 #include <string>
 #include "libtorrent/config.hpp"

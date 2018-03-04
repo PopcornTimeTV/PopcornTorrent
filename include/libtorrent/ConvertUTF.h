@@ -114,11 +114,11 @@ typedef uint8_t  UTF8;
 typedef unsigned char	Boolean; /* 0 or 1 */
 
 /* Some fundamental constants */
-#define UNI_REPLACEMENT_CHAR (UTF32)0x0000FFFD
-#define UNI_MAX_BMP (UTF32)0x0000FFFF
-#define UNI_MAX_UTF16 (UTF32)0x0010FFFF
-#define UNI_MAX_UTF32 (UTF32)0x7FFFFFFF
-#define UNI_MAX_LEGAL_UTF32 (UTF32)0x0010FFFF
+#define UNI_REPLACEMENT_CHAR UTF32(0x0000FFFD)
+#define UNI_MAX_BMP UTF32(0x0000FFFF)
+#define UNI_MAX_UTF16 UTF32(0x0010FFFF)
+#define UNI_MAX_UTF32 UTF32(0x7FFFFFFF)
+#define UNI_MAX_LEGAL_UTF32 UTF32(0x0010FFFF)
 
 typedef enum {
 	conversionOK, 		/* conversion successful */
@@ -158,6 +158,11 @@ TORRENT_EXTRA_EXPORT ConversionResult ConvertUTF32toUTF16 (
 
 TORRENT_EXTRA_EXPORT Boolean isLegalUTF8Sequence(const UTF8 *source,
 		const UTF8 *sourceEnd);
+
+TORRENT_EXTRA_EXPORT Boolean isLegalUTF8(const UTF8 *source, int length);
+
+extern const char trailingBytesForUTF8[256];
+extern const UTF32 offsetsFromUTF8[6];
 
 #ifdef __cplusplus
 }

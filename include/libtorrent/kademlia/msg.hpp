@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,19 +30,18 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef MSG_HPP
-#define MSG_HPP
+#ifndef TORRENT_KADEMLIA_MSG_HPP
+#define TORRENT_KADEMLIA_MSG_HPP
 
 #include <string>
-#include <libtorrent/kademlia/node_id.hpp>
-#include "libtorrent/lazy_entry.hpp"
-#if BOOST_VERSION < 103500
-#include <asio/ip/udp.hpp>
-#else
-#include <boost/asio/ip/udp.hpp>
-#endif
+#include "libtorrent/socket.hpp"
+#include "libtorrent/kademlia/node_id.hpp"
 
 namespace libtorrent {
+
+struct bdecode_node;
+class entry;
+
 namespace dht {
 
 typedef std::vector<char> packet_t;
@@ -51,14 +50,62 @@ typedef std::vector<tcp::endpoint> peers_t;
 
 struct msg
 {
-	msg(lazy_entry const& m, udp::endpoint const& ep): message(m), addr(ep) {}
+	msg(bdecode_node const& m, udp::endpoint const& ep): message(m), addr(ep) {}
 	// the message
-	lazy_entry const& message;
+	bdecode_node const& message;
 
 	// the address of the process sending or receiving
 	// the message.
 	udp::endpoint addr;
+private:
+	// explicitly disallow assignment, to silence msvc warning
+	msg& operator=(msg const&);
 };
+
+struct key_desc_t
+{
+	char const* name;
+	int type;
+	int size;
+	int flags;
+
+	enum {
+		// this argument is optional, parsing will not
+		// fail if it's not present
+		optional = 1,
+		// for dictionaries, the following entries refer
+		// to child nodes to this node, up until and including
+		// the next item that has the last_child flag set.
+		// these flags are nestable
+		parse_children = 2,
+		// this is the last item in a child dictionary
+		last_child = 4,
+		// the size argument refers to that the size
+		// has to be divisible by the number, instead
+		// of having that exact size
+		size_divisible = 8
+	};
+};
+
+// generate an error response message
+void incoming_error(entry& e, char const* msg, int error_code = 203);
+
+// given a redundant name to avoid clashing with libtorrent::detail
+namespace dht_detail {
+
+TORRENT_EXPORT bool verify_message(bdecode_node const& msg, key_desc_t const desc[]
+	, bdecode_node ret[], int size, char* error, int error_size);
+
+}
+
+// verifies that a message has all the required
+// entries and returns them in ret
+template <int Size>
+bool verify_message(bdecode_node const& msg, key_desc_t const (&desc)[Size]
+	, bdecode_node (&ret)[Size], char* error, int error_size)
+{
+	return dht_detail::verify_message(msg, desc, ret, Size, error, error_size);
+}
 
 } }
 

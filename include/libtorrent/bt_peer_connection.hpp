@@ -1,7 +1,7 @@
 /*
 
-Copyright (c) 2003-2014, Arvid Norberg
-Copyright (c) 2007-2014, Arvid Norberg, Un Shyam
+Copyright (c) 2003-2016, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg, Un Shyam
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -41,9 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/debug.hpp"
 
-#ifdef _MSC_VER
-#pragma warning(push, 1)
-#endif
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 
 #include <boost/smart_ptr.hpp>
 #include <boost/noncopyable.hpp>
@@ -51,9 +49,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/optional.hpp>
 #include <boost/cstdint.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 #include "libtorrent/buffer.hpp"
 #include "libtorrent/peer_connection.hpp"
@@ -71,11 +67,6 @@ namespace libtorrent
 {
 	class torrent;
 
-	namespace detail
-	{
-		struct session_impl;
-	}
-
 	class TORRENT_EXTRA_EXPORT bt_peer_connection
 		: public peer_connection
 	{
@@ -83,18 +74,12 @@ namespace libtorrent
 	public:
 
 		// this is the constructor where the we are the active part.
-		// The peer_conenction should handshake and verify that the
+		// The peer_connection should handshake and verify that the
 		// other end has the correct id
-		bt_peer_connection(
-			aux::session_impl& ses
-			, boost::shared_ptr<socket_type> s
-			, tcp::endpoint const& remote
-			, policy::peer* peerinfo
-			, peer_id const& pid
-			, boost::weak_ptr<torrent> t = boost::weak_ptr<torrent>()
-			, bool outgoing = false);
+		bt_peer_connection(peer_connection_args const& pack
+			, peer_id const& pid);
 
-		void start();
+		virtual void start() TORRENT_OVERRIDE;
 
 		enum
 		{
@@ -109,15 +94,19 @@ namespace libtorrent
 		};
 
 		~bt_peer_connection();
-		
-#ifndef TORRENT_DISABLE_ENCRYPTION
+
+#if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 		bool supports_encryption() const
 		{ return m_encrypted; }
 		bool rc4_encrypted() const
 		{ return m_rc4_encrypted; }
+
+		void switch_send_crypto(boost::shared_ptr<crypto_plugin> crypto);
+		void switch_recv_crypto(boost::shared_ptr<crypto_plugin> crypto);
 #endif
 
-		virtual int type() const { return peer_connection::bittorrent_connection; }
+		virtual int type() const TORRENT_OVERRIDE
+		{ return peer_connection::bittorrent_connection; }
 
 		enum message_type
 		{
@@ -164,12 +153,18 @@ namespace libtorrent
 		// work to do.
 
 		void on_sent(error_code const& error
-			, std::size_t bytes_transferred);
+			, std::size_t bytes_transferred) TORRENT_OVERRIDE;
 		void on_receive(error_code const& error
-			, std::size_t bytes_transferred);
-		
-		virtual void get_specific_peer_info(peer_info& p) const;
-		virtual bool in_handshake() const;
+			, std::size_t bytes_transferred) TORRENT_OVERRIDE;
+		void on_receive_impl(std::size_t bytes_transferred);
+
+#if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
+		virtual int hit_send_barrier(std::vector<boost::asio::mutable_buffer>& iovec) TORRENT_OVERRIDE;
+#endif
+
+		virtual void get_specific_peer_info(peer_info& p) const TORRENT_OVERRIDE;
+		virtual bool in_handshake() const TORRENT_OVERRIDE;
+		bool packet_finished() const { return m_recv_buffer.packet_finished(); }
 
 #ifndef TORRENT_DISABLE_EXTENSIONS
 		bool supports_holepunch() const { return m_holepunch_id != 0; }
@@ -217,15 +212,17 @@ namespace libtorrent
 
 		// the following functions appends messages
 		// to the send buffer
-		void write_choke();
-		void write_unchoke();
-		void write_interested();
-		void write_not_interested();
-		void write_request(peer_request const& r);
-		void write_cancel(peer_request const& r);
-		void write_bitfield();
-		void write_have(int index);
-		void write_piece(peer_request const& r, disk_buffer_holder& buffer);
+		void write_choke() TORRENT_OVERRIDE;
+		void write_unchoke() TORRENT_OVERRIDE;
+		void write_interested() TORRENT_OVERRIDE;
+		void write_not_interested() TORRENT_OVERRIDE;
+		void write_request(peer_request const& r) TORRENT_OVERRIDE;
+		void write_cancel(peer_request const& r) TORRENT_OVERRIDE;
+		void write_bitfield() TORRENT_OVERRIDE;
+		void write_have(int index) TORRENT_OVERRIDE;
+		void write_dont_have(int index) TORRENT_OVERRIDE;
+		void write_piece(peer_request const& r, disk_buffer_holder& buffer) TORRENT_OVERRIDE;
+		void write_keepalive() TORRENT_OVERRIDE;
 		void write_handshake();
 #ifndef TORRENT_DISABLE_EXTENSIONS
 		void write_extensions();
@@ -235,7 +232,6 @@ namespace libtorrent
 #endif
 		void write_metadata(std::pair<int, int> req);
 		void write_metadata_request(std::pair<int, int> req);
-		void write_keepalive();
 
 		// DHT extension
 		void write_dht_port(int listen_port);
@@ -243,16 +239,16 @@ namespace libtorrent
 		// FAST extension
 		void write_have_all();
 		void write_have_none();
-		void write_reject_request(peer_request const&);
-		void write_allow_fast(int piece);
-		void write_suggest(int piece);
-		
-		void on_connected();
-		void on_metadata();
+		void write_reject_request(peer_request const&) TORRENT_OVERRIDE;
+		void write_allow_fast(int piece) TORRENT_OVERRIDE;
+		void write_suggest(int piece) TORRENT_OVERRIDE;
+
+		void on_connected() TORRENT_OVERRIDE;
+		void on_metadata() TORRENT_OVERRIDE;
 
 #if TORRENT_USE_INVARIANT_CHECKS
 		void check_invariant() const;
-		ptime m_last_choke;
+		time_point m_last_choke;
 #endif
 
 	private:
@@ -263,9 +259,9 @@ namespace libtorrent
 		// block. If the peer isn't downloading
 		// a piece for the moment, the boost::optional
 		// will be invalid.
-		boost::optional<piece_block_progress> downloading_piece_progress() const;
+		boost::optional<piece_block_progress> downloading_piece_progress() const TORRENT_OVERRIDE;
 
-#ifndef TORRENT_DISABLE_ENCRYPTION
+#if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 
 		// if (is_local()), we are 'a' otherwise 'b'
 		//
@@ -292,6 +288,9 @@ namespace libtorrent
 		// If no sync found, return -1
 		int get_syncoffset(char const* src, int src_size
 			, char const* target, int target_size) const;
+
+		// helper to cut down on boilerplate
+		void rc4_decrypt(char* pos, int len);
 #endif
 
 public:
@@ -299,24 +298,16 @@ public:
 		// these functions encrypt the send buffer if m_rc4_encrypted
 		// is true, otherwise it passes the call to the
 		// peer_connection functions of the same names
-		virtual void append_const_send_buffer(char const* buffer, int size);
-		virtual void send_buffer(char const* begin, int size, int flags = 0
-			, void (*fun)(char*, int, void*) = 0, void* userdata = 0);
-		template <class Destructor>
-		void bt_append_send_buffer(char* buffer, int size, Destructor const& destructor)
-		{
-#ifndef TORRENT_DISABLE_ENCRYPTION
-			if (m_rc4_encrypted)
-				m_enc_handler->encrypt(buffer, size);
-#endif
-			peer_connection::append_send_buffer(buffer, size, destructor, true);
-		}
+		virtual void append_const_send_buffer(char const* buffer, int size
+			, chained_buffer::free_buffer_fun destructor = &nop
+			, void* userdata = NULL, block_cache_reference ref
+			= block_cache_reference()) TORRENT_OVERRIDE;
 
 private:
 
-		enum state
+		enum state_t
 		{
-#ifndef TORRENT_DISABLE_ENCRYPTION
+#if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 			read_pe_dhkey = 0,
 			read_pe_syncvc,
 			read_pe_synchash,
@@ -336,8 +327,8 @@ private:
 			read_packet_size,
 			read_packet
 		};
-		
-#ifndef TORRENT_DISABLE_ENCRYPTION
+
+#if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 		enum
 		{
 			handshake_len = 68,
@@ -345,7 +336,7 @@ private:
 		};
 #endif
 
-		// state of on_receive
+		// state of on_receive. one of the enums in state_t
 		boost::uint8_t m_state;
 
 		// this is set to true if the handshake from
@@ -355,38 +346,33 @@ private:
 		bool m_supports_dht_port:1;
 		bool m_supports_fast:1;
 
-#if TORRENT_USE_ASSERTS
-		// this is set to true when the client's
-		// bitfield is sent to this peer
+		// this is set to true when we send the bitfield message.
+		// for magnet links we can't do that right away,
+		// since we don't know how many pieces there are in
+		// the torrent.
 		bool m_sent_bitfield:1;
 
-		bool m_in_constructor:1;
-		
+		// true if we're done sending the bittorrent handshake,
+		// and can send bittorrent messages
 		bool m_sent_handshake:1;
-#endif
 
-#ifndef TORRENT_DISABLE_ENCRYPTION
+		// set to true once we send the allowed-fast messages. This is
+		// only done once per connection
+		bool m_sent_allowed_fast:1;
+
+#if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 		// this is set to true after the encryption method has been
-		// succesfully negotiated (either plaintext or rc4), to signal
+		// successfully negotiated (either plaintext or rc4), to signal
 		// automatic encryption/decryption.
 		bool m_encrypted:1;
 
 		// true if rc4, false if plaintext
 		bool m_rc4_encrypted:1;
-#endif
 
-#ifndef TORRENT_DISABLE_EXTENSIONS
-		// the message ID for upload only message
-		// 0 if not supported
-		boost::uint8_t m_upload_only_id;
-
-		// the message ID for holepunch messages
-		boost::uint8_t m_holepunch_id;
+		crypto_receive_buffer m_recv_buffer;
 #endif
 
 		std::string m_client_version;
-
-		static const message_handler m_message_handler[num_supported_messages];
 
 		// the peer ID we advertise for ourself
 		peer_id m_our_peer_id;
@@ -395,7 +381,7 @@ private:
 		// where in the send buffer actual payload
 		// data is located. This is currently
 		// only used to be able to gather statistics
-		// seperately on payload and protocol data.
+		// separately on payload and protocol data.
 		struct range
 		{
 			range(int s, int l)
@@ -408,25 +394,24 @@ private:
 			int start;
 			int length;
 		};
-		static bool range_below_zero(const range& r)
-		{ return r.start < 0; }
+
 		std::vector<range> m_payloads;
 
-		// we have suggested these pieces to the peer
-		// don't suggest it again
-		bitfield m_sent_suggested_pieces;
-
-#ifndef TORRENT_DISABLE_ENCRYPTION
+#if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 		// initialized during write_pe1_2_dhkey, and destroyed on
 		// creation of m_enc_handler. Cannot reinitialize once
 		// initialized.
 		boost::scoped_ptr<dh_key_exchange> m_dh_key_exchange;
-		
+
+		// used during an encrypted handshake then moved
+		// into m_enc_handler if rc4 encryption is negotiated
+		// otherwise it is destroyed when the handshake completes
+		boost::shared_ptr<rc4_handler> m_rc4;
+
 		// if encryption is negotiated, this is used for
-		// encryption/decryption during the entire session. Destroyed
-		// if plaintext is selected
-		boost::scoped_ptr<encryption_handler> m_enc_handler;
-		
+		// encryption/decryption during the entire session.
+		encryption_handler m_enc_handler;
+
 		// (outgoing only) synchronize verification constant with
 		// remote peer, this will hold rc4_decrypt(vc). Destroyed
 		// after the sync step.
@@ -436,13 +421,24 @@ private:
 		// the sync hash (hash("req1",secret)). Destroyed after the
 		// sync step.
 		boost::scoped_ptr<sha1_hash> m_sync_hash;
+#endif // #if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 
+		static const message_handler m_message_handler[num_supported_messages];
+
+#if !defined(TORRENT_DISABLE_ENCRYPTION) && !defined(TORRENT_DISABLE_EXTENSIONS)
 		// used to disconnect peer if sync points are not found within
 		// the maximum number of bytes
 		int m_sync_bytes_read;
-#endif // #ifndef TORRENT_DISABLE_ENCRYPTION
+#endif
 
 #ifndef TORRENT_DISABLE_EXTENSIONS
+		// the message ID for upload only message
+		// 0 if not supported
+		boost::uint8_t m_upload_only_id;
+
+		// the message ID for holepunch messages
+		boost::uint8_t m_holepunch_id;
+
 		// the message ID for don't-have message
 		boost::uint8_t m_dont_have_id;
 
@@ -450,10 +446,13 @@ private:
 		// 0 if not supported
 		boost::uint8_t m_share_mode_id;
 
-		// the reserved bits received from the other peer
-		// in the bittorrent handshake
 		char m_reserved_bits[8];
 #endif
+
+#if defined TORRENT_DEBUG || defined TORRENT_RELEASE_ASSERTS
+		bool m_in_constructor;
+#endif
+
 	};
 }
 

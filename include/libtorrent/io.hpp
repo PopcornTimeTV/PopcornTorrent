@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2014, Arvid Norberg
+Copyright (c) 2003-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_IO_HPP_INCLUDED
 #define TORRENT_IO_HPP_INCLUDED
 
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 #include <boost/cstdint.hpp>
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+
 #include <string>
 #include <algorithm> // for copy
 #include <cstring> // for memcpy
@@ -51,7 +54,7 @@ namespace libtorrent
 		inline T read_impl(InIt& start, type<T>)
 		{
 			T ret = 0;
-			for (int i = 0; i < (int)sizeof(T); ++i)
+			for (int i = 0; i < int(sizeof(T)); ++i)
 			{
 				ret <<= 8;
 				ret |= static_cast<boost::uint8_t>(*start);
@@ -75,7 +78,7 @@ namespace libtorrent
 		template <class T, class OutIt>
 		inline void write_impl(T val, OutIt& start)
 		{
-			for (int i = (int)sizeof(T)-1; i >= 0; --i)
+			for (int i = int(sizeof(T))-1; i >= 0; --i)
 			{
 				*start = static_cast<unsigned char>((val >> (i * 8)) & 0xff);
 				++start;
@@ -151,9 +154,9 @@ namespace libtorrent
 
 		inline int write_string(std::string const& str, char*& start)
 		{
-			std::memcpy((void*)start, str.c_str(), str.size());
+			std::memcpy(reinterpret_cast<void*>(start), str.c_str(), str.size());
 			start += str.size();
-			return str.size();
+			return int(str.size());
 		}
 
 		template <class OutIt>

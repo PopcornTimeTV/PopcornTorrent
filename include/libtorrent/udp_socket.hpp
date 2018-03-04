@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2007-2014, Arvid Norberg
+Copyright (c) 2007-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -40,21 +40,21 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/buffer.hpp"
 #include "libtorrent/thread.hpp"
 #include "libtorrent/deadline_timer.hpp"
+#include "libtorrent/debug.hpp"
+#include "libtorrent/aux_/allocating_handler.hpp"
 
 #include <deque>
 
 namespace libtorrent
 {
-	class connection_queue;
-
-	struct udp_socket_observer
+	struct TORRENT_EXTRA_EXPORT udp_socket_observer
 	{
 		// return true if the packet was handled (it won't be
 		// propagated to the next observer)
 		virtual bool incoming_packet(error_code const& ec
 			, udp::endpoint const&, char const* buf, int size) = 0;
-		virtual bool incoming_packet(error_code const& ec
-			, char const* hostname, char const* buf, int size) { return false; }
+		virtual bool incoming_packet(error_code const& /* ec */
+			, char const* /* hostname */, char const* /* buf */, int /* size */) { return false; }
 
 		// called when the socket becomes writeable, after having
 		// failed with EWOULDBLOCK
@@ -62,24 +62,24 @@ namespace libtorrent
 
 		// called every time the socket is drained of packets
 		virtual void socket_drained() {}
+	protected:
+		~udp_socket_observer() {}
 	};
 
-	class udp_socket
+	class TORRENT_EXTRA_EXPORT udp_socket : single_threaded
 	{
 	public:
-		udp_socket(io_service& ios, connection_queue& cc);
+		udp_socket(io_service& ios);
 		~udp_socket();
 
-		enum flags_t { dont_drop = 1, peer_connection = 2, dont_queue = 4 };
+		enum flags_t {
+			dont_drop = 1
+			, peer_connection = 2
+			, tracker_connection = 4
+			, dont_queue = 8
+		};
 
-		bool is_open() const
-		{
-			return m_ipv4_sock.is_open()
-#if TORRENT_USE_IPV6
-				|| m_ipv6_sock.is_open()
-#endif
-				;
-		}
+		bool is_open() const { return m_abort == false; }
 		io_service& get_io_service() { return m_ipv4_sock.get_io_service(); }
 
 		void subscribe(udp_socket_observer* o);
@@ -95,8 +95,8 @@ namespace libtorrent
 		void close();
 		int local_port() const { return m_bind_port; }
 
-		void set_proxy_settings(proxy_settings const& ps);
-		proxy_settings const& get_proxy_settings() { return m_proxy_settings; }
+		void set_proxy_settings(aux::proxy_settings const& ps);
+		aux::proxy_settings const& get_proxy_settings() { return m_proxy_settings; }
 		void set_force_proxy(bool f) { m_force_proxy = f; }
 
 		bool is_closed() const { return m_abort; }
@@ -108,33 +108,45 @@ namespace libtorrent
 
 		void set_buf_size(int s);
 
+		typedef udp::socket::receive_buffer_size receive_buffer_size;
+		typedef udp::socket::send_buffer_size send_buffer_size;
+
 		template <class SocketOption>
 		void get_option(SocketOption const& opt, error_code& ec)
 		{
-			m_ipv4_sock.get_option(opt, ec);
 #if TORRENT_USE_IPV6
-			m_ipv6_sock.get_option(opt, ec);
+			if (opt.level(udp::v6()) == IPPROTO_IPV6)
+				m_ipv6_sock.get_option(opt, ec);
+			else
 #endif
+				m_ipv4_sock.get_option(opt, ec);
 		}
 
 		template <class SocketOption>
 		void set_option(SocketOption const& opt, error_code& ec)
 		{
-			m_ipv4_sock.set_option(opt, ec);
+			if (opt.level(udp::v4()) != IPPROTO_IPV6)
+				m_ipv4_sock.set_option(opt, ec);
 #if TORRENT_USE_IPV6
-			m_ipv6_sock.set_option(opt, ec);
+			if (opt.level(udp::v6()) != IPPROTO_IP)
+				m_ipv6_sock.set_option(opt, ec);
 #endif
 		}
 
 		template <class SocketOption>
 		void get_option(SocketOption& opt, error_code& ec)
 		{
-			m_ipv4_sock.get_option(opt, ec);
+#if TORRENT_USE_IPV6
+			if (opt.level(udp::v6()) == IPPROTO_IPV6)
+				m_ipv6_sock.get_option(opt, ec);
+			else
+#endif
+				m_ipv4_sock.get_option(opt, ec);
 		}
 
 		udp::endpoint proxy_addr() const { return m_proxy_addr; }
 
-	protected:
+	private:
 
 		struct queued_packet
 		{
@@ -160,15 +172,35 @@ namespace libtorrent
 				;
 		}
 
-	private:
-
 		// non-copyable
 		udp_socket(udp_socket const&);
 		udp_socket& operator=(udp_socket const&);
 
+		void close_impl();
+
 		// observers on this udp socket
 		std::vector<udp_socket_observer*> m_observers;
 		std::vector<udp_socket_observer*> m_added_observers;
+
+		template <class Handler>
+		aux::allocating_handler<Handler, TORRENT_READ_HANDLER_MAX_SIZE>
+			make_read_handler4(Handler const& handler)
+		{
+			return aux::allocating_handler<Handler, TORRENT_READ_HANDLER_MAX_SIZE>(
+				handler, m_v4_read_handler_storage
+			);
+		}
+
+#if TORRENT_USE_IPV6
+		template <class Handler>
+		aux::allocating_handler<Handler, TORRENT_READ_HANDLER_MAX_SIZE>
+			make_read_handler6(Handler const& handler)
+		{
+			return aux::allocating_handler<Handler, TORRENT_READ_HANDLER_MAX_SIZE>(
+				handler, m_v6_read_handler_storage
+			);
+		}
+#endif
 
 		// this is true while iterating over the observers
 		// vector, invoking observer hooks. We may not
@@ -189,12 +221,11 @@ namespace libtorrent
 
 		void setup_read(udp::socket* s);
 		void on_read(error_code const& ec, udp::socket* s);
-		void on_read_impl(udp::socket* sock, udp::endpoint const& ep
+		void on_read_impl(udp::endpoint const& ep
 			, error_code const& e, std::size_t bytes_transferred);
 		void on_name_lookup(error_code const& e, tcp::resolver::iterator i);
-		void on_timeout();
-		void on_connect(int ticket);
-		void on_connected(error_code const& ec, int ticket);
+		void on_connect_timeout(error_code const& ec);
+		void on_connected(error_code const& ec);
 		void handshake1(error_code const& e);
 		void handshake2(error_code const& e);
 		void handshake3(error_code const& e);
@@ -203,6 +234,7 @@ namespace libtorrent
 		void connect1(error_code const& e);
 		void connect2(error_code const& e);
 		void hung_up(error_code const& e);
+		void retry_socks_connect(error_code const& ec);
 
 		void drain_queue();
 
@@ -210,23 +242,9 @@ namespace libtorrent
 		void wrap(char const* hostname, int port, char const* p, int len, error_code& ec);
 		void unwrap(error_code const& e, char const* buf, int size);
 
-#if TORRENT_USE_ASSERTS
-
-#if defined BOOST_HAS_PTHREADS
-		mutable pthread_t m_thread;
-#endif
-		bool is_single_thread() const
-		{
-#if defined BOOST_HAS_PTHREADS
-			if (m_thread == 0)
-				m_thread = pthread_self();
-			return m_thread == pthread_self();
-#endif
-			return true;
-		}
-#endif
-
 		udp::socket m_ipv4_sock;
+		aux::handler_storage<TORRENT_READ_HANDLER_MAX_SIZE> m_v4_read_handler_storage;
+		deadline_timer m_timer;
 		int m_buf_size;
 
 		// if the buffer size is attempted
@@ -239,18 +257,20 @@ namespace libtorrent
 
 #if TORRENT_USE_IPV6
 		udp::socket m_ipv6_sock;
+		aux::handler_storage<TORRENT_READ_HANDLER_MAX_SIZE> m_v6_read_handler_storage;
 #endif
 
 		boost::uint16_t m_bind_port;
 		boost::uint8_t m_v4_outstanding;
+		boost::uint8_t m_restart_v4;
 #if TORRENT_USE_IPV6
 		boost::uint8_t m_v6_outstanding;
+		boost::uint8_t m_restart_v6;
 #endif
 
 		tcp::socket m_socks5_sock;
-		int m_connection_ticket;
-		proxy_settings m_proxy_settings;
-		connection_queue& m_cc;
+		deadline_timer m_retry_timer;
+		aux::proxy_settings m_proxy_settings;
 		tcp::resolver m_resolver;
 		char m_tmp_buf[270];
 		bool m_queue_packets;
@@ -290,25 +310,23 @@ namespace libtorrent
 		int m_outstanding_connect;
 		int m_outstanding_timeout;
 		int m_outstanding_resolve;
-		int m_outstanding_connect_queue;
 		int m_outstanding_socks;
-
-		char timeout_stack[2000];
 #endif
 	};
 
 	struct rate_limited_udp_socket : public udp_socket
 	{
-		rate_limited_udp_socket(io_service& ios, connection_queue& cc);
+		rate_limited_udp_socket(io_service& ios);
 		void set_rate_limit(int limit) { m_rate_limit = limit; }
 		bool send(udp::endpoint const& ep, char const* p, int len
 			, error_code& ec, int flags = 0);
+		bool has_quota();
 
 	private:
 
 		int m_rate_limit;
 		int m_quota;
-		ptime m_last_tick;
+		time_point m_last_tick;
 	};
 }
 

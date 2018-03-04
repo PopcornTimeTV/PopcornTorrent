@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2014, Arvid Norberg
+Copyright (c) 2009-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,27 +35,23 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <vector>
-#include <boost/intrusive_ptr.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include "libtorrent/storage_defs.hpp"
 #include "libtorrent/peer_id.hpp" // sha1_hash
 #include "libtorrent/version.hpp"
 
-#ifndef TORRENT_DISABLE_EXTENSIONS
-#include "libtorrent/extensions.hpp"
-#endif
-
 namespace libtorrent
 {
 	class torrent_info;
-	class torrent;
 	struct torrent_plugin;
+	struct torrent_handle;
 
 	// The add_torrent_params is a parameter pack for adding torrents to a
 	// session. The key fields when adding a torrent are:
 	//
 	// * ti - when you have a .torrent file
-	// * url - when you have a magnet link or http URL to the .torrent file
+	// * url - when you have a magnet link
 	// * info_hash - when all you have is an info-hash (this is similar to a
 	//   magnet link)
 	//
@@ -72,6 +68,7 @@ namespace libtorrent
 	// used for the torrent as long as it doesn't have metadata. See
 	// ``torrent_handle::name``.
 	//
+#include "libtorrent/aux_/disable_warnings_push.hpp"
 	struct TORRENT_EXPORT add_torrent_params
 	{
 		// The constructor can be used to initialize the storage constructor,
@@ -109,6 +106,7 @@ namespace libtorrent
 		}
 
 #ifndef TORRENT_NO_DEPRECATE
+		TORRENT_DEPRECATED
 		void update_flags() const
 		{
 			if (flags != (flag_ignore_flags | default_flags)) return;
@@ -126,6 +124,8 @@ namespace libtorrent
 			if (merge_resume_trackers) f |= flag_merge_resume_trackers;
 		}
 #endif
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
 
 		// values for the ``flags`` field
 		enum flags_t
@@ -157,6 +157,7 @@ namespace libtorrent
 			// add_torrent_params configuring the torrent override the corresponding
 			// configuration from the resume file, with the one exception of save
 			// resume data, which has its own flag (for historic reasons).
+			// "file_priorities" and "save_path" are not affected by this flag.
 			flag_override_resume_data = 0x002,
 
 			// If ``flag_upload_mode`` is set, the torrent will be initialized in
@@ -175,7 +176,7 @@ namespace libtorrent
 
 			// determines if the torrent should be added in *share mode* or not.
 			// Share mode indicates that we are not interested in downloading the
-			// torrent, but merley want to improve our share ratio (i.e. increase
+			// torrent, but merely want to improve our share ratio (i.e. increase
 			// it). A torrent started in share mode will do its best to never
 			// download more than it uploads to the swarm. If the swarm does not
 			// have enough demand for upload capacity, the torrent will not
@@ -190,13 +191,13 @@ namespace libtorrent
 			// priorities for torrents in share mode, it will make it not work.
 			// 
 			// The share mode has one setting, the share ratio target, see
-			// ``session_settings::share_mode_target`` for more info.
+			// ``settings_pack::share_mode_target`` for more info.
 			flag_share_mode = 0x008,
 
 			// determines if the IP filter should apply to this torrent or not. By
 			// default all torrents are subject to filtering by the IP filter
 			// (i.e. this flag is set by default). This is useful if certain
-			// torrents needs to be excempt for some reason, being an auto-update
+			// torrents needs to be exempt for some reason, being an auto-update
 			// torrent for instance.
 			flag_apply_ip_filter = 0x010,
 
@@ -227,7 +228,11 @@ namespace libtorrent
 
 			// defaults to off and specifies whether tracker URLs loaded from
 			// resume data should be added to the trackers in the torrent or
-			// replace the trackers.
+			// replace the trackers. When replacing trackers (i.e. this flag is not
+			// set), any trackers passed in via add_torrent_params are also
+			// replaced by any trackers in the resume data. The default behavior is
+			// to have the resume data override the .torrent file _and_ the
+			// trackers added in add_torrent_params.
 			flag_merge_resume_trackers = 0x100,
 
 			// on by default and means that this torrent will be part of state
@@ -250,23 +255,43 @@ namespace libtorrent
 			// case the save_path specified in add_torrent_params is always used.
 			flag_use_resume_save_path = 0x1000,
 
+			// indicates that this torrent should never be unloaded from RAM, even
+			// if unloading torrents are allowed in general. Setting this makes
+			// the torrent exempt from loading/unloading management.
+			flag_pinned = 0x2000,
+
+			// defaults to off and specifies whether web seed URLs loaded from
+			// resume data should be added to the ones in the torrent file or
+			// replace them. No distinction is made between the two different kinds
+			// of web seeds (`BEP 17`_ and `BEP 19`_). When replacing web seeds
+			// (i.e. when this flag is not set), any web seeds passed in via
+			// add_torrent_params are also replaced. The default behavior is to
+			// have any web seeds in the resume data take precedence over whatever
+			// is passed in here as well as the .torrent file.
+			flag_merge_resume_http_seeds = 0x8000,
+
+			// the stop when ready flag. Setting this flag is equivalent to calling
+			// torrent_handle::stop_when_ready() immediately after the torrent is
+			// added.
+			flag_stop_when_ready = 0x4000,
+
 			// internal
-			default_flags = flag_update_subscribe | flag_auto_managed | flag_paused | flag_apply_ip_filter
+			default_flags = flag_pinned | flag_update_subscribe | flag_auto_managed | flag_paused | flag_apply_ip_filter
+
 #ifndef TORRENT_NO_DEPRECATE
-			, flag_ignore_flags = 0x80000000
+			, flag_ignore_flags TORRENT_DEPRECATED_ENUM = 0x80000000
 #endif
 		};
 
-		// filled in by the constructor and should be left untouched. It
-		// is used for forward binary compatibility.
+		// filled in by the constructor and should be left untouched. It is used
+		// for forward binary compatibility.
 		int version;
-
 		// torrent_info object with the torrent to add. Unless the url or
-		// info_hash is set, this is required to be initiazlied.
-		boost::intrusive_ptr<torrent_info> ti;
+		// info_hash is set, this is required to be initialized.
+		boost::shared_ptr<torrent_info> ti;
 
 #ifndef TORRENT_NO_DEPRECATE
-		char const* tracker_url;
+		char const* TORRENT_DEPRECATED_MEMBER tracker_url;
 #endif
 		// If the torrent doesn't have a tracker, but relies on the DHT to find
 		// peers, the ``trackers`` can specify tracker URLs for the torrent.
@@ -281,14 +306,17 @@ namespace libtorrent
 		std::string name;
 
 		// the path where the torrent is or will be stored. Note that this may
-		// alos be stored in resume data. If you want the save path saved in
+		// also be stored in resume data. If you want the save path saved in
 		// the resume data to be used, you need to set the
 		// flag_use_resume_save_path flag.
-		//
+		// 
 		// .. note::
 		// 	On windows this path (and other paths) are interpreted as UNC
 		// 	paths. This means they must use backslashes as directory separators
 		// 	and may not contain the special directories "." or "..".
+		// 
+		// Setting this to an absolute path performs slightly better than a
+		// relative path.
 		std::string save_path;
 
 		// The optional parameter, ``resume_data`` can be given if up to date
@@ -312,12 +340,15 @@ namespace libtorrent
 		storage_constructor_type storage;
 
 		// The ``userdata`` parameter is optional and will be passed on to the
-		// extension constructor functions, if any (see `add_extension()`_).
+		// extension constructor functions, if any
+		// (see torrent_handle::add_extension()).
 		void* userdata;
 
 		// can be set to control the initial file priorities when adding a
 		// torrent. The semantics are the same as for
-		// ``torrent_handle::prioritize_files()``.
+		// ``torrent_handle::prioritize_files()``. The file priorities specified
+		// in here take precedence over those specified in the resume data, if
+		// any.
 		std::vector<boost::uint8_t> file_priorities;
 
 		// torrent extension construction functions can be added to this vector
@@ -326,7 +357,7 @@ namespace libtorrent
 		// to avoid race conditions. For instance it may be important to have the
 		// plugin catch events that happen very early on after the torrent is
 		// created.
-		std::vector<boost::function<boost::shared_ptr<torrent_plugin>(torrent*, void*)> >
+		std::vector<boost::function<boost::shared_ptr<torrent_plugin>(torrent_handle const&, void*)> >
 			extensions;
 
 		// the default tracker id to be used when announcing to trackers. By
@@ -339,15 +370,7 @@ namespace libtorrent
 		// ``downloading_metadata`` state until the .torrent file has been
 		// downloaded. If there's any error while downloading, the torrent will
 		// be stopped and the torrent error state (``torrent_status::error``)
-		// will indicate what went wrong. The ``url`` may refer to a magnet link
-		// or a regular http URL.
-		// 
-		// If it refers to an HTTP URL, the info-hash for the added torrent will
-		// not be the true info-hash of the .torrent. Instead a placeholder,
-		// unique, info-hash is used which is later updated once the .torrent
-		// file has been downloaded.
-		// 
-		// Once the info-hash change happens, a torrent_update_alert is posted.
+		// will indicate what went wrong. The ``url`` may be set to a magnet link.
 		std::string url;
 
 		// if ``uuid`` is specified, it is used to find duplicates. If another
@@ -356,12 +379,18 @@ namespace libtorrent
 		// items which has UUIDs specified.
 		std::string uuid;
 
-		// should point to the URL of the RSS feed this torrent comes from,
-		// if it comes from an RSS feed.
+		// should point to the URL of the RSS feed this torrent comes from, if it
+		// comes from an RSS feed.
 		std::string source_feed_url;
 
 		// flags controlling aspects of this torrent and how it's added. See
 		// flags_t for details.
+		// 
+		// .. note::
+		// 	The ``flags`` field is initialized with default flags by the
+		// 	constructor. In order to preserve default behavior when clearing or
+		// 	setting other flags, make sure to bitwise OR or in a flag or bitwise
+		// 	AND the inverse of a flag to clear it.
 		boost::uint64_t flags;
 
 		// set this to the info hash of the torrent to add in case the info-hash
@@ -378,21 +407,24 @@ namespace libtorrent
 		// 
 		// -1 means unlimited on these settings just like their counterpart
 		// functions on torrent_handle
+		// 
+		// For fine grained control over rate limits, including making them apply
+		// to local peers, see peer-classes_.
 		int max_uploads;
 		int max_connections;
 		int upload_limit;
 		int download_limit;
 
 #ifndef TORRENT_NO_DEPRECATE
-		bool seed_mode;
-		bool override_resume_data;
-		bool upload_mode;
-		bool share_mode;
-		bool apply_ip_filter;
-		bool paused;
-		bool auto_managed;
-		bool duplicate_is_error;
-		bool merge_resume_trackers;
+		bool TORRENT_DEPRECATED_MEMBER seed_mode;
+		bool TORRENT_DEPRECATED_MEMBER override_resume_data;
+		bool TORRENT_DEPRECATED_MEMBER upload_mode;
+		bool TORRENT_DEPRECATED_MEMBER share_mode;
+		bool TORRENT_DEPRECATED_MEMBER apply_ip_filter;
+		bool TORRENT_DEPRECATED_MEMBER paused;
+		bool TORRENT_DEPRECATED_MEMBER auto_managed;
+		bool TORRENT_DEPRECATED_MEMBER duplicate_is_error;
+		bool TORRENT_DEPRECATED_MEMBER merge_resume_trackers;
 #endif
 
 	};

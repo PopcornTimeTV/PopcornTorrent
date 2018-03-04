@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2011-2014, Arvid Norberg
+Copyright (c) 2011-2016, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -34,39 +34,80 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/random.hpp"
 #include "libtorrent/assert.hpp"
 
+#ifdef BOOST_NO_CXX11_HDR_RANDOM
+#include "libtorrent/aux_/disable_warnings_push.hpp"
+
+#include <boost/random/random_device.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+
+#include "libtorrent/aux_/disable_warnings_pop.hpp"
+#else
+#include <random>
+#endif
+
+#if !TORRENT_THREADSAFE_STATIC
+#include "libtorrent/thread.hpp"
+#endif
+
 namespace libtorrent
 {
-
-	namespace
-	{
-		boost::uint32_t x = 123456789;
-#ifdef TORRENT_USE_ASSERTS
-		bool seeded = false;
+#ifdef BOOST_NO_CXX11_HDR_RANDOM
+	using boost::random::random_device;
+	using boost::random::mt19937;
+	using boost::random::uniform_int_distribution;
+#else
+	using std::random_device;
+	using std::mt19937;
+	using std::uniform_int_distribution;
 #endif
-	}
 
-	void random_seed(boost::uint32_t v)
-	{
-		x = v;
-#ifdef TORRENT_USE_ASSERTS
-		seeded = true;
-#endif
-	}
+#ifdef TORRENT_BUILD_SIMULATOR
 
-	// this is an xorshift random number generator
-	// see: http://en.wikipedia.org/wiki/Xorshift
 	boost::uint32_t random()
 	{
-		TORRENT_ASSERT(seeded);
-
-		static boost::uint32_t y = 362436069;
-		static boost::uint32_t z = 521288629;
-		static boost::uint32_t w = 88675123;
-		boost::uint32_t t;
-
-		t = x ^ (x << 11);
-		x = y; y = z; z = w;
-		return w = w ^ (w >> 19) ^ (t ^ (t >> 8));
+		// make sure random numbers are deterministic. Seed with a fixed number
+		static mt19937 random_engine(4040);
+		return uniform_int_distribution<boost::uint32_t>(0, UINT_MAX)(random_engine);
 	}
+
+#else
+
+#if !TORRENT_THREADSAFE_STATIC
+	// because local statics are not atomic pre c++11
+	// do it manually, probably at a higher cost
+	namespace
+	{
+		static mutex random_device_mutex;
+		static random_device* dev = NULL;
+		static mt19937* rnd = NULL;
+	}
+#endif
+
+	boost::uint32_t random()
+	{
+#if TORRENT_THREADSAFE_STATIC
+		static random_device dev;
+		static mt19937 random_engine(dev());
+		return uniform_int_distribution<boost::uint32_t>(0, UINT_MAX)(random_engine);
+#else
+		mutex::scoped_lock l(random_device_mutex);
+
+		if (dev == NULL)
+		{
+			dev = new random_device();
+			rnd = new mt19937((*dev)());
+		}
+		return uniform_int_distribution<boost::uint32_t>(0, UINT_MAX)(*rnd);
+#endif
+	}
+
+#endif // TORRENT_BUILD_SIMULATOR
+
+	boost::uint32_t randint(int i)
+	{
+		return random() % i;
+	}
+
 }
 

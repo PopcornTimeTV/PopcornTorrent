@@ -305,6 +305,7 @@
 		4DFBAD091E990BA7009A5E35 /* NSString+Localization.h in Headers */ = {isa = PBXBuildFile; fileRef = 4DFBAD061E990BA7009A5E35 /* NSString+Localization.h */; };
 		4DFBAD0A1E990BA7009A5E35 /* NSString+Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */; };
 		4DFBAD0B1E990BA7009A5E35 /* NSString+Localization.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DFBAD071E990BA7009A5E35 /* NSString+Localization.m */; };
+		79FEF06F541FC4B7F5B43D5D /* Pods_PopcornTorrent_iOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 42166EDB84DEA010088BEA73 /* Pods_PopcornTorrent_iOS.framework */; };
 		9265165C1CEA69A6000F57D4 /* PTTorrentStreamer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */; };
 		926516631CEA69A6000F57D4 /* PTTorrentStreamer.h in Headers */ = {isa = PBXBuildFile; fileRef = 922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		B8F4E6DA7C9F57DE1DE04FEF /* Pods_PopcornTorrent_tvOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1BC644C8FF4271C556AD751E /* Pods_PopcornTorrent_tvOS.framework */; };
@@ -424,6 +425,7 @@
 		0E442A9FB3CD3EABA0F1BBD6 /* Pods-PopcornTorrent tvOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent tvOS.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent tvOS/Pods-PopcornTorrent tvOS.debug.xcconfig"; sourceTree = "<group>"; };
 		1BC644C8FF4271C556AD751E /* Pods_PopcornTorrent_tvOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PopcornTorrent_tvOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		25F2A9146006364112154AD0 /* Pods-PopcornTorrent iOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent iOS.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent iOS/Pods-PopcornTorrent iOS.debug.xcconfig"; sourceTree = "<group>"; };
+		42166EDB84DEA010088BEA73 /* Pods_PopcornTorrent_iOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PopcornTorrent_iOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D1440281E9AF45500B78269 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4D14402A1E9AF46000B78269 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4D2996661EE431B600737894 /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
@@ -588,7 +590,6 @@
 		922F43A91CA37F0200955B33 /* PTTorrentStreamer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PTTorrentStreamer.h; sourceTree = "<group>"; };
 		922F43AA1CA37F0200955B33 /* PTTorrentStreamer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PTTorrentStreamer.mm; sourceTree = "<group>"; };
 		9265166A1CEA69A6000F57D4 /* PopcornTorrent.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PopcornTorrent.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		A5B92801DD3949E86AEFEBA1 /* Pods-PopcornTorrent tvOSTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent tvOSTests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests.debug.xcconfig"; sourceTree = "<group>"; };
 		BB5BB859415E8479D70380E5 /* Pods-PopcornTorrent tvOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent tvOS.release.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent tvOS/Pods-PopcornTorrent tvOS.release.xcconfig"; sourceTree = "<group>"; };
 		D91570A21D6B927C00C6C848 /* PopcornTorrentTests iOS.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "PopcornTorrentTests iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D964E42A204B77A300AF8E30 /* cpuid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = cpuid.cpp; path = torrent/cpuid.cpp; sourceTree = "<group>"; };
@@ -637,7 +638,6 @@
 		D964E4AC204B85C900AF8E30 /* node_entry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = node_entry.cpp; path = torrent/kademlia/node_entry.cpp; sourceTree = "<group>"; };
 		D964E4AD204B85C900AF8E30 /* put_data.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = put_data.cpp; path = torrent/kademlia/put_data.cpp; sourceTree = "<group>"; };
 		D964E4B8204B86BE00AF8E30 /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS11.2.sdk/System/Library/Frameworks/MediaPlayer.framework; sourceTree = DEVELOPER_DIR; };
-		F1FFB6C28EB59FA52081D9FD /* Pods-PopcornTorrent tvOSTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PopcornTorrent tvOSTests.release.xcconfig"; path = "Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -664,6 +664,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D964E4B9204B86BE00AF8E30 /* MediaPlayer.framework in Frameworks */,
+				79FEF06F541FC4B7F5B43D5D /* Pods_PopcornTorrent_iOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -912,8 +913,6 @@
 				04418AA7DE19557647E6C636 /* Pods-PopcornTorrent iOS.release.xcconfig */,
 				0E442A9FB3CD3EABA0F1BBD6 /* Pods-PopcornTorrent tvOS.debug.xcconfig */,
 				BB5BB859415E8479D70380E5 /* Pods-PopcornTorrent tvOS.release.xcconfig */,
-				A5B92801DD3949E86AEFEBA1 /* Pods-PopcornTorrent tvOSTests.debug.xcconfig */,
-				F1FFB6C28EB59FA52081D9FD /* Pods-PopcornTorrent tvOSTests.release.xcconfig */,
 			);
 			name = Pods;
 			sourceTree = "<group>";
@@ -925,6 +924,7 @@
 				D964E4B8204B86BE00AF8E30 /* MediaPlayer.framework */,
 				4DCB39331E8444CA00388374 /* UIKit.framework */,
 				1BC644C8FF4271C556AD751E /* Pods_PopcornTorrent_tvOS.framework */,
+				42166EDB84DEA010088BEA73 /* Pods_PopcornTorrent_iOS.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -1085,12 +1085,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4D97E8851D99C2EF009FEF7E /* Build configuration list for PBXNativeTarget "PopcornTorrent tvOSTests" */;
 			buildPhases = (
-				0725C7EACA6711AD9B013673 /* [CP] Check Pods Manifest.lock */,
 				4D97E8751D99C2EF009FEF7E /* Sources */,
 				4D97E8761D99C2EF009FEF7E /* Frameworks */,
 				4D97E8771D99C2EF009FEF7E /* Resources */,
-				FDD9B5D4CF8173C04374A186 /* [CP] Embed Pods Frameworks */,
-				F82E4D00FD28D804B427F25E /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -1260,24 +1257,6 @@
 			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrent tvOS/Pods-PopcornTorrent tvOS-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		0725C7EACA6711AD9B013673 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-PopcornTorrent tvOSTests-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
 		1962D0D1CC7E4A7DE05D29A3 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1355,39 +1334,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		F82E4D00FD28D804B427F25E /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		FDD9B5D4CF8173C04374A186 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/GCDWebServer-tvOS/GCDWebServer.framework",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GCDWebServer.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-PopcornTorrent tvOSTests/Pods-PopcornTorrent tvOSTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -1936,7 +1882,6 @@
 		};
 		4D97E8861D99C2EF009FEF7E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A5B92801DD3949E86AEFEBA1 /* Pods-PopcornTorrent tvOSTests.debug.xcconfig */;
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
@@ -1950,7 +1895,6 @@
 		};
 		4D97E8871D99C2EF009FEF7E /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F1FFB6C28EB59FA52081D9FD /* Pods-PopcornTorrent tvOSTests.release.xcconfig */;
 			buildSettings = {
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;

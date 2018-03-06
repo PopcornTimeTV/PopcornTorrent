@@ -97,9 +97,8 @@ using namespace libtorrent;
     session_settings settings = _session->settings();
     settings.announce_to_all_tiers = true;
     settings.announce_to_all_trackers = true;
-    settings.prefer_udp_trackers = false;
     settings.max_peerlist_size = 10000;
-    settings.cache_size = 2048;
+    settings.cache_size = 512;
     _session->set_settings(settings);
     
     _requestedRangeInfo = [[NSMutableDictionary alloc] init];
@@ -475,8 +474,8 @@ using namespace libtorrent;
     if (_requiredSpace > availableSpace) {
         NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, self.fileSize.stringValue];
         NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-4 userInfo:@{NSLocalizedDescriptionKey: description}];
-        [self cancelStreamingAndDeleteData:NO];
         if (_failureBlock) _failureBlock(error);
+        [self cancelStreamingAndDeleteData:NO];
         return;
     }
     

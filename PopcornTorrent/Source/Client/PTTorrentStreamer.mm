@@ -157,7 +157,7 @@ using namespace libtorrent;
             if (ec) {
                 error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
             }
-            MIN_PIECES = ((tp.ti->file_at([self indexOfLargestFileInTorrentWithTorrentInfo:tp.ti]).size*0.05)/tp.ti->piece_length());
+            MIN_PIECES = ((tp.ti->file_at([self indexOfLargestFileInTorrentWithTorrentInfo:tp.ti]).size*0.03)/tp.ti->piece_length());
         } else {
             error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-2 userInfo:@{NSLocalizedDescriptionKey: [NSString localizedStringWithFormat:@"File doesn't exist at path: %@".localizedString, filePath]}];
         }
@@ -426,7 +426,7 @@ using namespace libtorrent;
         }
     }];
     
-    [self.mediaServer startWithPort:50322 bonjourName:nil];
+    [self.mediaServer startWithPort:50321 bonjourName:nil];
     
     __block NSURL *serverURL = self.mediaServer.serverURL;
     

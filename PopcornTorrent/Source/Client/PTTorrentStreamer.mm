@@ -5,6 +5,7 @@
 #import <string>
 #import <libtorrent/alert.hpp>
 #import <libtorrent/alert_types.hpp>
+#import <libtorrent/bencode.hpp>
 #import "CocoaSecurity.h"
 #import "PTTorrentStreamer+Protected.h"
 #import <GCDWebServer/GCDWebServer.h>
@@ -28,7 +29,7 @@ NSNotificationName const PTTorrentStatusDidChangeNotification = @"com.popcorntim
 using namespace libtorrent;
 
 @implementation PTTorrentStreamer
-    
+
 + (instancetype)sharedStreamer {
     static dispatch_once_t onceToken;
     static PTTorrentStreamer *sharedStreamer;
@@ -190,6 +191,13 @@ using namespace libtorrent;
             if (failure) failure(error);
             return [self cancelStreamingAndDeleteData:NO];
         }
+    }else{
+        NSData *resumeData = [NSData dataWithContentsOfFile:[_savePath stringByAppendingString:@"/resumeData.fastresume"] ];
+        if (resumeData != nil){
+            unsigned long int len = resumeData.length;
+            std::vector<char> resumeVector((char *)resumeData.bytes, (char *)resumeData.bytes + len);
+            tp.resume_data = resumeVector;
+        }
     }
     
     tp.save_path = std::string([self.savePath UTF8String]);
@@ -209,9 +217,9 @@ using namespace libtorrent;
         [self metadataReceivedAlert:th];
     }
     
-    #if TARGET_OS_IOS
-        [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
-    #endif
+#if TARGET_OS_IOS
+    [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+#endif
 }
 
 
@@ -265,17 +273,19 @@ using namespace libtorrent;
     }
     
     return NO;
-
+    
 }
 
 
 - (void)cancelStreamingAndDeleteData:(BOOL)deleteData {
-    self.alertsQueue = nil;
-    self.alertsLoopActive = NO;
     
     std::vector<torrent_handle> ths = _session->get_torrents();
     for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
-        _session->remove_torrent(ths[i]);
+        ths[i].pause();
+        if (!deleteData && ths[i].need_save_resume_data())ths[i].save_resume_data();
+        ths[i].flush_cache();
+        _session->pause();
+        if (deleteData)_session->remove_torrent(ths[i]);
     }
     
     required_pieces.clear();
@@ -289,6 +299,8 @@ using namespace libtorrent;
     [self.mediaServer removeAllHandlers];
     
     if (deleteData) {
+        self.alertsQueue = nil;
+        self.alertsLoopActive = NO;
         [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
     }
     
@@ -303,9 +315,9 @@ using namespace libtorrent;
     _torrentStatus = (PTTorrentStatus){0, 0, 0, 0, 0, 0};
     _isFinished = false;
     
-    #if TARGET_OS_IOS
-        [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
-    #endif
+#if TARGET_OS_IOS
+    [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+#endif
 }
 
 
@@ -334,8 +346,16 @@ using namespace libtorrent;
                     case torrent_finished_alert::alert_type:
                         [self torrentFinishedAlert:((torrent_finished_alert *)alert.get())->handle];
                         break;
-                    default: break;
+                    case save_resume_data_alert::alert_type: {
+                        torrent_status st = (((save_resume_data_alert *)alert.get())->handle).status(torrent_handle::query_save_path
+                                                                                                     | torrent_handle::query_name);
+                        [self resumeDataReadyAlertWithData:*((save_resume_data_alert *)alert.get())->resume_data andSaveDirectory:[NSString stringWithUTF8String:(st.save_path + "/resumeData.fastresume").c_str()]];
+                        break;
+                    }
+                    default:
+                        break;
                 }
+                alert = nil;
             }
             deque.clear();
         }
@@ -352,7 +372,7 @@ using namespace libtorrent;
     }
     
     firstPiece = -1;
-
+    
     mtx.lock();
     
     required_pieces.clear();
@@ -361,16 +381,16 @@ using namespace libtorrent;
     boost::shared_ptr<const torrent_info> ti = th.torrent_file();
     th.clear_piece_deadlines();//clear all deadlines on all pieces before we set new ones
     std::fill(piece_priorities.begin(), piece_priorities.end(), 1);
-    th.prioritize_pieces(piece_priorities);// clear all piece priorities before setting new ones
+    //th.prioritize_pieces(piece_priorities);// clear all piece priorities before setting new ones
     
     for (int i = next_required_piece; i < next_required_piece + MIN_PIECES; i++) {
         if (i < ti->num_pieces()) {
-            th.piece_priority(i, LIBTORRENT_PRIORITY_MAXIMUM);
+            piece_priorities[i] = LIBTORRENT_PRIORITY_MAXIMUM;
             th.set_piece_deadline(i, PIECE_DEADLINE_MILLIS, torrent_handle::alert_when_available);
             required_pieces.push_back(i);
         }
     }
-    
+    th.prioritize_pieces(piece_priorities);
     mtx.unlock();
 }
 
@@ -397,7 +417,7 @@ using namespace libtorrent;
     
     [self.mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
         GCDWebServerFileResponse *response = [[GCDWebServerFileResponse alloc] init];
-
+        
         if (request.hasByteRange) {
             response = [[GCDWebServerFileResponse alloc]initWithFile:fileURL.relativePath byteRange:request.byteRange];
         } else {
@@ -567,6 +587,8 @@ using namespace libtorrent;
             [self.requestedRangeInfo removeAllObjects];
             completionBlock(response);
         }
+        if (MIN_PIECES == 0){[self metadataReceivedAlert:th];}
+        
         [self prioritizeNextPieces:th];
         [self processTorrent:th];
     }
@@ -591,13 +613,34 @@ using namespace libtorrent;
         [[NSNotificationCenter defaultCenter] postNotificationName:PTTorrentStatusDidChangeNotification object:self];
     });
     
-    #if TARGET_OS_IOS
-        [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
-    #endif
+#if TARGET_OS_IOS
+    [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+#endif
     
     // Remove the torrent when its finished
     th.pause(false);
     _session->remove_torrent(th);
 }
 
+- (void) resumeDataReadyAlertWithData:(entry)resumeData andSaveDirectory:(NSString*)directory{
+    self.alertsQueue = nil;
+    self.alertsLoopActive = NO;
+    std::vector<torrent_handle> ths = _session->get_torrents();
+    for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
+        _session->remove_torrent(ths[i]);
+    }
+    std::stringstream ss;
+    ss.unsetf(std::ios_base::skipws);
+    bencode(std::ostream_iterator<char>(ss), resumeData);
+    
+    NSData *resumeDataFile = [[NSData alloc] initWithBytesNoCopy:(void*)ss.str().c_str() length:ss.str().size() freeWhenDone:false];
+    NSAssert(resumeDataFile != nil, @"Resume data failed to be generated");
+    [resumeDataFile writeToFile:[NSURL URLWithString:directory].relativePath atomically:NO];
+    NSArray *contentsOfDirectory = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[[NSURL URLWithString:directory]URLByDeletingLastPathComponent].relativePath error:nil];
+    for(NSString *file in contentsOfDirectory){
+        NSLog(file);
+    }
+}
+
 @end
+

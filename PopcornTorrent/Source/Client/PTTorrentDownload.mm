@@ -11,6 +11,8 @@ NSString * const PTTorrentItemPropertyDownloadStatus = @"downloadStatus";
 NSString * const MPMediaItemPropertyPathOrLink = @"filePathOrLink";
 NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
 
+using namespace libtorrent;
+
 @implementation PTTorrentDownload {
     PTTorrentDownloadStatus _downloadStatus;
 }
@@ -217,12 +219,14 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
 }
 
 - (void)cancelStreamingAndDeleteData:(BOOL)deleteData {
-    self.alertsQueue = nil;
-    self.alertsLoopActive = NO;
     
-    std::vector<libtorrent::torrent_handle> ths = _session->get_torrents();
-    for(std::vector<libtorrent::torrent_handle>::size_type i = 0; i != ths.size(); i++) {
-        _session->remove_torrent(ths[i]);
+    std::vector<torrent_handle> ths = _session->get_torrents();
+    for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
+        ths[i].pause();
+        if (!deleteData && ths[i].need_save_resume_data())ths[i].save_resume_data();
+        ths[i].flush_cache();
+        _session->pause();
+        if (deleteData)_session->remove_torrent(ths[i]);
     }
     
     required_pieces.clear();
@@ -233,6 +237,11 @@ NSString * const PTTorrentItemPropertyTorrentProgress = @"progress";
     self.failureBlock = nil;
     if (self.mediaServer.isRunning) [self.mediaServer stop];
     [self.mediaServer removeAllHandlers];
+    
+    if (deleteData) {
+        self.alertsQueue = nil;
+        self.alertsLoopActive = NO;
+    }
     
     firstPiece = -1;
     endPiece = 0;

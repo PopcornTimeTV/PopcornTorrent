@@ -217,6 +217,8 @@ using namespace libtorrent;
         [self metadataReceivedAlert:th];
     }
     
+    if(_session->is_paused())_session->resume();
+    
 #if TARGET_OS_IOS
     [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
 #endif
@@ -636,10 +638,6 @@ using namespace libtorrent;
     NSData *resumeDataFile = [[NSData alloc] initWithBytesNoCopy:(void*)ss.str().c_str() length:ss.str().size() freeWhenDone:false];
     NSAssert(resumeDataFile != nil, @"Resume data failed to be generated");
     [resumeDataFile writeToFile:[NSURL URLWithString:directory].relativePath atomically:NO];
-    NSArray *contentsOfDirectory = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:[[NSURL URLWithString:directory]URLByDeletingLastPathComponent].relativePath error:nil];
-    for(NSString *file in contentsOfDirectory){
-        NSLog(file);
-    }
 }
 
 @end

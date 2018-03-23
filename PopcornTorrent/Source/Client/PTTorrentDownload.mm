@@ -176,7 +176,9 @@ using namespace libtorrent;
     [self setDownloadStatus:PTTorrentDownloadStatusPaused];
     
     #if TARGET_OS_IOS
+      dispatch_async(dispatch_get_main_queue(), ^{
         [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+      });
     #endif
 }
 
@@ -195,7 +197,9 @@ using namespace libtorrent;
     [self setDownloadStatus:PTTorrentDownloadStatusDownloading];
     
     #if TARGET_OS_IOS
+      dispatch_async(dispatch_get_main_queue(), ^{
         [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+      });
     #endif
 }
 
@@ -249,7 +253,9 @@ using namespace libtorrent;
     self.streaming = NO;
     
     #if TARGET_OS_IOS
+      dispatch_async(dispatch_get_main_queue(), ^{
         [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+      });
     #endif
 }
 

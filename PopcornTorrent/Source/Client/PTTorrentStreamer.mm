@@ -220,7 +220,9 @@ using namespace libtorrent;
     if(_session->is_paused())_session->resume();
     
 #if TARGET_OS_IOS
+  dispatch_async(dispatch_get_main_queue(), ^{
     [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+  });
 #endif
 }
 
@@ -318,7 +320,9 @@ using namespace libtorrent;
     _isFinished = false;
     
 #if TARGET_OS_IOS
+  dispatch_async(dispatch_get_main_queue(), ^{
     [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+  });
 #endif
 }
 
@@ -616,7 +620,9 @@ using namespace libtorrent;
     });
     
 #if TARGET_OS_IOS
-    [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+    });
 #endif
     
     // Remove the torrent when its finished

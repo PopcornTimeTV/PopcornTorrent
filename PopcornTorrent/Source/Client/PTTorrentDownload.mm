@@ -234,6 +234,7 @@ using namespace libtorrent;
     }
     
     required_pieces.clear();
+    required_pieces.shrink_to_fit();
     [self.requestedRangeInfo removeAllObjects];
     
     self.progressBlock = nil;

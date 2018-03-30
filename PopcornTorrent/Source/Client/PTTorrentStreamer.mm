@@ -293,6 +293,8 @@ using namespace libtorrent;
     }
     
     required_pieces.clear();
+    required_pieces.shrink_to_fit();
+    
     [self.requestedRangeInfo removeAllObjects];
     _status = torrent_status();
     
@@ -492,12 +494,13 @@ using namespace libtorrent;
 #pragma mark - Alerts
 
 - (void)metadataReceivedAlert:(torrent_handle)th {
-    NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfFileSystemForPath:NSHomeDirectory() error:nil];
     
     _requiredSpace = th.status().total_wanted;
-    long long availableSpace = attributes ? [attributes[NSFileSystemFreeSize] longLongValue] : 0;
+    NSURL* savePathURL = [NSURL fileURLWithPath:self.savePath];
+    NSDictionary *results = [savePathURL resourceValuesForKeys:@[NSURLVolumeAvailableCapacityKey] error:nil];
+    NSNumber *availableSpace = results[NSURLVolumeAvailableCapacityKey];//get available space on device
     
-    if (_requiredSpace > availableSpace) {
+    if (_requiredSpace > availableSpace.longLongValue) {
         NSString *description = [NSString localizedStringWithFormat:@"There is not enough space to download the torrent. Please clear at least %@ and try again.".localizedString, self.fileSize.stringValue];
         NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-4 userInfo:@{NSLocalizedDescriptionKey: description}];
         if (_failureBlock) _failureBlock(error);
@@ -513,7 +516,7 @@ using namespace libtorrent;
     th.prioritize_files(file_priorities);
     
     boost::shared_ptr<const torrent_info> ti = th.torrent_file();
-    MIN_PIECES = ((ti->file_at([self indexOfLargestFileInTorrent:th]).size*0.05)/ti->piece_length());
+    MIN_PIECES = ((ti->file_at([self indexOfLargestFileInTorrent:th]).size*0.03)/ti->piece_length());
     int first_piece = ti->map_file(file_index, 0, 0).piece;
     for (int i = first_piece; i < first_piece + MIN_PIECES; i++) {
         required_pieces.push_back(i);
@@ -545,27 +548,26 @@ using namespace libtorrent;
     BOOL allRequiredPiecesDownloaded = YES;
     
     std::vector<int> piecesOfThis = th.piece_priorities();
+    auto copyRequired(required_pieces);
     
-    mtx.lock();
-    for(std::vector<int>::size_type i = 0; i != required_pieces.size(); i++) {
-        int piece = required_pieces[i];
+    for(std::vector<int>::size_type i = 0; i != copyRequired.size(); i++) {
+        int piece = copyRequired[i];
         if (th.have_piece(piece) == false) {
             allRequiredPiecesDownloaded = NO;
             std::vector<int> piece_priorities = th.piece_priorities();
             std::fill(piece_priorities.begin(), piece_priorities.end(), 1);
             th.prioritize_pieces(piece_priorities);
-            for(std::vector<int>::size_type i = 0; i != required_pieces.size(); i++) {
-                int piece = required_pieces[i];
+            for(std::vector<int>::size_type i = 0; i != copyRequired.size(); i++) {
+                int piece = copyRequired[i];
                 th.piece_priority(piece, LIBTORRENT_PRIORITY_MAXIMUM);
                 th.set_piece_deadline(piece, PIECE_DEADLINE_MILLIS, torrent_handle::alert_when_available);
             }
-            break;
+        }else{
+            requiredPiecesDownloaded++;
         }
-        requiredPiecesDownloaded++;
     }
-    mtx.unlock();
     
-    int requiredPieces = (int)required_pieces.size();
+    int requiredPieces = (int)copyRequired.size();
     float bufferingProgress = 1.0 - (requiredPieces - requiredPiecesDownloaded)/(float)requiredPieces;
     _torrentStatus = {
         bufferingProgress,
@@ -578,6 +580,9 @@ using namespace libtorrent;
     
     _totalDownloaded = _status.total_wanted_done;
     _isFinished = _status.is_finished;
+    
+    copyRequired.clear();
+    copyRequired.shrink_to_fit();
     
     dispatch_async(dispatch_get_main_queue(), ^{
         if (_progressBlock) _progressBlock(_torrentStatus);

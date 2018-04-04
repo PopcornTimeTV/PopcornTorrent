@@ -21,7 +21,7 @@
 #define LIBTORRENT_PRIORITY_SKIP 0
 #define LIBTORRENT_PRIORITY_MAXIMUM 7
 
-int MIN_PIECES; //they are calculated by divind the 5% of a torrent file size with the size of a torrent piece
+int MIN_PIECES = 0; //they are calculated by divind the 5% of a torrent file size with the size of a torrent piece
 
 NSNotificationName const PTTorrentStatusDidChangeNotification = @"com.popcorntimetv.popcorntorrent.status.change";
 
@@ -98,14 +98,14 @@ using namespace libtorrent;
     session_settings settings = _session->settings();
     settings.announce_to_all_tiers = true;
     settings.announce_to_all_trackers = true;
+    //settings.prefer_udp_trackers = false;
     settings.max_peerlist_size = 10000;
-    settings.cache_size = 512;
     _session->set_settings(settings);
     
     _requestedRangeInfo = [[NSMutableDictionary alloc] init];
     
     _status = torrent_status();
-    self.mediaServer = [[GCDWebServer alloc] init];
+    if(self.mediaServer == nil)self.mediaServer = [[GCDWebServer alloc] init];
     
 }
 
@@ -304,11 +304,7 @@ using namespace libtorrent;
     if (self.mediaServer.isRunning)[self.mediaServer stop];
     [self.mediaServer removeAllHandlers];
     
-    if (deleteData) {
-        self.alertsQueue = nil;
-        self.alertsLoopActive = NO;
-        [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
-    }
+    
     
     _savePath = nil;
     _fileName = nil;
@@ -326,6 +322,15 @@ using namespace libtorrent;
     [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
   });
 #endif
+    
+    if (deleteData) {
+        self.alertsQueue = nil;
+        self.alertsLoopActive = NO;
+        [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
+        _session->abort();
+        _session = nil;
+        [self setupSession];
+    }
 }
 
 
@@ -547,21 +552,13 @@ using namespace libtorrent;
     int requiredPiecesDownloaded = 0;
     BOOL allRequiredPiecesDownloaded = YES;
     
-    std::vector<int> piecesOfThis = th.piece_priorities();
     auto copyRequired(required_pieces);
     
     for(std::vector<int>::size_type i = 0; i != copyRequired.size(); i++) {
         int piece = copyRequired[i];
+        if(_session->is_paused())break;
         if (th.have_piece(piece) == false) {
             allRequiredPiecesDownloaded = NO;
-            std::vector<int> piece_priorities = th.piece_priorities();
-            std::fill(piece_priorities.begin(), piece_priorities.end(), 1);
-            th.prioritize_pieces(piece_priorities);
-            for(std::vector<int>::size_type i = 0; i != copyRequired.size(); i++) {
-                int piece = copyRequired[i];
-                th.piece_priority(piece, LIBTORRENT_PRIORITY_MAXIMUM);
-                th.set_piece_deadline(piece, PIECE_DEADLINE_MILLIS, torrent_handle::alert_when_available);
-            }
         }else{
             requiredPiecesDownloaded++;
         }
@@ -581,9 +578,6 @@ using namespace libtorrent;
     _totalDownloaded = _status.total_wanted_done;
     _isFinished = _status.is_finished;
     
-    copyRequired.clear();
-    copyRequired.shrink_to_fit();
-    
     dispatch_async(dispatch_get_main_queue(), ^{
         if (_progressBlock) _progressBlock(_torrentStatus);
         [[NSNotificationCenter defaultCenter] postNotificationName:PTTorrentStatusDidChangeNotification object:self];
@@ -598,8 +592,7 @@ using namespace libtorrent;
             [self.requestedRangeInfo removeAllObjects];
             completionBlock(response);
         }
-        if (MIN_PIECES == 0){[self metadataReceivedAlert:th];}
-        
+        if (MIN_PIECES == 0)[self metadataReceivedAlert:th];
         [self prioritizeNextPieces:th];
         [self processTorrent:th];
     }
@@ -649,6 +642,9 @@ using namespace libtorrent;
     NSData *resumeDataFile = [[NSData alloc] initWithBytesNoCopy:(void*)ss.str().c_str() length:ss.str().size() freeWhenDone:false];
     NSAssert(resumeDataFile != nil, @"Resume data failed to be generated");
     [resumeDataFile writeToFile:[NSURL URLWithString:directory].relativePath atomically:NO];
+    _session->abort();
+    _session = nil;
+    [self setupSession];
 }
 
 @end

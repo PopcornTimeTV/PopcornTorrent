@@ -343,7 +343,7 @@ using namespace libtorrent;
     
     while ([self isAlertsLoopActive]) {
         const alert *ptr = _session->wait_for_alert(max_wait);
-        if (ptr != nullptr) {
+        if (ptr != nullptr && _session != nullptr) {
             _session->pop_alerts(&deque);
             for (std::deque<alert *>::iterator it = deque.begin(); it != deque.end(); ++it) {
                 std::unique_ptr<alert> alert(*it);

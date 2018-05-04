@@ -304,9 +304,6 @@ using namespace libtorrent;
     if (self.mediaServer.isRunning)[self.mediaServer stop];
     [self.mediaServer removeAllHandlers];
     
-    
-    
-    _savePath = nil;
     _fileName = nil;
     _requiredSpace = 0;
     _totalDownloaded = 0;
@@ -327,6 +324,7 @@ using namespace libtorrent;
         self.alertsQueue = nil;
         self.alertsLoopActive = NO;
         [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
+        _savePath = nil;
         _session->abort();
         _session = nil;
         [self setupSession];
@@ -631,6 +629,7 @@ using namespace libtorrent;
 - (void) resumeDataReadyAlertWithData:(entry)resumeData andSaveDirectory:(NSString*)directory{
     self.alertsQueue = nil;
     self.alertsLoopActive = NO;
+    _savePath = nil;
     std::vector<torrent_handle> ths = _session->get_torrents();
     for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
         _session->remove_torrent(ths[i]);

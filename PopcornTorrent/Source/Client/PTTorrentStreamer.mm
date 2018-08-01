@@ -21,7 +21,8 @@
 #define LIBTORRENT_PRIORITY_SKIP 0
 #define LIBTORRENT_PRIORITY_MAXIMUM 7
 
-int MIN_PIECES = 0; //they are calculated by divind the 5% of a torrent file size with the size of a torrent piece
+int MIN_PIECES = 0, selectedFileIndex = -1; //they are calculated by divind the 5% of a torrent file size with the size of a torrent piece / selected file in case we load a multi movie torrent
+bool shouldUserSelectFiles = FALSE;
 
 NSNotificationName const PTTorrentStatusDidChangeNotification = @"com.popcorntimetv.popcorntorrent.status.change";
 
@@ -113,6 +114,21 @@ using namespace libtorrent;
                                   progress:(PTTorrentStreamerProgress)progress
                                readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
                                    failure:(PTTorrentStreamerFailure)failure {
+    [self startStreamingFromFileOrMagnetLink:filePathOrMagnetLink
+                               directoryName:nil
+                                    progress:progress
+                                 readyToPlay:readyToPlay
+                                     failure:failure];
+    
+}
+
+- (void)startStreamingFromMultiTorrentFileOrMagnetLink:(NSString *)filePathOrMagnetLink
+                                  progress:(PTTorrentStreamerProgress)progress
+                               readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
+                                   failure:(PTTorrentStreamerFailure)failure
+                                    selectFileToStream:(PTTorrentStreamerSelection)callback{
+    shouldUserSelectFiles = TRUE;
+    self.selectionBlock = callback;
     [self startStreamingFromFileOrMagnetLink:filePathOrMagnetLink
                                directoryName:nil
                                     progress:progress
@@ -301,6 +317,9 @@ using namespace libtorrent;
     self.progressBlock = nil;
     self.readyToPlayBlock = nil;
     self.failureBlock = nil;
+    self.selectionBlock =  nil;
+    selectedFileIndex = -1;
+    
     if (self.mediaServer.isRunning)[self.mediaServer stop];
     [self.mediaServer removeAllHandlers];
     
@@ -325,6 +344,10 @@ using namespace libtorrent;
         self.alertsLoopActive = NO;
         [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
         _savePath = nil;
+        std::deque<alert *> deq;
+        _session->pop_alerts(&deq);
+        deq.clear();
+        deq.shrink_to_fit();
         _session->abort();
         _session = nil;
         [self setupSession];
@@ -478,6 +501,14 @@ using namespace libtorrent;
 }
 
 - (int)indexOfLargestFileInTorrentWithTorrentInfo:(boost::shared_ptr<const torrent_info>)ti {
+    if (shouldUserSelectFiles == TRUE){
+        if (selectedFileIndex != -1)return selectedFileIndex;
+        auto files = ti->files();
+        NSMutableArray* file_names = [[NSMutableArray alloc]init];
+        for (int i=0; i<ti->num_files();i++)[file_names addObject:[NSString stringWithFormat:@"%s",files.file_name(i).c_str()]];
+        selectedFileIndex = self.selectionBlock([NSArray arrayWithArray:file_names]);
+        return selectedFileIndex;
+    }
     int files_count = ti->num_files();
     if (files_count > 1) {
         int64_t largest_size = -1;

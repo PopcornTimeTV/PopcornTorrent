@@ -26,6 +26,15 @@ typedef void (^PTTorrentStreamerReadyToPlay)(NSURL * _Nonnull videoFileURL, NSUR
  */
 typedef void (^PTTorrentStreamerFailure)(NSError * _Nonnull error);
 
+/**
+ Block called when the torrent metadata have been downloaded and the user has to select the torrent to play
+ 
+ @param torrentsAvailable  The available torrents names that the user can select from
+ 
+ @return The index of the item in the array torrentsAvailable the user has selected
+ */
+typedef int (^PTTorrentStreamerSelection)(NSArray<NSString*> * _Nonnull torrentsAvailable);
+
 NS_ASSUME_NONNULL_BEGIN
 
 /**
@@ -47,7 +56,21 @@ FOUNDATION_EXPORT NSNotificationName const PTTorrentStatusDidChangeNotification;
  The directory to which all torrents are saved. Defaults to `NSTemporaryDirectory`. Will return `nil` if there is an error creating the directory.
  */
 + (NSString * _Nullable)downloadDirectory;
-    
+
+/**
+ Begins streaming of a torrent.
+ 
+ @param filePathOrMagnetLink    The direct link of a locally stored `.torrent` file or a `magnet:?` link.
+ @param progress                Block containing useful information about the torrent currently being streamed. Called every time the `torrentStatus` variable changes.
+ @param readyToPlay             Block called when the torrent has finished processing and is ready to begin being played.
+ @param failure                 Block called if there is an error while processing the torrent.
+ @param callback                Block called when the torrent data are received and user needs to chose file to play
+ */
+- (void)startStreamingFromMultiTorrentFileOrMagnetLink:(NSString *)filePathOrMagnetLink
+                                              progress:(PTTorrentStreamerProgress)progress
+                                           readyToPlay:(PTTorrentStreamerReadyToPlay)readyToPlay
+                                               failure:(PTTorrentStreamerFailure)failure
+                                    selectFileToStream:(PTTorrentStreamerSelection)callback;
 
 /**
  Begins streaming of a torrent.

@@ -30,6 +30,7 @@
 @property (nonatomic, copy, nullable) PTTorrentStreamerProgress progressBlock;
 @property (nonatomic, copy, nullable) PTTorrentStreamerReadyToPlay readyToPlayBlock;
 @property (nonatomic, copy, nullable) PTTorrentStreamerFailure failureBlock;
+@property (nonatomic, copy, nullable) PTTorrentStreamerSelection selectionBlock;
 @property (nonatomic, strong, nonnull) GCDWebServer *mediaServer;
 @property (nonatomic) libtorrent::torrent_status status;
 @property (nonatomic) bool isFinished;

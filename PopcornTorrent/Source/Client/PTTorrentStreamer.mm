@@ -91,9 +91,6 @@ using namespace libtorrent;
     endPiece = 0;
     
     _session = new session();
-    _session->set_alert_mask(alert::status_notification |
-                             alert::progress_notification |
-                             alert::storage_notification);
     _session->listen_on(std::make_pair(6881, 6889), ec);
     
     NSAssert(ec == nil, @"FATAL ERROR: Failed to open listen socket: %s", ec.message().c_str());

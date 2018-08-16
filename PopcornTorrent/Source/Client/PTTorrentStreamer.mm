@@ -91,17 +91,38 @@ using namespace libtorrent;
     endPiece = 0;
     
     _session = new session();
-    _session->set_alert_mask(alert::all_categories);
+    _session->set_alert_mask(alert::status_notification |
+                             alert::progress_notification |
+                             alert::storage_notification);
     _session->listen_on(std::make_pair(6881, 6889), ec);
     
     NSAssert(ec == nil, @"FATAL ERROR: Failed to open listen socket: %s", ec.message().c_str());
-    
-    session_settings settings = _session->settings();
-    settings.announce_to_all_tiers = true;
-    settings.announce_to_all_trackers = true;
-    //settings.prefer_udp_trackers = false;
-    settings.max_peerlist_size = 10000;
-    _session->set_settings(settings);
+    settings_pack pack = _session->get_settings();
+    pack.set_int(settings_pack::alert_mask, alert::status_notification |
+                 alert::progress_notification |
+                 alert::storage_notification);
+    pack.set_bool(settings_pack::listen_system_port_fallback, false);
+    pack.set_bool(settings_pack::use_dht_as_fallback, false);
+    // Disable support for SSL torrents for now
+    pack.set_int(settings_pack::ssl_listen, 0);
+    // To prevent ISPs from blocking seeding
+    pack.set_bool(settings_pack::lazy_bitfields, true);
+    // Speed up exit
+    pack.set_int(settings_pack::stop_tracker_timeout, 1);
+    pack.set_int(settings_pack::auto_scrape_interval, 1200); // 20 minutes
+    pack.set_int(settings_pack::auto_scrape_min_interval, 900); // 15 minutes
+    pack.set_int(settings_pack::connection_speed, 20); // default is 10
+    pack.set_bool(settings_pack::no_connect_privileged_ports, false);
+    // Disk cache pool is rarely tested in libtorrent and doesn't free buffers
+    // Soon to be deprecated there
+    // More info: https://github.com/arvidn/libtorrent/issues/2251
+    pack.set_bool(settings_pack::use_disk_cache_pool, false);
+    // libtorrent 1.1 enables UPnP & NAT-PMP by default
+    // turn them off before `libt::session` ctor to avoid split second effects
+    pack.set_bool(settings_pack::enable_upnp, false);
+    pack.set_bool(settings_pack::enable_natpmp, false);
+    pack.set_bool(settings_pack::upnp_ignore_nonrouters, true);
+    _session->apply_settings(pack);
     
     _requestedRangeInfo = [[NSMutableDictionary alloc] init];
     
@@ -344,10 +365,6 @@ using namespace libtorrent;
         self.alertsLoopActive = NO;
         [[NSFileManager defaultManager] removeItemAtPath:self.savePath error:nil];
         _savePath = nil;
-        std::deque<alert *> deq;
-        _session->pop_alerts(&deq);
-        deq.clear();
-        deq.shrink_to_fit();
         _session->abort();
         _session = nil;
         [self setupSession];
@@ -392,6 +409,7 @@ using namespace libtorrent;
                 alert = nil;
             }
             deque.clear();
+            deque.shrink_to_fit();
         }
     }
 }
@@ -502,6 +520,7 @@ using namespace libtorrent;
 
 - (int)indexOfLargestFileInTorrentWithTorrentInfo:(boost::shared_ptr<const torrent_info>)ti {
     if (shouldUserSelectFiles == TRUE){
+        shouldUserSelectFiles = FALSE;
         if (selectedFileIndex != -1)return selectedFileIndex;
         auto files = ti->files();
         NSMutableArray* file_names = [[NSMutableArray alloc]init];

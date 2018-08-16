@@ -4,15 +4,22 @@
 #import <PopcornTorrent/PopcornTorrent.h>
 
 @interface PopcornTorrentTests : XCTestCase
-
+@property (nonatomic,strong) PTTorrentStreamer *streamer;
 @end
 
 @implementation PopcornTorrentTests
 
+- (PTTorrentStreamer *)streamer{
+    if (_streamer == nil){
+        _streamer = [PTTorrentStreamer sharedStreamer];
+    }
+    return _streamer;
+}
+
 - (void)testMagnetLinkStreaming {
     XCTestExpectation *expectation = [self expectationWithDescription:@"Torrent Streaming"];
     
-    [[PTTorrentStreamer sharedStreamer] startStreamingFromFileOrMagnetLink:@"magnet:?xt=urn:btih:6ccd25433f8aa382a8954575b4598ca3226add92&dn=The.Commuter.2018.1080p.WEB-DL.DD5.1.H264-FGT&tr=http%3A%2F%2Ftracker.trackerfix.com%3A80%2Fannounce&tr=udp%3A%2F%2F9.rarbg.me%3A2710&tr=udp%3A%2F%2F9.rarbg.to%3A2710" progress:^(PTTorrentStatus status) {
+    [self.streamer startStreamingFromFileOrMagnetLink:@"magnet:?xt=urn:btih:049d7f1c11fec9031ed0071e75e0d15d29c5fe30&dn=Tag.2018.REPACK.BDRip.x264-GECKOS&tr=http%3A%2F%2Ftracker.trackerfix.com%3A80%2Fannounce&tr=udp%3A%2F%2F9.rarbg.me%3A2710&tr=udp%3A%2F%2F9.rarbg.to%3A2710" progress:^(PTTorrentStatus status) {
         NSLog(@"Progress: %f",status.totalProgress);
     } readyToPlay:^(NSURL *videoFileURL, NSURL* video) {
         NSLog(@"%@", videoFileURL);
@@ -28,10 +35,14 @@
     [self waitForExpectationsWithTimeout:60.0 * 10 handler:nil];
 }
 
+-(void) testMultiTorrentStreaming{
+    for (int i=0; i<=1; i++)[self testMagnetLinkStreaming];
+}
+
 - (void)testSelectiveMagnetLinkStreaming {
     XCTestExpectation *expectation = [self expectationWithDescription:@"Torrent Streaming"];
     
-    [[PTTorrentStreamer sharedStreamer] startStreamingFromMultiTorrentFileOrMagnetLink:@"magnet:?xt=urn:btih:6ccd25433f8aa382a8954575b4598ca3226add92&dn=The.Commuter.2018.1080p.WEB-DL.DD5.1.H264-FGT&tr=http%3A%2F%2Ftracker.trackerfix.com%3A80%2Fannounce&tr=udp%3A%2F%2F9.rarbg.me%3A2710&tr=udp%3A%2F%2F9.rarbg.to%3A2710" progress:^(PTTorrentStatus status) {
+    [self.streamer startStreamingFromMultiTorrentFileOrMagnetLink:@"magnet:?xt=urn:btih:049d7f1c11fec9031ed0071e75e0d15d29c5fe30&dn=Tag.2018.REPACK.BDRip.x264-GECKOS&tr=http%3A%2F%2Ftracker.trackerfix.com%3A80%2Fannounce&tr=udp%3A%2F%2F9.rarbg.me%3A2710&tr=udp%3A%2F%2F9.rarbg.to%3A2710" progress:^(PTTorrentStatus status) {
         NSLog(@"Progress: %f",status.totalProgress);
     } readyToPlay:^(NSURL *videoFileURL, NSURL* video) {
         NSLog(@"%@", videoFileURL);
@@ -58,7 +69,7 @@
 -(void)testTorrentFileStreaming {
     XCTestExpectation *expectation = [self expectationWithDescription:@"Torrent Streaming"];
     
-    [[PTTorrentStreamer sharedStreamer] startStreamingFromFileOrMagnetLink:[[NSBundle bundleForClass:[self class]] pathForResource:@"Test" ofType:@"torrent"] progress:^(PTTorrentStatus status) {
+    [self.streamer startStreamingFromFileOrMagnetLink:[[NSBundle bundleForClass:[self class]] pathForResource:@"Test" ofType:@"torrent"] progress:^(PTTorrentStatus status) {
         
     } readyToPlay:^(NSURL *videoFileURL, NSURL* video) {
         NSLog(@"%@", videoFileURL);

@@ -238,14 +238,13 @@ using namespace libtorrent;
     tp.storage_mode = storage_mode_allocate;
     
     torrent_handle th = _session->add_torrent(tp, ec);
+    th.set_sequential_download(true);
     
     if (ec) {
         NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
         if (failure) failure(error);
         return [self cancelStreamingAndDeleteData:NO];
     }
-    
-    th.set_sequential_download(true);
     
     if (![filePathOrMagnetLink hasPrefix:@"magnet"]) {
         [self metadataReceivedAlert:th];
@@ -417,7 +416,7 @@ using namespace libtorrent;
     if (firstPiece != -1) {
         next_required_piece = (int)firstPiece;
     } else {
-        next_required_piece = required_pieces[MIN_PIECES - 1] + 1;
+        next_required_piece = required_pieces.size() >0 ? required_pieces[MIN_PIECES - 1] + 1 : 0;
     }
     
     firstPiece = -1;
@@ -430,7 +429,6 @@ using namespace libtorrent;
     boost::shared_ptr<const torrent_info> ti = th.torrent_file();
     th.clear_piece_deadlines();//clear all deadlines on all pieces before we set new ones
     std::fill(piece_priorities.begin(), piece_priorities.end(), 1);
-    //th.prioritize_pieces(piece_priorities);// clear all piece priorities before setting new ones
     
     for (int i = next_required_piece; i < next_required_piece + MIN_PIECES; i++) {
         if (i < ti->num_pieces()) {

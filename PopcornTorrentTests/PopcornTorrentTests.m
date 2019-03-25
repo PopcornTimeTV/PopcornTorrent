@@ -24,8 +24,8 @@
     } readyToPlay:^(NSURL *videoFileURL, NSURL* video) {
         NSLog(@"%@", videoFileURL);
         XCTAssertNotNil(videoFileURL, @"No file URL");
-        //[[PTTorrentStreamer sharedStreamer] cancelStreamingAndDeleteData:YES];
-        //[expectation fulfill];
+        [[PTTorrentStreamer sharedStreamer] cancelStreamingAndDeleteData:YES];
+        [expectation fulfill];
     } failure:^(NSError *error) {
         XCTFail(@"%@", error.localizedDescription);
         [expectation fulfill];

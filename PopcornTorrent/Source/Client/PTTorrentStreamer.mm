@@ -520,7 +520,7 @@ using namespace libtorrent;
         auto files = ti->files();
         NSMutableArray* file_names = [[NSMutableArray alloc]init];
         for (int i=0; i<ti->num_files();i++)[file_names addObject:[NSString stringWithFormat:@"%s",files.file_name(i).c_str()]];
-        selectedFileIndex = self.selectionBlock([NSArray arrayWithArray:file_names]);
+        selectedFileIndex = self.selectionBlock([file_names copy]);
         return selectedFileIndex;
     }
     int files_count = ti->num_files();

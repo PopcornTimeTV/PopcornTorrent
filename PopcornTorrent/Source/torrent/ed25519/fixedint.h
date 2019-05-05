@@ -1,6 +1,10 @@
-#include <boost/cstdint.hpp>
+#ifndef FIXEDINT_H_INCLUDED
+#define FIXEDINT_H_INCLUDED
 
-typedef boost::uint64_t u64;
-typedef boost::int64_t i64;
-typedef boost::int32_t i32;
+#include <cstdint>
 
+typedef std::uint64_t u64;
+typedef std::int64_t i64;
+typedef std::int32_t i32;
+
+#endif

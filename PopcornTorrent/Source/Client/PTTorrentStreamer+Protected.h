@@ -3,6 +3,9 @@
 #import <libtorrent/session.hpp>
 #import <libtorrent/torrent_info.hpp>
 #import <libtorrent/add_torrent_params.hpp>
+#import <libtorrent/magnet_uri.hpp>
+#import <libtorrent/read_resume_data.hpp>
+#import <libtorrent/write_resume_data.hpp>
 #import <GCDWebServer/GCDWebServer.h>
 
 /**

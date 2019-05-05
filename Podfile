@@ -11,6 +11,11 @@ target 'PopcornTorrent tvOS' do
     pods
 end
 
+target 'PopcornTorrent iOS' do
+    platform :ios, '9.0'
+    pods
+end
+
 target 'PopcornTorrent iOSTests' do
     platform :ios, '9.0'
     pods
@@ -18,11 +23,6 @@ end
 
 target 'PopcornTorrent tvOSTests' do
     platform :tvos, '9.0'
-    pods
-end
-
-target 'PopcornTorrent iOS' do
-    platform :ios, '9.0'
     pods
 end
 

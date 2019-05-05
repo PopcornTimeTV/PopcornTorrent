@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2016, Arvid Norberg
+Copyright (c) 2003-2018, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,98 +30,64 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-
 #ifndef TORRENT_BENCODE_HPP_INCLUDED
 #define TORRENT_BENCODE_HPP_INCLUDED
 
-
-
 // OVERVIEW
-// 
-// Bencoding is a common representation in bittorrent used for for dictionary,
+//
+// Bencoding is a common representation in bittorrent used for dictionary,
 // list, int and string hierarchies. It's used to encode .torrent files and
 // some messages in the network protocol. libtorrent also uses it to store
-// settings, resume data and other state between sessions.
+// settings, resume data and other session state.
 //
-// Strings in bencoded structures are not necessarily representing text.
+// Strings in bencoded structures do not necessarily represent text.
 // Strings are raw byte buffers of a certain length. If a string is meant to be
 // interpreted as text, it is required to be UTF-8 encoded. See `BEP 3`_.
 //
-// There are two mechanims to *decode* bencoded buffers in libtorrent.
+// The function for decoding bencoded data bdecode(), returning a bdecode_node.
+// This function builds a tree that points back into the original buffer. The
+// returned bdecode_node will not be valid once the buffer it was parsed out of
+// is discarded.
 //
-// The most flexible one is `bdecode() bencode()`_, which returns a structure
-// represented by entry. Oncea buffer has been decoded with this function, it
-// can be discarded. The entry does not contain any references back to it. This
-// means that bdecode() copies all the data out of the buffer and into its own
-// hierarchy. This makes this function expensive, which might matter if you're
-// parsing large amounts of data.
-//
-// Another consideration is that `bdecode() bencode()`_ is a recursive parser.
-// For this reason, in order to avoid DoS attacks by triggering a stack
-// overflow, there is a recursion limit. This limit is a sanity check to make
-// sure it doesn't run the risk of busting the stack.
-//
-// The second mechanism is the decode function for bdecode_node. This function
-// builds a tree that points back into the original buffer. The returned
-// bdecode_node will not be valid once the buffer it was parsed out of is
-// discarded.
-//
-// Not only is this function more efficient because of less memory allocation
-// and data copy, the parser is also not recursive, which means it probably
-// performs a little bit better and can have a higher recursion limit on the
-// structures it's parsing.
+// It's possible to construct an entry from a bdecode_node, if a structure needs
+// to be altered and re-encoded.
 
-#include <stdlib.h>
 #include <string>
-#include <exception>
 #include <iterator> // for distance
 
-#include "libtorrent/aux_/disable_warnings_push.hpp"
-
-#include <boost/static_assert.hpp>
-
-#include "libtorrent/aux_/disable_warnings_pop.hpp"
-
-#include "libtorrent/entry.hpp"
 #include "libtorrent/config.hpp"
-
+#include "libtorrent/entry.hpp"
 #include "libtorrent/assert.hpp"
 #include "libtorrent/io.hpp" // for write_string
+#include "libtorrent/string_util.hpp" // for is_digit
 
-namespace libtorrent
-{
+namespace libtorrent {
 
-#ifndef TORRENT_NO_DEPRECATE
-	// thrown by bdecode() if the provided bencoded buffer does not contain
-	// valid encoding.
-	struct TORRENT_DEPRECATED invalid_encoding : std::exception
-	{
-		// hidden
-		virtual const char* what() const TORRENT_EXCEPTION_THROW_SPECIFIER
-			TORRENT_OVERRIDE TORRENT_FINAL
-		{ return "invalid bencoding"; }
-	};
+#if TORRENT_ABI_VERSION == 1
+	using invalid_encoding = system_error;
 #endif
 
-	namespace detail
-	{
-		template <class OutIt>
-		int write_integer(OutIt& out, entry::integer_type val)
+namespace detail {
+
+		template <class OutIt, class In, typename Cond
+			= typename std::enable_if<std::is_integral<In>::value>::type>
+		int write_integer(OutIt& out, In data)
 		{
+			entry::integer_type const val = entry::integer_type(data);
+			TORRENT_ASSERT(data == In(val));
 			// the stack allocated buffer for keeping the
 			// decimal representation of the number can
 			// not hold number bigger than this:
-			BOOST_STATIC_ASSERT(sizeof(entry::integer_type) <= 8);
+			static_assert(sizeof(entry::integer_type) <= 8, "64 bit integers required");
+			static_assert(sizeof(data) <= sizeof(entry::integer_type), "input data too big, see entry::integer_type");
 			char buf[21];
-			int ret = 0;
-			for (char const* str = integer_to_str(buf, 21, val);
-				*str != 0; ++str)
+			auto const str = integer_to_str(buf, val);
+			for (char const c : str)
 			{
-				*out = *str;
+				*out = c;
 				++out;
-				++ret;
 			}
-			return ret;
+			return static_cast<int>(str.size());
 		}
 
 		template <class OutIt>
@@ -189,22 +155,21 @@ namespace libtorrent
 				break;
 			case entry::list_t:
 				write_char(out, 'l');
-				for (entry::list_type::const_iterator i = e.list().begin(); i != e.list().end(); ++i)
-					ret += bencode_recursive(out, *i);
+				for (auto const& i : e.list())
+					ret += bencode_recursive(out, i);
 				write_char(out, 'e');
 				ret += 2;
 				break;
 			case entry::dictionary_t:
 				write_char(out, 'd');
-				for (entry::dictionary_type::const_iterator i = e.dict().begin();
-					i != e.dict().end(); ++i)
+				for (auto const& i : e.dict())
 				{
 					// write key
-					ret += write_integer(out, i->first.length());
+					ret += write_integer(out, i.first.length());
 					write_char(out, ':');
-					ret += write_string(i->first, out);
+					ret += write_string(i.first, out);
 					// write value
-					ret += bencode_recursive(out, i->second);
+					ret += bencode_recursive(out, i.second);
 					ret += 1;
 				}
 				write_char(out, 'e');
@@ -212,7 +177,7 @@ namespace libtorrent
 				break;
 			case entry::preformatted_t:
 				std::copy(e.preformatted().begin(), e.preformatted().end(), out);
-				ret += e.preformatted().size();
+				ret += static_cast<int>(e.preformatted().size());
 				break;
 			case entry::undefined_t:
 
@@ -225,7 +190,7 @@ namespace libtorrent
 			}
 			return ret;
 		}
-
+#if TORRENT_ABI_VERSION == 1
 		template<class InIt>
 		void bdecode_recursive(InIt& in, InIt end, entry& ret, bool& err, int depth)
 		{
@@ -238,7 +203,7 @@ namespace libtorrent
 			if (in == end)
 			{
 				err = true;
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 				ret.m_type_queried = false;
 #endif
 				return;
@@ -251,14 +216,14 @@ namespace libtorrent
 			case 'i':
 				{
 				++in; // 'i'
-				std::string val = read_until(in, end, 'e', err);
+				std::string const val = read_until(in, end, 'e', err);
 				if (err) return;
 				TORRENT_ASSERT(*in == 'e');
 				++in; // 'e'
 				ret = entry(entry::int_t);
 				char* end_pointer;
-				ret.integer() = strtoll(val.c_str(), &end_pointer, 10);
-#ifdef TORRENT_DEBUG
+				ret.integer() = std::strtoll(val.c_str(), &end_pointer, 10);
+#if TORRENT_USE_ASSERTS
 				ret.m_type_queried = false;
 #endif
 				if (end_pointer == val.c_str())
@@ -266,22 +231,22 @@ namespace libtorrent
 					err = true;
 					return;
 				}
-				} break;
+				}
+				break;
 
 			// ----------------------------------------------
 			// list
 			case 'l':
-				{
 				ret = entry(entry::list_t);
 				++in; // 'l'
 				while (*in != 'e')
 				{
-					ret.list().push_back(entry());
+					ret.list().emplace_back();
 					entry& e = ret.list().back();
 					bdecode_recursive(in, end, e, err, depth + 1);
 					if (err)
 					{
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 						ret.m_type_queried = false;
 #endif
 						return;
@@ -289,23 +254,22 @@ namespace libtorrent
 					if (in == end)
 					{
 						err = true;
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 						ret.m_type_queried = false;
 #endif
 						return;
 					}
 				}
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 				ret.m_type_queried = false;
 #endif
 				TORRENT_ASSERT(*in == 'e');
 				++in; // 'e'
-				} break;
+				break;
 
 			// ----------------------------------------------
 			// dictionary
 			case 'd':
-				{
 				ret = entry(entry::dictionary_t);
 				++in; // 'd'
 				while (*in != 'e')
@@ -314,7 +278,7 @@ namespace libtorrent
 					bdecode_recursive(in, end, key, err, depth + 1);
 					if (err || key.type() != entry::string_t)
 					{
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 						ret.m_type_queried = false;
 #endif
 						return;
@@ -323,7 +287,7 @@ namespace libtorrent
 					bdecode_recursive(in, end, e, err, depth + 1);
 					if (err)
 					{
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 						ret.m_type_queried = false;
 #endif
 						return;
@@ -331,28 +295,29 @@ namespace libtorrent
 					if (in == end)
 					{
 						err = true;
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 						ret.m_type_queried = false;
 #endif
 						return;
 					}
 				}
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 				ret.m_type_queried = false;
 #endif
 				TORRENT_ASSERT(*in == 'e');
 				++in; // 'e'
-				} break;
+				break;
 
 			// ----------------------------------------------
 			// string
 			default:
-				if (is_digit(boost::uint8_t(*in)))
+				static_assert(sizeof(*in) == 1, "Input iterator to 8 bit data required");
+				if (is_digit(char(*in)))
 				{
 					std::string len_s = read_until(in, end, ':', err);
 					if (err)
 					{
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 						ret.m_type_queried = false;
 #endif
 						return;
@@ -364,7 +329,7 @@ namespace libtorrent
 					read_string(in, end, len, ret.string(), err);
 					if (err)
 					{
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 						ret.m_type_queried = false;
 #endif
 						return;
@@ -373,77 +338,58 @@ namespace libtorrent
 				else
 				{
 					err = true;
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 					ret.m_type_queried = false;
 #endif
 					return;
 				}
-#ifdef TORRENT_DEBUG
+#if TORRENT_USE_ASSERTS
 				ret.m_type_queried = false;
 #endif
 			}
 		}
+#endif // TORRENT_ABI_VERSION
 	}
 
-	// These functions will encode data to bencoded or decode bencoded data.
-	// 
-	// If possible, ``bdecode()`` producing a bdecode_node should be preferred
-	// over this function.
-	// 
+	// This function will encode data to bencoded form.
+	//
 	// The entry_ class is the internal representation of the bencoded data
 	// and it can be used to retrieve information, an entry_ can also be build by
 	// the program and given to ``bencode()`` to encode it into the ``OutIt``
 	// iterator.
-	// 
-	// The ``OutIt`` and ``InIt`` are iterators
-	// (InputIterator_ and OutputIterator_ respectively). They
-	// are templates and are usually instantiated as ostream_iterator_,
-	// back_insert_iterator_ or istream_iterator_. These
-	// functions will assume that the iterator refers to a character
-	// (``char``). So, if you want to encode entry ``e`` into a buffer
-	// in memory, you can do it like this::
-	// 
+	//
+	// ``OutIt`` is an OutputIterator_. It's a template and usually
+	// instantiated as ostream_iterator_ or back_insert_iterator_. This
+	// function assumes the value_type of the iterator is a ``char``.
+	// In order to encode entry ``e`` into a buffer, do::
+	//
 	//	std::vector<char> buffer;
 	//	bencode(std::back_inserter(buf), e);
-	// 
-	// .. _InputIterator: http://www.sgi.com/tech/stl/InputIterator.html
-	// .. _OutputIterator: http://www.sgi.com/tech/stl/OutputIterator.html
-	// .. _ostream_iterator: http://www.sgi.com/tech/stl/ostream_iterator.html
-	// .. _back_insert_iterator: http://www.sgi.com/tech/stl/back_insert_iterator.html
-	// .. _istream_iterator: http://www.sgi.com/tech/stl/istream_iterator.html
-	// 
-	// If you want to decode a torrent file from a buffer in memory, you can do it like this::
-	// 
-	//	std::vector<char> buffer;
-	//	// ...
-	//	entry e = bdecode(buf.begin(), buf.end());
-	// 
-	// Or, if you have a raw char buffer::
-	// 
-	//	const char* buf;
-	//	// ...
-	//	entry e = bdecode(buf, buf + data_size);
-	// 
-	// Now we just need to know how to retrieve information from the entry.
-	// 
-	// If ``bdecode()`` encounters invalid encoded data in the range given to it
-	// it will return a default constructed ``entry`` object.
+	//
+	// .. _OutputIterator:  https://en.cppreference.com/w/cpp/named_req/OutputIterator
+	// .. _ostream_iterator: https://en.cppreference.com/w/cpp/iterator/ostream_iterator
+	// .. _back_insert_iterator: https://en.cppreference.com/w/cpp/iterator/back_insert_iterator
 	template<class OutIt> int bencode(OutIt out, const entry& e)
 	{
 		return detail::bencode_recursive(out, e);
 	}
-	template<class InIt> entry bdecode(InIt start, InIt end)
+
+#if TORRENT_ABI_VERSION == 1
+	template<class InIt>
+	TORRENT_DEPRECATED
+	entry bdecode(InIt start, InIt end)
 	{
 		entry e;
 		bool err = false;
 		detail::bdecode_recursive(start, end, e, err, 0);
-#ifdef TORRENT_DEBUG
 		TORRENT_ASSERT(e.m_type_queried == false);
-#endif
 		if (err) return entry();
 		return e;
 	}
-	template<class InIt> entry bdecode(InIt start, InIt end, int& len)
+	template<class InIt>
+	TORRENT_DEPRECATED
+	entry bdecode(InIt start, InIt end
+		, typename std::iterator_traits<InIt>::difference_type& len)
 	{
 		entry e;
 		bool err = false;
@@ -454,7 +400,7 @@ namespace libtorrent
 		if (err) return entry();
 		return e;
 	}
+#endif
 }
 
 #endif // TORRENT_BENCODE_HPP_INCLUDED
-

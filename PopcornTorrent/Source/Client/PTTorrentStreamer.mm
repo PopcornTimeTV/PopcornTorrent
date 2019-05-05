@@ -93,32 +93,18 @@ using namespace libtorrent;
     _session = new session();
     _session->listen_on(std::make_pair(6881, 6889), ec);
     
-    NSAssert(ec == nil, @"FATAL ERROR: Failed to open listen socket: %s", ec.message().c_str());
-    settings_pack pack = _session->get_settings();
+    NSAssert(ec.failed() == false, @"FATAL ERROR: Failed to open listen socket: %s", ec.message().c_str());
+    settings_pack pack = default_settings();
     pack.set_int(settings_pack::alert_mask, alert::status_notification |
-                 alert::progress_notification |
+                 alert::piece_progress_notification |
                  alert::storage_notification);
     pack.set_bool(settings_pack::listen_system_port_fallback, false);
-    pack.set_bool(settings_pack::use_dht_as_fallback, false);
-    // Disable support for SSL torrents for now
-    pack.set_int(settings_pack::ssl_listen, 0);
-    // To prevent ISPs from blocking seeding
-    pack.set_bool(settings_pack::lazy_bitfields, true);
-    // Speed up exit
-    pack.set_int(settings_pack::stop_tracker_timeout, 1);
-    pack.set_int(settings_pack::auto_scrape_interval, 1200); // 20 minutes
-    pack.set_int(settings_pack::auto_scrape_min_interval, 900); // 15 minutes
-    pack.set_int(settings_pack::connection_speed, 20); // default is 10
-    pack.set_bool(settings_pack::no_connect_privileged_ports, false);
-    // Disk cache pool is rarely tested in libtorrent and doesn't free buffers
-    // Soon to be deprecated there
-    // More info: https://github.com/arvidn/libtorrent/issues/2251
-    pack.set_bool(settings_pack::use_disk_cache_pool, false);
     // libtorrent 1.1 enables UPnP & NAT-PMP by default
     // turn them off before `libt::session` ctor to avoid split second effects
     pack.set_bool(settings_pack::enable_upnp, false);
     pack.set_bool(settings_pack::enable_natpmp, false);
     pack.set_bool(settings_pack::upnp_ignore_nonrouters, true);
+    pack.set_int(settings_pack::file_pool_size, 2);
     _session->apply_settings(pack);
     
     _requestedRangeInfo = [[NSMutableDictionary alloc] init];
@@ -164,7 +150,7 @@ using namespace libtorrent;
     self.readyToPlayBlock = readyToPlay;
     self.failureBlock = failure;
     
-    self.alertsQueue = dispatch_queue_create("com.popcorntimetv.popcorntorrent.alerts", DISPATCH_QUEUE_SERIAL);
+    self.alertsQueue = dispatch_queue_create("com.popcorntimetv.popcorntorrent.alerts", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
     self.alertsLoopActive = YES;
     dispatch_async(self.alertsQueue, ^{
         [self alertsLoop];
@@ -177,7 +163,7 @@ using namespace libtorrent;
     
     if ([filePathOrMagnetLink hasPrefix:@"magnet"]) {
         NSString *magnetLink = filePathOrMagnetLink;
-        tp.url = std::string([magnetLink UTF8String]);
+        tp = parse_magnet_uri(std::string([magnetLink UTF8String]));//std::string([magnetLink UTF8String]);
         
         MD5String = [CocoaSecurity md5:magnetLink].hexLower;
     } else {
@@ -187,7 +173,7 @@ using namespace libtorrent;
         if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
             NSData *fileData = [NSData dataWithContentsOfFile:filePath];
             MD5String = [CocoaSecurity md5WithData:fileData].hexLower;
-            shared_ptr<torrent_info> ti1 = boost::make_shared<torrent_info>([filePathOrMagnetLink UTF8String], ec);
+            std::shared_ptr<torrent_info> ti1 = std::make_shared<torrent_info>([filePathOrMagnetLink UTF8String], ec);
             tp.ti = ti1;
             if (ec) {
                 error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
@@ -203,6 +189,7 @@ using namespace libtorrent;
         }
     }
     
+    //construct the folder path for downloads
     NSString *pathComponent = directoryName != nil ? directoryName : [MD5String substringToIndex:16];
     
     NSString *basePath = [[self class] downloadDirectory];
@@ -214,24 +201,29 @@ using namespace libtorrent;
     }
     
     _savePath = [basePath stringByAppendingPathComponent:pathComponent];
-    
+    //create folder for torrents
     if (![[NSFileManager defaultManager] fileExistsAtPath:_savePath]) {
         NSError *error;
         [[NSFileManager defaultManager] createDirectoryAtPath:self.savePath
                                   withIntermediateDirectories:YES
                                                    attributes:nil
                                                         error:&error];
+        //if we cannot create folder clear all data and exit
         if (error) {
             if (failure) failure(error);
             return [self cancelStreamingAndDeleteData:NO];
         }
-    }else{
+    }else if([filePathOrMagnetLink hasPrefix:@"magnet"]){
+        //if folder exists already and we are loading a magnet search for resume file
         NSData *resumeData = [NSData dataWithContentsOfFile:[_savePath stringByAppendingString:@"/resumeData.fastresume"] ];
         if (resumeData != nil){
             unsigned long int len = resumeData.length;
+            //read resume file
             std::vector<char> resumeVector((char *)resumeData.bytes, (char *)resumeData.bytes + len);
-            tp.resume_data = resumeVector;
+            tp = read_resume_data(resumeVector, ec);//load it into the torrent
+            if (ec) std::printf("  failed to load resume data: %s\n", ec.message().c_str());
         }
+        ec.clear();
     }
     
     tp.save_path = std::string([self.savePath UTF8String]);
@@ -239,6 +231,8 @@ using namespace libtorrent;
     
     torrent_handle th = _session->add_torrent(tp, ec);
     th.set_sequential_download(true);
+    th.set_max_connections(60);
+    th.set_max_uploads(10);
     
     if (ec) {
         NSError *error = [[NSError alloc] initWithDomain:@"com.popcorntimetv.popcorntorrent.error" code:-1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithCString:ec.message().c_str() encoding:NSUTF8StringEncoding]}];
@@ -268,7 +262,7 @@ using namespace libtorrent;
     std::vector<torrent_handle> ths = _session->get_torrents();
     
     for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
-        boost::shared_ptr<const torrent_info> ti = ths[i].torrent_file();
+        std::shared_ptr<const torrent_info> ti = ths[i].torrent_file();
         
         //get all the pieces in the movie
         int totalTorrentPieces = ti->num_pieces();
@@ -372,40 +366,43 @@ using namespace libtorrent;
 
 
 - (void)alertsLoop {
-    std::deque<alert *> deque;
-    time_duration max_wait = milliseconds(ALERTS_LOOP_WAIT_MILLIS);
-    
-    while ([self isAlertsLoopActive]) {
-        const alert *ptr = _session->wait_for_alert(max_wait);
-        if (ptr != nullptr && _session != nullptr) {
-            _session->pop_alerts(&deque);
-            for (std::deque<alert *>::iterator it = deque.begin(); it != deque.end(); ++it) {
-                std::unique_ptr<alert> alert(*it);
-                switch (alert->type()) {
-                    case metadata_received_alert::alert_type:
-                        [self metadataReceivedAlert:((metadata_received_alert *)alert.get())->handle];
-                        break;
-                        
-                    case piece_finished_alert::alert_type:
-                        [self pieceFinishedAlert:((piece_finished_alert *)alert.get())->handle forPieceIndex:((piece_finished_alert *)alert.get())->piece_index];
-                        break;
-                        // In case the video file is already fully downloaded
-                    case torrent_finished_alert::alert_type:
-                        [self torrentFinishedAlert:((torrent_finished_alert *)alert.get())->handle];
-                        break;
-                    case save_resume_data_alert::alert_type: {
-                        torrent_status st = (((save_resume_data_alert *)alert.get())->handle).status(torrent_handle::query_save_path
-                                                                                                     | torrent_handle::query_name);
-                        [self resumeDataReadyAlertWithData:*((save_resume_data_alert *)alert.get())->resume_data andSaveDirectory:[NSString stringWithUTF8String:(st.save_path + "/resumeData.fastresume").c_str()]];
-                        break;
+    @autoreleasepool {
+        
+        std::vector<alert *> deque;
+        time_duration max_wait = milliseconds(ALERTS_LOOP_WAIT_MILLIS);
+        
+        while ([self isAlertsLoopActive]) {
+            const alert *ptr = _session->wait_for_alert(max_wait);
+            if (ptr != nullptr && _session != nullptr) {
+                _session->pop_alerts(&deque);
+                for (std::vector<alert *>::iterator it = deque.begin(); it != deque.end(); ++it) {
+                    std::auto_ptr<alert> alert(*it);
+                    switch (alert->type()) {
+                        case metadata_received_alert::alert_type:
+                            [self metadataReceivedAlert:((metadata_received_alert *)alert.get())->handle];
+                            break;
+                            
+                        case piece_finished_alert::alert_type:
+                            [self pieceFinishedAlert:((piece_finished_alert *)alert.get())->handle forPieceIndex:((piece_finished_alert *)alert.get())->piece_index];
+                            break;
+                            // In case the video file is already fully downloaded
+                        case torrent_finished_alert::alert_type:
+                            [self torrentFinishedAlert:((torrent_finished_alert *)alert.get())->handle];
+                            break;
+                        case save_resume_data_alert::alert_type: {
+                            torrent_status st = (((save_resume_data_alert *)alert.get())->handle).status(torrent_handle::query_save_path
+                                                                                                         | torrent_handle::query_name);
+                            [self resumeDataReadyAlertWithData:((save_resume_data_alert *)alert.get())->params andSaveDirectory:[NSString stringWithUTF8String:(st.save_path + "/resumeData.fastresume").c_str()]];
+                            break;
+                        }
+                        default:
+                            break;
                     }
-                    default:
-                        break;
+                    alert.release();
                 }
-                alert = nil;
+                deque.clear();
+                deque.shrink_to_fit();
             }
-            deque.clear();
-            deque.shrink_to_fit();
         }
     }
 }
@@ -426,7 +423,7 @@ using namespace libtorrent;
     required_pieces.clear();
     
     std::vector<int> piece_priorities = th.piece_priorities();
-    boost::shared_ptr<const torrent_info> ti = th.torrent_file();
+    std::shared_ptr<const torrent_info> ti = th.torrent_file();
     th.clear_piece_deadlines();//clear all deadlines on all pieces before we set new ones
     std::fill(piece_priorities.begin(), piece_priorities.end(), 1);
     
@@ -447,7 +444,7 @@ using namespace libtorrent;
     self.streaming = YES;
     _status = th.status();
     
-    boost::shared_ptr<const torrent_info> ti = th.torrent_file();
+    std::shared_ptr<const torrent_info> ti = th.torrent_file();
     int file_index = [self indexOfLargestFileInTorrent:th];
     file_entry fe = ti->file_at(file_index);
     std::string path = fe.path;
@@ -461,7 +458,7 @@ using namespace libtorrent;
 - (void)startWebServerAndPlay {
     __block NSURL *fileURL = [NSURL fileURLWithPath:[self.savePath stringByAppendingPathComponent:_fileName]];
     __weak __typeof__(self) weakSelf = self;
-    
+    NSLog(@"file to be streamed is %@",[self.savePath stringByAppendingPathComponent:_fileName]);
     [self.mediaServer addDefaultHandlerForMethod:@"GET" requestClass:[GCDWebServerRequest class] asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
         GCDWebServerFileResponse *response = [[GCDWebServerFileResponse alloc] init];
         
@@ -509,17 +506,17 @@ using namespace libtorrent;
 
 
 - (int)indexOfLargestFileInTorrent:(torrent_handle)th {
-    boost::shared_ptr<const torrent_info> ti = th.torrent_file();
+    std::shared_ptr<const torrent_info> ti = th.torrent_file();
     return [self indexOfLargestFileInTorrentWithTorrentInfo:ti];
 }
 
-- (int)indexOfLargestFileInTorrentWithTorrentInfo:(boost::shared_ptr<const torrent_info>)ti {
+- (int)indexOfLargestFileInTorrentWithTorrentInfo:(std::shared_ptr<const torrent_info>)ti {
     if (shouldUserSelectFiles == TRUE){
         shouldUserSelectFiles = FALSE;
         if (selectedFileIndex != -1)return selectedFileIndex;
         auto files = ti->files();
         NSMutableArray* file_names = [[NSMutableArray alloc]init];
-        for (int i=0; i<ti->num_files();i++)[file_names addObject:[NSString stringWithFormat:@"%s",files.file_name(i).c_str()]];
+        for (int i=0; i<ti->num_files();i++)[file_names addObject:[NSString stringWithFormat:@"%s",files.file_name(i).to_string().c_str()]];
         selectedFileIndex = self.selectionBlock([file_names copy]);
         return selectedFileIndex;
     }
@@ -563,7 +560,7 @@ using namespace libtorrent;
     file_priorities[file_index] = LIBTORRENT_PRIORITY_MAXIMUM;
     th.prioritize_files(file_priorities);
     
-    boost::shared_ptr<const torrent_info> ti = th.torrent_file();
+    std::shared_ptr<const torrent_info> ti = th.torrent_file();
     MIN_PIECES = ((ti->file_at([self indexOfLargestFileInTorrent:th]).size*0.03)/ti->piece_length());
     int first_piece = ti->map_file(file_index, 0, 0).piece;
     for (int i = first_piece; i < first_piece + MIN_PIECES; i++) {
@@ -667,11 +664,11 @@ using namespace libtorrent;
 #endif
     
     // Remove the torrent when its finished
-    th.pause(false);
+    th.pause(torrent_handle::graceful_pause);
     _session->remove_torrent(th);
 }
 
-- (void) resumeDataReadyAlertWithData:(entry)resumeData andSaveDirectory:(NSString*)directory{
+- (void) resumeDataReadyAlertWithData:(add_torrent_params)resumeData andSaveDirectory:(NSString*)directory{
     self.alertsQueue = nil;
     self.alertsLoopActive = NO;
     _savePath = nil;
@@ -679,9 +676,12 @@ using namespace libtorrent;
     for(std::vector<torrent_handle>::size_type i = 0; i != ths.size(); i++) {
         _session->remove_torrent(ths[i]);
     }
+
+    auto const buf = write_resume_data_buf(resumeData);
+    
     std::stringstream ss;
     ss.unsetf(std::ios_base::skipws);
-    bencode(std::ostream_iterator<char>(ss), resumeData);
+    bencode(std::ostream_iterator<char>(ss), buf);
     
     NSData *resumeDataFile = [[NSData alloc] initWithBytesNoCopy:(void*)ss.str().c_str() length:ss.str().size() freeWhenDone:false];
     NSAssert(resumeDataFile != nil, @"Resume data failed to be generated");

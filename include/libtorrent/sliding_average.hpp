@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2010-2016, Arvid Norberg
+Copyright (c) 2010-2018, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,27 +33,31 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_SLIDING_AVERAGE_HPP_INCLUDED
 #define TORRENT_SLIDING_AVERAGE_HPP_INCLUDED
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 #include <cstdlib> // for std::abs
+#include <limits>
 
-namespace libtorrent
-{
+#include "libtorrent/assert.hpp"
+
+namespace libtorrent {
 
 // an exponential moving average accumulator. Add samples to it and it keeps
 // track of a moving mean value and an average deviation
-template <int inverted_gain>
+template <typename Int, Int inverted_gain>
 struct sliding_average
 {
-	sliding_average(): m_mean(0), m_average_deviation(0), m_num_samples(0) {}
+	static_assert(std::is_integral<Int>::value, "template argument must be integral");
 
-	void add_sample(int s)
+	sliding_average(): m_mean(0), m_average_deviation(0), m_num_samples(0) {}
+	sliding_average(sliding_average const&) = default;
+	sliding_average& operator=(sliding_average const&) = default;
+
+	void add_sample(Int s)
 	{
+		TORRENT_ASSERT(s < std::numeric_limits<Int>::max() / 64);
 		// fixed point
 		s *= 64;
-		int deviation = 0;
-
-		if (m_num_samples > 0)
-			deviation = std::abs(m_mean - s);
+		Int const deviation = (m_num_samples > 0) ? std::abs(m_mean - s) : 0;
 
 		if (m_num_samples < inverted_gain)
 			++m_num_samples;
@@ -61,7 +65,7 @@ struct sliding_average
 		m_mean += (s - m_mean) / m_num_samples;
 
 		if (m_num_samples > 1) {
-			// the the exact same thing for deviation off the mean except -1 on
+			// the exact same thing for deviation off the mean except -1 on
 			// the samples, because the number of deviation samples always lags
 			// behind by 1 (you need to actual samples to have a single deviation
 			// sample).
@@ -69,50 +73,19 @@ struct sliding_average
 		}
 	}
 
-	int mean() const { return m_num_samples > 0 ? (m_mean + 32) / 64 : 0; }
-	int avg_deviation() const { return m_num_samples > 1 ? (m_average_deviation + 32) / 64 : 0; }
+	Int mean() const { return m_num_samples > 0 ? (m_mean + 32) / 64 : 0; }
+	Int avg_deviation() const { return m_num_samples > 1 ? (m_average_deviation + 32) / 64 : 0; }
 	int num_samples() const { return m_num_samples; }
 
 private:
 	// both of these are fixed point values (* 64)
-	int m_mean;
-	int m_average_deviation;
+	Int m_mean = 0;
+	Int m_average_deviation = 0;
 	// the number of samples we have received, but no more than inverted_gain
 	// this is the effective inverted_gain
-	int m_num_samples;
-};
-
-struct average_accumulator
-{
-	average_accumulator()
-		: m_num_samples(0)
-		, m_sample_sum(0)
-	{}
-
-	void add_sample(int s)
-	{
-		++m_num_samples;
-		m_sample_sum += s;
-	}
-
-	int mean()
-	{
-		int ret;
-		if (m_num_samples == 0) ret = 0;
-		else ret = int(m_sample_sum / m_num_samples);
-		// in case we don't get any more samples, at least
-		// let the average roll over, but only be worth a
-		// single sample
-		m_num_samples = 1;
-		m_sample_sum = ret;
-		return ret;
-	}
-
-	int m_num_samples;
-	boost::uint64_t m_sample_sum;
+	int m_num_samples = 0;
 };
 
 }
 
 #endif
-

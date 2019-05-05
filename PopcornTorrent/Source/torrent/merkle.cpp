@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2016, Arvid Norberg
+Copyright (c) 2003-2018, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/aux_/merkle.hpp"
 
-namespace libtorrent
-{
+namespace libtorrent {
+
 	int merkle_get_parent(int tree_node)
 	{
 		// node 0 doesn't have a parent

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2016, Arvid Norberg
+Copyright (c) 2009-2018, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,26 +33,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_IO_SERVICE_FWD_HPP_INCLUDED
 #define TORRENT_IO_SERVICE_FWD_HPP_INCLUDED
 
-#ifdef __OBJC__
-#define Protocol Protocol_
-#endif
-
-#include "libtorrent/aux_/disable_warnings_push.hpp"
-
+#include "libtorrent/config.hpp"
 #include <boost/version.hpp>
-
-#include "libtorrent/aux_/disable_warnings_pop.hpp"
-
-#ifdef __OBJC__
-#undef Protocol
-#endif
 
 #if defined TORRENT_BUILD_SIMULATOR
 namespace sim { namespace asio {
+
 	struct io_service;
 }}
-#endif
-
+#else
 namespace boost { namespace asio {
 #if BOOST_VERSION < 106600
 	class io_service;
@@ -61,15 +50,24 @@ namespace boost { namespace asio {
 	typedef io_context io_service;
 #endif
 }}
-
-namespace libtorrent
-{
-#if defined TORRENT_BUILD_SIMULATOR
-	typedef sim::asio::io_service io_service;
-#else
-	typedef boost::asio::io_service io_service;
 #endif
+
+namespace libtorrent {
+
+#if defined TORRENT_BUILD_SIMULATOR
+	using io_service = sim::asio::io_service;
+#else
+	using io_service = boost::asio::io_service;
+#endif
+
+#if BOOST_VERSION >= 107000
+template <typename T>
+io_service& get_io_service(T& o) { return static_cast<io_service&>(o.get_executor().context()); }
+#else
+template <typename T>
+io_service& get_io_service(T& o) { return o.get_io_service(); }
+#endif
+
 }
 
 #endif
-

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2003-2016, Arvid Norberg
+Copyright (c) 2003-2018, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -33,16 +33,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef TORRENT_PEER_ID_HPP_INCLUDED
 #define TORRENT_PEER_ID_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
 #include "libtorrent/sha1_hash.hpp"
 
-namespace libtorrent
-{
-	typedef sha1_hash peer_id;
-#ifndef TORRENT_NO_DEPRECATE
-	typedef sha1_hash big_number;
-#endif
+namespace libtorrent {
+
+	using peer_id = sha1_hash;
 }
 
 #endif // TORRENT_PEER_ID_HPP_INCLUDED
-

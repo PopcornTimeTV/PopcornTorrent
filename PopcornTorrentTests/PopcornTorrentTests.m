@@ -41,12 +41,13 @@
 
 - (void)testSelectiveMagnetLinkStreaming {
     XCTestExpectation *expectation = [self expectationWithDescription:@"Torrent Streaming"];
-    
-    [self.streamer startStreamingFromMultiTorrentFileOrMagnetLink:@"magnet:?xt=urn:btih:049d7f1c11fec9031ed0071e75e0d15d29c5fe30&dn=Tag.2018.REPACK.BDRip.x264-GECKOS&tr=http%3A%2F%2Ftracker.trackerfix.com%3A80%2Fannounce&tr=udp%3A%2F%2F9.rarbg.me%3A2710&tr=udp%3A%2F%2F9.rarbg.to%3A2710" progress:^(PTTorrentStatus status) {
+    __block NSString *selectedTorrent;
+    [self.streamer startStreamingFromMultiTorrentFileOrMagnetLink:@"magnet:?xt=urn:btih:D4161A18932C75F598853910C581ECCFA2A43929&dn=La+Casa+De+Papel+AKA+Money+Heist+%282019%29+Season+03+Complete+720p+WEB-DL+x264+AAC+ESub+%5BEnglish+DD5.1%5D+3.3GB+%5BCraZzyBoY%5D&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.open-internet.nl%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Ftracker.internetwarriors.net%3A1337%2Fannounce&tr=udp%3A%2F%2F9.rarbg.me%3A2710%2Fannounce&tr=udp%3A%2F%2F9.rarbg.to%3A2710%2Fannounce&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80%2Fannounce&tr=http%3A%2F%2Ftracker3.itzmx.com%3A6961%2Fannounce&tr=http%3A%2F%2Ftracker1.itzmx.com%3A8080%2Fannounce&tr=udp%3A%2F%2Ftracker.zer0day.to%3A1337%2Fannounce&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969%2Fannounce&tr=udp%3A%2F%2Fcoppersurfer.tk%3A6969%2Fannounce" progress:^(PTTorrentStatus status) {
         NSLog(@"Progress: %f",status.totalProgress);
     } readyToPlay:^(NSURL *videoFileURL, NSURL* video) {
         NSLog(@"%@", videoFileURL);
         XCTAssertNotNil(videoFileURL, @"No file URL");
+        XCTAssertEqualObjects(video.lastPathComponent, selectedTorrent);
         [[PTTorrentStreamer sharedStreamer] cancelStreamingAndDeleteData:YES];
         [expectation fulfill];
     } failure:^(NSError *error) {
@@ -55,12 +56,12 @@
     }
     selectFileToStream:^int(NSArray<NSString*> *torrentNames) {
         NSString* torrents = [[NSString alloc] init];
-        for (NSString* name in torrentNames)torrents = [torrents stringByAppendingFormat:@"%@ ",name];
+        for (NSString* name in torrentNames)torrents = [torrents stringByAppendingFormat:@"%@\n",name];
         XCTAssertNotEqual(torrents, @"");
-        NSLog(@"Available names are %@",torrents);
-        return 2;
-    }
-     ];
+        NSLog(@"Available names are \n%@",torrents);
+        selectedTorrent = [torrentNames objectAtIndex:3];
+        return 3;
+    }];
     
     // Wait 5 minutes
     [self waitForExpectationsWithTimeout:60.0 * 10 handler:nil];

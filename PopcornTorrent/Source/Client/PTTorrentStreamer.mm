@@ -99,6 +99,7 @@ using namespace libtorrent;
                  alert::piece_progress_notification |
                  alert::storage_notification);
     pack.set_bool(settings_pack::listen_system_port_fallback, false);
+    pack.set_bool(settings_pack::use_read_cache, false);
     // libtorrent 1.1 enables UPnP & NAT-PMP by default
     // turn them off before `libt::session` ctor to avoid split second effects
     pack.set_bool(settings_pack::enable_upnp, false);
@@ -445,7 +446,7 @@ using namespace libtorrent;
     _status = th.status();
     
     std::shared_ptr<const torrent_info> ti = th.torrent_file();
-    int file_index = [self indexOfLargestFileInTorrent:th];
+    int file_index = selectedFileIndex != -1 ? selectedFileIndex : [self indexOfLargestFileInTorrent:th];
     file_entry fe = ti->file_at(file_index);
     std::string path = fe.path;
     _fileName = [NSString stringWithCString:path.c_str() encoding:NSUTF8StringEncoding];
@@ -531,6 +532,7 @@ using namespace libtorrent;
                 largest_file_index = i;
             }
         }
+        selectedFileIndex = largest_file_index;
         return largest_file_index;
     }
     return 0;
@@ -561,7 +563,7 @@ using namespace libtorrent;
     th.prioritize_files(file_priorities);
     
     std::shared_ptr<const torrent_info> ti = th.torrent_file();
-    MIN_PIECES = ((ti->file_at([self indexOfLargestFileInTorrent:th]).size*0.03)/ti->piece_length());
+    MIN_PIECES = ((ti->file_at(file_index).size*0.03)/ti->piece_length());
     int first_piece = ti->map_file(file_index, 0, 0).piece;
     for (int i = first_piece; i < first_piece + MIN_PIECES; i++) {
         required_pieces.push_back(i);
@@ -575,7 +577,7 @@ using namespace libtorrent;
     
     th.clear_piece_deadlines();
     std::vector<int> piece_priorities = th.piece_priorities();
-    std::fill(piece_priorities.begin(), piece_priorities.end(), 1);
+    std::fill(piece_priorities.begin(), piece_priorities.end(), LIBTORRENT_PRIORITY_SKIP);
     th.prioritize_pieces(piece_priorities);
     for(std::vector<int>::size_type i = 0; i != required_pieces.size(); i++) {
         int piece = required_pieces[i];

@@ -98,7 +98,7 @@ namespace libtorrent {
 
 #ifdef TORRENT_BSD
 #ifdef HW_MEMSIZE
-		int mib[2] = { CTL_HW, HW_MEMSIZE };
+		int mib[2] = { CTL_HW, HW_MEMSIZE/4 };
 #else
 		// not entirely sure this sysctl supports 64
 		// bit return values, but it's probably better

@@ -32,7 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/aux_/ip_notifier.hpp"
 #include "libtorrent/assert.hpp"
-#include "ip.h"
+#include "netinet/ip.h"
 
 #if defined TORRENT_BUILD_SIMULATOR
 // TODO: simulator support

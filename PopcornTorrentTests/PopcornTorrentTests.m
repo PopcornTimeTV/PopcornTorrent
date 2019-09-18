@@ -59,8 +59,8 @@
         for (NSString* name in torrentNames)torrents = [torrents stringByAppendingFormat:@"%@\n",name];
         XCTAssertNotEqual(torrents, @"");
         NSLog(@"Available names are \n%@",torrents);
-        selectedTorrent = [torrentNames objectAtIndex:3];
-        return 3;
+        selectedTorrent = [torrentNames objectAtIndex:2];
+        return 2;
     }];
     
     // Wait 5 minutes

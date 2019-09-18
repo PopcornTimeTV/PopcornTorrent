@@ -269,7 +269,7 @@ using namespace libtorrent;
         int totalTorrentPieces = ti->num_pieces();
         
         //find the torrent piece corresponding to the requested piece of the movie
-        peer_request request = ti->map_file([self indexOfLargestFileInTorrent:ths[i]], range.location, (int)range.length);
+        peer_request request = ti->map_file(selectedFileIndex != -1 ? selectedFileIndex : [self indexOfLargestFileInTorrent:ths[i]], range.location, (int)range.length);
         
         //set first and last pieces
         int startPiece = request.piece;
@@ -577,14 +577,13 @@ using namespace libtorrent;
     
     th.clear_piece_deadlines();
     std::vector<int> piece_priorities = th.piece_priorities();
-    std::fill(piece_priorities.begin(), piece_priorities.end(), LIBTORRENT_PRIORITY_SKIP);
+    std::fill(piece_priorities.begin(), piece_priorities.end(), 1);
     th.prioritize_pieces(piece_priorities);
     for(std::vector<int>::size_type i = 0; i != required_pieces.size(); i++) {
         int piece = required_pieces[i];
         th.piece_priority(piece, LIBTORRENT_PRIORITY_MAXIMUM);
         th.set_piece_deadline(piece, PIECE_DEADLINE_MILLIS, torrent_handle::alert_when_available);
     }
-    piece_priorities = th.piece_priorities();
     _status = th.status();
 }
 

@@ -205,8 +205,8 @@ namespace {
 		// allow lots of peers to try to connect simultaneously
 		set.set_int(settings_pack::listen_queue_size, 3000);
 
-		// unchoke many peers
-		set.set_int(settings_pack::unchoke_slots_limit, 2000);
+		// unchoke all peers
+		set.set_int(settings_pack::unchoke_slots_limit, -1);
 
 		// use 1 GB of cache
 		set.set_int(settings_pack::cache_size, 32768 * 2);
@@ -326,7 +326,7 @@ namespace {
 		if (internal_executor)
 		{
 			// the user did not provide an executor, we have to use our own
-			m_io_service = std::make_shared<io_service>();
+			m_io_service = std::make_shared<io_service>(1);
 			ios = m_io_service.get();
 		}
 
@@ -393,7 +393,7 @@ namespace {
 		// to keep the session_impl alive
 		m_impl->call_abort();
 
-		if (m_thread && m_thread.unique())
+		if (m_thread && m_thread.use_count() == 1)
 		{
 #if defined TORRENT_ASIO_DEBUGGING
 			wait_for_asio_handlers();
@@ -424,7 +424,7 @@ namespace {
 	session_proxy& session_proxy::operator=(session_proxy&&) noexcept = default;
 	session_proxy::~session_proxy()
 	{
-		if (m_thread && m_thread.unique())
+		if (m_thread && m_thread.use_count() == 1)
 		{
 #if defined TORRENT_ASIO_DEBUGGING
 			wait_for_asio_handlers();

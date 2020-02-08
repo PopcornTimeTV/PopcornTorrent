@@ -2258,6 +2258,7 @@ namespace {
 	constexpr picker_flags_t picker_log_alert::backup1;
 	constexpr picker_flags_t picker_log_alert::backup2;
 	constexpr picker_flags_t picker_log_alert::end_game;
+	constexpr picker_flags_t picker_log_alert::extent_affinity;
 
 	std::string picker_log_alert::message() const
 	{
@@ -2279,6 +2280,7 @@ namespace {
 			"backup1 ",
 			"backup2 ",
 			"end_game "
+			"extent_affinity "
 		};
 
 		std::string ret = peer_alert::message();
@@ -2490,7 +2492,7 @@ namespace {
 		aux::vector<sha1_hash> samples;
 		samples.resize(m_num_samples);
 
-		const char *ptr = m_alloc.get().ptr(m_samples_idx);
+		char const* ptr = m_alloc.get().ptr(m_samples_idx);
 		std::memcpy(samples.data(), ptr, samples.size() * 20);
 
 		return std::move(samples);

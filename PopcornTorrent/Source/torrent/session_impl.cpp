@@ -404,7 +404,7 @@ namespace aux {
 #endif
 		, m_alerts(m_settings.get_int(settings_pack::alert_queue_size)
 			, alert_category_t{static_cast<unsigned int>(m_settings.get_int(settings_pack::alert_mask))})
-		, m_disk_thread(m_io_service, m_stats_counters)
+		, m_disk_thread(m_io_service, m_settings, m_stats_counters)
 		, m_download_rate(peer_connection::download_channel)
 		, m_upload_rate(peer_connection::upload_channel)
 		, m_host_resolver(m_io_service)
@@ -447,7 +447,6 @@ namespace aux {
 		, m_lsd_announce_timer(m_io_service)
 		, m_close_file_timer(m_io_service)
 	{
-		m_disk_thread.set_settings(&pack);
 	}
 
 	template <typename Fun, typename... Args>
@@ -594,6 +593,7 @@ namespace aux {
 #endif
 	}
 
+	// TODO: 2 the ip filter should probably be saved here too
 	void session_impl::save_state(entry* eptr, save_state_flags_t const flags) const
 	{
 		TORRENT_ASSERT(is_single_thread());
@@ -648,7 +648,7 @@ namespace aux {
 			settings = e->dict_find_dict("dht");
 			if (settings)
 			{
-				m_dht_settings = dht::read_dht_settings(settings);
+				static_cast<dht::dht_settings&>(m_dht_settings) = dht::read_dht_settings(settings);
 			}
 		}
 
@@ -670,21 +670,24 @@ namespace aux {
 			settings = e->dict_find_dict("proxy");
 			if (settings)
 			{
-				bdecode_node val;
-				val = settings.dict_find_int("port");
-				if (val) m_settings.set_int(settings_pack::proxy_port, int(val.int_value()));
-				val = settings.dict_find_int("type");
-				if (val) m_settings.set_int(settings_pack::proxy_type, int(val.int_value()));
-				val = settings.dict_find_int("proxy_hostnames");
-				if (val) m_settings.set_bool(settings_pack::proxy_hostnames, val.int_value() != 0);
-				val = settings.dict_find_int("proxy_peer_connections");
-				if (val) m_settings.set_bool(settings_pack::proxy_peer_connections, val.int_value() != 0);
-				val = settings.dict_find_string("hostname");
-				if (val) m_settings.set_str(settings_pack::proxy_hostname, val.string_value().to_string());
-				val = settings.dict_find_string("password");
-				if (val) m_settings.set_str(settings_pack::proxy_password, val.string_value().to_string());
-				val = settings.dict_find_string("username");
-				if (val) m_settings.set_str(settings_pack::proxy_username, val.string_value().to_string());
+				m_settings.bulk_set([&settings](session_settings_single_thread& s)
+				{
+					bdecode_node val;
+					val = settings.dict_find_int("port");
+					if (val) s.set_int(settings_pack::proxy_port, int(val.int_value()));
+					val = settings.dict_find_int("type");
+					if (val) s.set_int(settings_pack::proxy_type, int(val.int_value()));
+					val = settings.dict_find_int("proxy_hostnames");
+					if (val) s.set_bool(settings_pack::proxy_hostnames, val.int_value() != 0);
+					val = settings.dict_find_int("proxy_peer_connections");
+					if (val) s.set_bool(settings_pack::proxy_peer_connections, val.int_value() != 0);
+					val = settings.dict_find_string("hostname");
+					if (val) s.set_str(settings_pack::proxy_hostname, val.string_value().to_string());
+					val = settings.dict_find_string("password");
+					if (val) s.set_str(settings_pack::proxy_password, val.string_value().to_string());
+					val = settings.dict_find_string("username");
+					if (val) s.set_str(settings_pack::proxy_username, val.string_value().to_string());
+				});
 				need_update_proxy = true;
 			}
 		}
@@ -692,15 +695,18 @@ namespace aux {
 		settings = e->dict_find_dict("encryption");
 		if (settings)
 		{
-			bdecode_node val;
-			val = settings.dict_find_int("prefer_rc4");
-			if (val) m_settings.set_bool(settings_pack::prefer_rc4, val.int_value() != 0);
-			val = settings.dict_find_int("out_enc_policy");
-			if (val) m_settings.set_int(settings_pack::out_enc_policy, int(val.int_value()));
-			val = settings.dict_find_int("in_enc_policy");
-			if (val) m_settings.set_int(settings_pack::in_enc_policy, int(val.int_value()));
-			val = settings.dict_find_int("allowed_enc_level");
-			if (val) m_settings.set_int(settings_pack::allowed_enc_level, int(val.int_value()));
+			m_settings.bulk_set([&settings](session_settings_single_thread& s)
+			{
+				bdecode_node val;
+				val = settings.dict_find_int("prefer_rc4");
+				if (val) s.set_bool(settings_pack::prefer_rc4, val.int_value() != 0);
+				val = settings.dict_find_int("out_enc_policy");
+				if (val) s.set_int(settings_pack::out_enc_policy, int(val.int_value()));
+				val = settings.dict_find_int("in_enc_policy");
+				if (val) s.set_int(settings_pack::in_enc_policy, int(val.int_value()));
+				val = settings.dict_find_int("allowed_enc_level");
+				if (val) s.set_int(settings_pack::allowed_enc_level, int(val.int_value()));
+			});
 		}
 #endif
 
@@ -1287,7 +1293,7 @@ namespace aux {
 #endif
 
 		apply_pack(&pack, m_settings, this);
-		m_disk_thread.set_settings(&pack);
+		m_disk_thread.settings_updated();
 
 		if (!reopen_listen_port)
 		{
@@ -3147,7 +3153,7 @@ namespace aux {
 		if (!m_undead_peers.empty())
 		{
 			auto const remove_it = std::remove_if(m_undead_peers.begin(), m_undead_peers.end()
-				, std::bind(&std::shared_ptr<peer_connection>::unique, _1));
+				, [](std::shared_ptr<peer_connection>& ptr) { return ptr.use_count() == 1; });
 			m_undead_peers.erase(remove_it, m_undead_peers.end());
 			if (m_undead_peers.empty())
 			{
@@ -3903,6 +3909,9 @@ namespace aux {
 		TORRENT_ASSERT(is_single_thread());
 		if (m_stats_counters[counters::num_unchoke_slots] == 0) return;
 
+		// if we unchoke everyone, skip this logic
+		if (settings().get_int(settings_pack::unchoke_slots_limit) < 0) return;
+
 		std::vector<opt_unchoke_candidate> opt_unchoke;
 
 		// collect the currently optimistically unchoked peers here, so we can
@@ -4167,6 +4176,13 @@ namespace aux {
 		time_point const now = aux::time_now();
 		time_duration const unchoke_interval = now - m_last_choke;
 		m_last_choke = now;
+
+		// if we unchoke everyone, skip this logic
+		if (settings().get_int(settings_pack::unchoke_slots_limit) < 0)
+		{
+			m_stats_counters.set_value(counters::num_unchoke_slots, std::numeric_limits<int>::max());
+			return;
+		}
 
 		// build list of all peers that are
 		// unchokable.
@@ -5176,8 +5192,9 @@ namespace aux {
 		// this function maps the previous functionality of just setting the ssl
 		// listen port in order to enable the ssl listen sockets, to the new
 		// mechanism where SSL sockets are specified in listen_interfaces.
+		std::vector<std::string> ignore;
 		auto current_ifaces = parse_listen_interfaces(
-			m_settings.get_str(settings_pack::listen_interfaces));
+			m_settings.get_str(settings_pack::listen_interfaces), ignore);
 		// these are the current interfaces we have, first remove all the SSL
 		// interfaces
 		current_ifaces.erase(std::remove_if(current_ifaces.begin(), current_ifaces.end()
@@ -5211,16 +5228,18 @@ namespace aux {
 		INVARIANT_CHECK;
 
 		std::string const net_interfaces = m_settings.get_str(settings_pack::listen_interfaces);
-		m_listen_interfaces = parse_listen_interfaces(net_interfaces);
+		std::vector<std::string> err;
+		m_listen_interfaces = parse_listen_interfaces(net_interfaces, err);
+
+		for (auto const& e : err)
+		{
+			m_alerts.emplace_alert<listen_failed_alert>(e, lt::address{}, 0
+				, operation_t::parse_address, errors::invalid_port, lt::socket_type_t::tcp);
+		}
 
 #ifndef TORRENT_DISABLE_LOGGING
 		if (should_log())
 		{
-			if (!net_interfaces.empty() && m_listen_interfaces.empty())
-			{
-				session_log("ERROR: failed to parse listen_interfaces setting: %s"
-					, net_interfaces.c_str());
-			}
 			session_log("update listen interfaces: %s", net_interfaces.c_str());
 			session_log("parsed listen interfaces count: %d, ifaces: %s"
 				, int(m_listen_interfaces.size())
@@ -5343,6 +5362,16 @@ namespace aux {
 #endif
 		for (auto const& n : nodes)
 			add_dht_router(n);
+#endif
+	}
+
+	void session_impl::update_dht_settings()
+	{
+#ifndef TORRENT_DISABLE_DHT
+		bool const prefer_verified_nodes = m_settings.get_bool(
+			settings_pack::dht_prefer_verified_node_ids);
+
+		m_dht_settings.prefer_verified_node_ids = prefer_verified_nodes;
 #endif
 	}
 
@@ -5575,7 +5604,7 @@ namespace aux {
 			}
 
 			if (tcp) (*ls)->tcp_port_mapping[transport].port = port;
-			else (*ls)->tcp_port_mapping[transport].port = port;
+			else (*ls)->udp_port_mapping[transport].port = port;
 		}
 
 		if (!ec && m_alerts.should_post<portmap_alert>())
@@ -5817,7 +5846,7 @@ namespace aux {
 
 	void session_impl::set_dht_settings(dht::dht_settings const& settings)
 	{
-		m_dht_settings = settings;
+		static_cast<dht::dht_settings&>(m_dht_settings) = settings;
 	}
 
 	void session_impl::set_dht_state(dht::dht_state&& state)
@@ -6042,13 +6071,12 @@ namespace aux {
 	void session_impl::dht_sample_infohashes(udp::endpoint const& ep, sha1_hash const& target)
 	{
 		if (!m_dht) return;
-		m_dht->sample_infohashes(ep, target, [this, &ep](time_duration interval
-			, int num, std::vector<sha1_hash> samples
+		m_dht->sample_infohashes(ep, target, [this, ep](time_duration const interval
+			, int const num, std::vector<sha1_hash> samples
 			, std::vector<std::pair<sha1_hash, udp::endpoint>> nodes)
 		{
-			if (m_alerts.should_post<dht_sample_infohashes_alert>())
-				m_alerts.emplace_alert<dht_sample_infohashes_alert>(ep
-					, interval, num, samples, nodes);
+			m_alerts.emplace_alert<dht_sample_infohashes_alert>(ep
+				, interval, num, std::move(samples), std::move(nodes));
 		});
 	}
 
@@ -6282,6 +6310,25 @@ namespace aux {
 			if (m_alerts.should_post<performance_alert>())
 				m_alerts.emplace_alert<performance_alert>(torrent_handle()
 					, performance_alert::too_many_optimistic_unchoke_slots);
+		}
+
+		if (allowed_upload_slots == std::numeric_limits<int>::max())
+		{
+			// this means we're not aplpying upload slot limits, unchoke
+			// everyone
+			for (auto const& p : m_connections)
+			{
+				if (p->is_disconnecting() || p->is_connecting())
+					continue;
+
+				auto const t = p->associated_torrent().lock();
+				t->unchoke_peer(*p);
+			}
+		}
+		else
+		{
+			// trigger recalculating unchoke slots
+			m_unchoke_time_scaler = 0;
 		}
 	}
 

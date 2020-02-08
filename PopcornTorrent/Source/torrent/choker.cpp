@@ -136,18 +136,8 @@ namespace {
 		return lhs->time_of_last_unchoke() < rhs->time_of_last_unchoke();
 	}
 
-	// return true if 'lhs' peer should be preferred to be unchoke over 'rhs'
-	bool unchoke_compare_anti_leech(peer_connection const* lhs
-		, peer_connection const* rhs)
+	int anti_leech_score(peer_connection const* peer)
 	{
-		int const cmp = compare_peers(lhs, rhs);
-		if (cmp != 0) return cmp > 0;
-
-		std::shared_ptr<torrent> const t1 = lhs->associated_torrent().lock();
-		std::shared_ptr<torrent> const t2 = rhs->associated_torrent().lock();
-		TORRENT_ASSERT(t1);
-		TORRENT_ASSERT(t2);
-
 		// the anti-leech seeding algorithm is based on the paper "Improving
 		// BitTorrent: A Simple Approach" from Chow et. al. and ranks peers based
 		// on how many pieces they have, preferring to unchoke peers that just
@@ -168,13 +158,25 @@ namespace {
 		//   |             V             |
 		//   +---------------------------+
 		//   0%    num have pieces     100%
-		int const t1_total = t1->torrent_file().num_pieces();
-		int const t2_total = t2->torrent_file().num_pieces();
-		int const score1 = (lhs->num_have_pieces() < t1_total / 2
-			? t1_total - lhs->num_have_pieces() : lhs->num_have_pieces()) * 1000 / t1_total;
-		int const score2 = (rhs->num_have_pieces() < t2_total / 2
-			? t2_total - rhs->num_have_pieces() : rhs->num_have_pieces()) * 1000 / t2_total;
+		std::shared_ptr<torrent> const t = peer->associated_torrent().lock();
+		TORRENT_ASSERT(t);
 
+		std::int64_t const total_size = t->torrent_file().total_size();
+		if (total_size == 0) return 0;
+		std::int64_t const have_size = std::max(peer->statistics().total_payload_upload()
+			, std::int64_t(t->torrent_file().piece_length()) * peer->num_have_pieces());
+		return int(std::abs((have_size - total_size / 2) * 2000 / total_size));
+	}
+
+	// return true if 'lhs' peer should be preferred to be unchoke over 'rhs'
+	bool unchoke_compare_anti_leech(peer_connection const* lhs
+		, peer_connection const* rhs)
+	{
+		int const cmp = compare_peers(lhs, rhs);
+		if (cmp != 0) return cmp > 0;
+
+		int const score1 = anti_leech_score(lhs);
+		int const score2 = anti_leech_score(rhs);
 		if (score1 != score2) return score1 > score2;
 
 		// prioritize the one that has waited the longest to be unchoked
@@ -233,10 +235,6 @@ namespace {
 		}
 #endif
 
-		int upload_slots = sett.get_int(settings_pack::unchoke_slots_limit);
-		if (upload_slots < 0)
-			upload_slots = std::numeric_limits<int>::max();
-
 		// ==== BitTyrant ====
 		//
 		// if we're using the bittyrant unchoker, go through all peers that
@@ -268,6 +266,7 @@ namespace {
 
 			// if we're using the bittyrant choker, sort peers by their return
 			// on investment. i.e. download rate / upload rate
+			// TODO: use an incremental partial_sort() here
 			std::sort(peers.begin(), peers.end()
 				, std::bind(&bittyrant_unchoke_compare, _1, _2));
 
@@ -276,7 +275,7 @@ namespace {
 			// now, figure out how many peers should be unchoked. We deduct the
 			// estimated reciprocation rate from our upload_capacity estimate
 			// until there none left
-			upload_slots = 0;
+			int upload_slots = 0;
 
 			for (auto const p : peers)
 			{
@@ -290,6 +289,10 @@ namespace {
 
 			return upload_slots;
 		}
+
+		int upload_slots = sett.get_int(settings_pack::unchoke_slots_limit);
+		if (upload_slots < 0)
+			upload_slots = std::numeric_limits<int>::max();
 
 		// ==== rate-based ====
 		//
@@ -308,7 +311,7 @@ namespace {
 			// it purely based on the current state of our peers.
 			upload_slots = 0;
 
-			// TODO: optimize this using partial_sort or something. We don't need
+			// TODO: use an incremental partial_sort() here. We don't need
 			// to sort the entire list
 
 			// TODO: make the comparison function a free function and move it
@@ -342,34 +345,36 @@ namespace {
 		// we use partial sort here, because we only care about the top
 		// upload_slots peers.
 
+		int const slots = std::min(upload_slots, int(peers.size()));
+
 		if (sett.get_int(settings_pack::seed_choking_algorithm)
 			== settings_pack::round_robin)
 		{
 			int const pieces = sett.get_int(settings_pack::seeding_piece_quota);
 
-			std::partial_sort(peers.begin(), peers.begin()
-				+ std::min(upload_slots, int(peers.size())), peers.end()
+			std::nth_element(peers.begin(), peers.begin()
+				+ slots, peers.end()
 				, std::bind(&unchoke_compare_rr, _1, _2, pieces));
 		}
 		else if (sett.get_int(settings_pack::seed_choking_algorithm)
 			== settings_pack::fastest_upload)
 		{
-			std::partial_sort(peers.begin(), peers.begin()
-				+ std::min(upload_slots, int(peers.size())), peers.end()
+			std::nth_element(peers.begin(), peers.begin()
+				+ slots, peers.end()
 				, std::bind(&unchoke_compare_fastest_upload, _1, _2));
 		}
 		else if (sett.get_int(settings_pack::seed_choking_algorithm)
 			== settings_pack::anti_leech)
 		{
-			std::partial_sort(peers.begin(), peers.begin()
-				+ std::min(upload_slots, int(peers.size())), peers.end()
+			std::nth_element(peers.begin(), peers.begin()
+				+ slots, peers.end()
 				, std::bind(&unchoke_compare_anti_leech, _1, _2));
 		}
 		else
 		{
 			int const pieces = sett.get_int(settings_pack::seeding_piece_quota);
-			std::partial_sort(peers.begin(), peers.begin()
-				+ std::min(upload_slots, int(peers.size())), peers.end()
+			std::nth_element(peers.begin(), peers.begin()
+				+ slots, peers.end()
 				, std::bind(&unchoke_compare_rr, _1, _2, pieces));
 
 			TORRENT_ASSERT_FAIL();

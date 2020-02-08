@@ -378,7 +378,8 @@ restart_response:
 					int header_size;
 					if (parse_chunk_header(buf, &chunk_size, &header_size))
 					{
-						if (chunk_size < 0)
+						if (chunk_size < 0
+							|| chunk_size > std::numeric_limits<std::int64_t>::max() - m_cur_chunk_end - header_size)
 						{
 							m_state = error_state;
 							error = true;
@@ -616,7 +617,14 @@ restart_response:
 			span<char> chunk = buffer.subspan(
 				aux::numeric_cast<std::ptrdiff_t>(chunk_start - offset)
 				, aux::numeric_cast<std::ptrdiff_t>(chunk_end - chunk_start));
+#if defined __GNUC__ && __GNUC__ >= 7
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 			std::memmove(write_ptr, chunk.data(), std::size_t(chunk.size()));
+#if defined __GNUC__ && __GNUC__ >= 7
+#pragma GCC diagnostic pop
+#endif
 			write_ptr += chunk.size();
 		}
 		return buffer.first(write_ptr - buffer.data());

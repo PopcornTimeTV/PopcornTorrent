@@ -248,6 +248,7 @@ namespace aux {
 		// i.e. is_valid() will return false.
 		torrent_handle() noexcept = default;
 
+		// hidden
 		torrent_handle(torrent_handle const& t) = default;
 		torrent_handle(torrent_handle&& t) noexcept = default;
 		torrent_handle& operator=(torrent_handle const&) = default;
@@ -286,8 +287,8 @@ namespace aux {
 		// guaranteed to finish in the same order as you initiated them.
 		void read_piece(piece_index_t piece) const;
 
-		// Returns true if this piece has been completely downloaded, and false
-		// otherwise.
+		// Returns true if this piece has been completely downloaded and written
+		// to disk, and false otherwise.
 		bool have_piece(piece_index_t piece) const;
 
 #if TORRENT_ABI_VERSION == 1
@@ -726,8 +727,8 @@ namespace aux {
 		//			std::ofstream out((st.save_path
 		//				+ "/" + st.name + ".fastresume").c_str()
 		//				, std::ios_base::binary);
-		//			out.unsetf(std::ios_base::skipws);
-		//			bencode(std::ostream_iterator<char>(out), *rd->resume_data);
+		//			std::vector<char> buf = write_resume_data_buf(rd->params);
+		//			out.write(buf.data(), buf.size());
 		//			--outstanding_resume_data;
 		//		}
 		//	}
@@ -831,8 +832,7 @@ namespace aux {
 		// If the torrent doesn't have metadata, the pointer will not be
 		// initialized (i.e. a nullptr). The torrent may be in a state
 		// without metadata only if it was started without a .torrent file, e.g.
-		// by using the libtorrent extension of just supplying a tracker and
-		// info-hash.
+		// by being added by magnet link
 		std::shared_ptr<const torrent_info> torrent_file() const;
 
 #if TORRENT_ABI_VERSION == 1
@@ -993,7 +993,8 @@ namespace aux {
 		// ``get_file_priorities()`` returns a vector with the priorities of all
 		// files.
 		//
-		// The priority values are the same as for piece_priority().
+		// The priority values are the same as for piece_priority(). See
+		// download_priority_t.
 		//
 		// Whenever a file priority is changed, all other piece priorities are
 		// reset to match the file priorities. In order to maintain special
@@ -1101,21 +1102,7 @@ namespace aux {
 		// Typically this is one of the source flags in peer_info. i.e.
 		// ``tracker``, ``pex``, ``dht`` etc.
 		//
-		// ``flags`` are the same flags that are passed along with the ``ut_pex`` extension.
-		//
-		// ==== ==========================================
-		// 0x01 peer supports encryption.
-		//
-		// 0x02 peer is a seed
-		//
-		// 0x04 supports uTP. If this is not set, the peer will only be contacted
-		//      over TCP.
-		//
-		// 0x08 supports hole punching protocol. If this
-		//      flag is received from a peer, it can be
-		//      used as a rendezvous point in case direct
-		//      connections to the peer fail
-		// ==== ==========================================
+		// For possible values of ``flags``, see pex_flags_t.
 		void connect_peer(tcp::endpoint const& adr, peer_source_flags_t source = {}
 			, pex_flags_t flags = pex_encryption | pex_utp | pex_holepunch) const;
 
@@ -1240,6 +1227,8 @@ namespace aux {
 		bool operator<(const torrent_handle& h) const
 		{ return m_torrent.owner_before(h.m_torrent); }
 
+		// returns a unique identifier for this torrent. It's not a dense index.
+		// It's not preserved across sessions.
 		std::uint32_t id() const
 		{
 			uintptr_t ret = reinterpret_cast<uintptr_t>(m_torrent.lock().get());
@@ -1250,7 +1239,9 @@ namespace aux {
 
 		// This function is intended only for use by plugins and the alert
 		// dispatch function. This type does not have a stable API and should
-		// be relied on as little as possible.
+		// be relied on as little as possible. Accessing the handle returned by
+		// this function is not thread safe outside of libtorrent's internal
+		// thread (which is used to invoke plugin callbacks).
 		std::shared_ptr<torrent> native_handle() const;
 
 	private:

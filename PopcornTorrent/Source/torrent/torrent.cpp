@@ -203,10 +203,13 @@ bool is_downloading_state(int const st)
 		, m_super_seeding(p.flags & torrent_flags::super_seeding)
 		, m_stop_when_ready(p.flags & torrent_flags::stop_when_ready)
 		, m_need_save_resume_data(p.flags & torrent_flags::need_save_resume)
+		, m_enable_dht(!bool(p.flags & torrent_flags::disable_dht))
+		, m_enable_lsd(!bool(p.flags & torrent_flags::disable_lsd))
 		, m_max_uploads((1 << 24) - 1)
 		, m_save_resume_flags()
 		, m_num_uploads(0)
 		, m_lsd_seq(0)
+		, m_enable_pex(!bool(p.flags & torrent_flags::disable_pex))
 		, m_magnet_link(false)
 		, m_apply_ip_filter(p.flags & torrent_flags::apply_ip_filter)
 		, m_pending_active_change(false)
@@ -223,6 +226,9 @@ bool is_downloading_state(int const st)
 		, m_inactive(false)
 		, m_downloaded(0xffffff)
 		, m_progress_ppm(0)
+		, m_torrent_initialized(false)
+		, m_outstanding_file_priority(false)
+		, m_complete_sent(false)
 	{
 		// we cannot log in the constructor, because it relies on shared_from_this
 		// being initialized, which happens after the constructor returns.
@@ -252,6 +258,14 @@ bool is_downloading_state(int const st)
 		if (!m_torrent_file)
 			m_torrent_file = (p.ti ? p.ti : std::make_shared<torrent_info>(m_info_hash));
 
+		// in case we added the torrent via magnet link, make sure to preserve any
+		// DHT nodes passed in on the URI in the torrent file itself
+		if (!m_torrent_file->is_valid())
+		{
+			for (auto const& n : p.dht_nodes)
+				m_torrent_file->add_node(n);
+		}
+
 		// --- WEB SEEDS ---
 
 		// if override web seed flag is set, don't load any web seeds from the
@@ -274,10 +288,16 @@ bool is_downloading_state(int const st)
 			// correct URLs to end with a "/" for multi-file torrents
 			if (multi_file)
 				ensure_trailing_slash(ws.back().url);
+			if (!m_torrent_file->is_valid())
+				m_torrent_file->add_url_seed(ws.back().url);
 		}
 
 		for (auto const& e : p.http_seeds)
+		{
 			ws.emplace_back(e, web_seed_entry::http_seed);
+			if (!m_torrent_file->is_valid())
+				m_torrent_file->add_http_seed(e);
+		}
 
 		aux::random_shuffle(ws);
 		for (auto& w : ws) m_web_seeds.emplace_back(std::move(w));
@@ -305,6 +325,11 @@ bool is_downloading_state(int const st)
 			if (!find_tracker(e.url))
 			{
 				m_trackers.push_back(e);
+				// add the tracker to the m_torrent_file here so that the trackers
+				// will be preserved via create_torrent() when passing in just the
+				// torrent_info object.
+				if (!m_torrent_file->is_valid())
+					m_torrent_file->add_tracker(e.url, e.tier, announce_entry::tracker_source(e.source));
 			}
 		}
 
@@ -768,6 +793,7 @@ bool is_downloading_state(int const st)
 	bool torrent::should_announce_dht() const
 	{
 		TORRENT_ASSERT(is_single_thread());
+		if (!m_enable_dht) return false;
 		if (!m_ses.announce_dht()) return false;
 
 		if (!m_ses.dht()) return false;
@@ -951,6 +977,12 @@ bool is_downloading_state(int const st)
 			ret |= torrent_flags::sequential_download;
 		if (m_stop_when_ready)
 			ret |= torrent_flags::stop_when_ready;
+		if (!m_enable_dht)
+			ret |= torrent_flags::disable_dht;
+		if (!m_enable_lsd)
+			ret |= torrent_flags::disable_lsd;
+		if (!m_enable_pex)
+			ret |= torrent_flags::disable_pex;
 		return ret;
 	}
 
@@ -983,6 +1015,12 @@ bool is_downloading_state(int const st)
 			set_sequential_download(bool(flags & torrent_flags::sequential_download));
 		if (mask & torrent_flags::stop_when_ready)
 			stop_when_ready(bool(flags & torrent_flags::stop_when_ready));
+		if (mask & torrent_flags::disable_dht)
+			m_enable_dht = !bool(flags & torrent_flags::disable_dht);
+		if (mask & torrent_flags::disable_lsd)
+			m_enable_lsd = !bool(flags & torrent_flags::disable_lsd);
+		if (mask & torrent_flags::disable_pex)
+			m_enable_pex = !bool(flags & torrent_flags::disable_pex);
 	}
 
 	void torrent::set_share_mode(bool s)
@@ -1741,6 +1779,15 @@ bool is_downloading_state(int const st)
 			return;
 		}
 
+		int const blocks_per_piece
+			= (m_torrent_file->piece_length() + default_block_size - 1) / default_block_size;
+		if (blocks_per_piece > piece_picker::max_blocks_per_piece)
+		{
+			set_error(errors::invalid_piece_size, torrent_status::error_file_none);
+			pause();
+			return;
+		}
+
 		// --- MAPPED FILES ---
 		file_storage const& fs = m_torrent_file->files();
 		if (m_add_torrent_params)
@@ -1825,7 +1872,6 @@ bool is_downloading_state(int const st)
 				TORRENT_ASSERT((pr.start & (block_size() - 1)) == 0);
 
 				int block = block_size();
-				int blocks_per_piece = m_torrent_file->piece_length() / block;
 				piece_block pb(pr.piece, pr.start / block);
 				for (; pr.length >= block; pr.length -= block, ++pb.block_index)
 				{
@@ -1935,6 +1981,8 @@ bool is_downloading_state(int const st)
 
 		// this will remove the piece picker, if we're done with it
 		maybe_done_flushing();
+
+		m_torrent_initialized = true;
 	}
 
 	bt_peer_connection* torrent::find_introducer(tcp::endpoint const& ep) const
@@ -2523,6 +2571,7 @@ bool is_downloading_state(int const st)
 	void torrent::lsd_announce()
 	{
 		if (m_abort) return;
+		if (!m_enable_lsd) return;
 
 		// if the files haven't been checked yet, we're
 		// not ready for peers. Except, if we don't have metadata,
@@ -2587,6 +2636,9 @@ bool is_downloading_state(int const st)
 
 				if (m_paused)
 					debug_log("DHT: torrent paused, no DHT announce");
+
+				if (!m_enable_dht)
+					debug_log("DHT: torrent has DHT disabled flag");
 
 #if TORRENT_ABI_VERSION == 1
 				// deprecated in 1.2
@@ -2874,7 +2926,7 @@ bool is_downloading_state(int const st)
 					return;
 				}
 
-				ae.endpoints.emplace_back(s);
+				ae.endpoints.emplace_back(s, bool(m_complete_sent));
 				std::swap(ae.endpoints[valid_endpoints], ae.endpoints.back());
 				valid_endpoints++;
 			});
@@ -2935,7 +2987,12 @@ bool is_downloading_state(int const st)
 				if (req.event == tracker_request::none)
 				{
 					if (!aep.start_sent) req.event = tracker_request::started;
-					else if (!aep.complete_sent && is_seed()) req.event = tracker_request::completed;
+					else if (!m_complete_sent
+						&& !aep.complete_sent
+						&& is_seed())
+					{
+						req.event = tracker_request::completed;
+					}
 				}
 
 				req.triggered_manually = aep.triggered_manually;
@@ -3167,6 +3224,10 @@ bool is_downloading_state(int const st)
 		tcp::endpoint local_endpoint;
 		if (ae)
 		{
+#if TORRENT_ABI_VERSION == 1
+			if (!ae->complete_sent && r.event == tracker_request::completed)
+				ae->complete_sent = true;
+#endif
 			announce_endpoint* aep = ae->find_endpoint(r.outgoing_socket);
 			if (aep)
 			{
@@ -3177,12 +3238,20 @@ bool is_downloading_state(int const st)
 				if (!aep->start_sent && r.event == tracker_request::started)
 					aep->start_sent = true;
 				if (!aep->complete_sent && r.event == tracker_request::completed)
+				{
 					aep->complete_sent = true;
+					// we successfully reported event=completed to one tracker. Don't
+					// send it to any other ones from now on (there may be other
+					// announces outstanding right now though)
+					m_complete_sent = true;
+				}
 				ae->verified = true;
 				aep->next_announce = now + interval;
 				aep->min_announce = now + resp.min_interval;
 				aep->updating = false;
 				aep->fails = 0;
+				aep->last_error.clear();
+				aep->message = !resp.warning_message.empty() ? resp.warning_message : std::string();
 				int tracker_index = int(ae - m_trackers.data());
 				m_last_working_tracker = std::int8_t(prioritize_tracker(tracker_index));
 
@@ -3540,7 +3609,7 @@ bool is_downloading_state(int const st)
 		if (!valid_metadata()) return {};
 		TORRENT_ASSERT(m_torrent_file->num_pieces() > 0);
 		if (m_seed_mode) return std::int64_t(0);
-		if (!has_picker()) return m_seed_mode ? std::int64_t(0) : m_torrent_file->total_size();
+		if (!has_picker()) return is_seed() ? std::int64_t(0) : m_torrent_file->total_size();
 
 		std::int64_t left
 			= m_torrent_file->total_size()
@@ -4911,29 +4980,28 @@ bool is_downloading_state(int const st)
 	namespace
 	{
 		aux::vector<download_priority_t, file_index_t> fix_priorities(
-			aux::vector<download_priority_t, file_index_t> const& input
+			aux::vector<download_priority_t, file_index_t> input
 			, file_storage const* fs)
 		{
-			aux::vector<download_priority_t, file_index_t> files(input.begin(), input.end());
+			if (fs) input.resize(fs->num_files(), default_priority);
 
-			if (fs) files.resize(fs->num_files(), default_priority);
-
-			for (file_index_t i : files.range())
+			for (file_index_t i : input.range())
 			{
 				// initialize pad files to priority 0
-				if (files[i] > dont_download && fs && fs->pad_file_at(i))
-					files[i] = dont_download;
-				else if (files[i] > top_priority)
-					files[i] = top_priority;
+				if (input[i] > dont_download && fs && fs->pad_file_at(i))
+					input[i] = dont_download;
+				else if (input[i] > top_priority)
+					input[i] = top_priority;
 			}
 
-			return files;
+			return input;
 		}
 	}
 
 	void torrent::on_file_priority(storage_error const& err
 		, aux::vector<download_priority_t, file_index_t> prios)
 	{
+		m_outstanding_file_priority = false;
 		COMPLETE_ASYNC("file_priority");
 		if (m_file_priority != prios)
 		{
@@ -4942,23 +5010,43 @@ bool is_downloading_state(int const st)
 				recalc_share_mode();
 		}
 
-		if (!err) return;
+		if (err)
+		{
+			// in this case, some file priorities failed to get set
+			if (alerts().should_post<file_error_alert>())
+				alerts().emplace_alert<file_error_alert>(err.ec
+					, resolve_filename(err.file()), err.operation, get_handle());
 
-		// in this case, some file priorities failed to get set
-
-		if (alerts().should_post<file_error_alert>())
-			alerts().emplace_alert<file_error_alert>(err.ec
-				, resolve_filename(err.file()), err.operation, get_handle());
-
-		set_error(err.ec, err.file());
-		pause();
+			set_error(err.ec, err.file());
+			pause();
+		}
+		else if (!m_deferred_file_priorities.empty() && !m_abort)
+		{
+			auto new_priority = m_file_priority;
+			// resize the vector if we have to. The last item in the map has the
+			// highest file index.
+			auto const max_idx = std::prev(m_deferred_file_priorities.end())->first;
+			if (new_priority.end_index() <= max_idx)
+			{
+				// any unallocated slot is assumed to have the default priority
+				new_priority.resize(static_cast<int>(max_idx) + 1, default_priority);
+			}
+			for (auto const& p : m_deferred_file_priorities)
+			{
+				file_index_t const index = p.first;
+				download_priority_t const prio = p.second;
+				new_priority[index] = prio;
+			}
+			m_deferred_file_priorities.clear();
+			prioritize_files(std::move(new_priority));
+		}
 	}
 
-	void torrent::prioritize_files(aux::vector<download_priority_t, file_index_t> const& files)
+	void torrent::prioritize_files(aux::vector<download_priority_t, file_index_t> files)
 	{
 		INVARIANT_CHECK;
 
-		auto new_priority = fix_priorities(files
+		auto new_priority = fix_priorities(std::move(files)
 			, valid_metadata() ? &m_torrent_file->files() : nullptr);
 
 		// storage may be NULL during shutdown
@@ -4971,6 +5059,7 @@ bool is_downloading_state(int const st)
 			// possibly not fully updated.
 			update_piece_priorities(new_priority);
 
+			m_outstanding_file_priority = true;
 			ADD_OUTSTANDING_ASYNC("file_priority");
 			m_ses.disk_thread().async_set_file_priority(m_storage
 				, std::move(new_priority), std::bind(&torrent::on_file_priority, shared_from_this(), _1, _2));
@@ -4996,6 +5085,13 @@ bool is_downloading_state(int const st)
 		}
 
 		prio = aux::clamp(prio, dont_download, top_priority);
+
+		if (m_outstanding_file_priority)
+		{
+			m_deferred_file_priorities[index] = prio;
+			return;
+		}
+
 		auto new_priority = m_file_priority;
 		if (new_priority.end_index() <= index)
 		{
@@ -5014,6 +5110,7 @@ bool is_downloading_state(int const st)
 			// piece priorities still stay the same, but the file priorities are
 			// possibly not fully updated.
 			update_piece_priorities(new_priority);
+			m_outstanding_file_priority = true;
 			ADD_OUTSTANDING_ASYNC("file_priority");
 			m_ses.disk_thread().async_set_file_priority(m_storage
 				, std::move(new_priority), std::bind(&torrent::on_file_priority, shared_from_this(), _1, _2));
@@ -5165,8 +5262,11 @@ bool is_downloading_state(int const st)
 		{
 			t.endpoints.clear();
 			if (t.source == 0) t.source = announce_entry::source_client;
+#if TORRENT_ABI_VERSION == 1
+			t.complete_sent = m_complete_sent;
+#endif
 			for (auto& aep : t.endpoints)
-				aep.complete_sent = is_seed();
+				aep.complete_sent = m_complete_sent;
 		}
 
 		if (settings().get_bool(settings_pack::prefer_udp_trackers))
@@ -6067,7 +6167,7 @@ bool is_downloading_state(int const st)
 
 	std::shared_ptr<const torrent_info> torrent::get_torrent_copy()
 	{
-		if (!m_torrent_file->is_valid()) return std::shared_ptr<const torrent_info>();
+		if (!m_torrent_file->is_valid()) return {};
 		return m_torrent_file;
 	}
 
@@ -6161,16 +6261,13 @@ bool is_downloading_state(int const st)
 		}
 
 		// save web seeds
-		if (!m_web_seeds.empty())
+		for (auto const& ws : m_web_seeds)
 		{
-			for (auto const& ws : m_web_seeds)
-			{
-				if (ws.removed || ws.ephemeral) continue;
-				if (ws.type == web_seed_entry::url_seed)
-					ret.url_seeds.push_back(ws.url);
-				else if (ws.type == web_seed_entry::http_seed)
-					ret.http_seeds.push_back(ws.url);
-			}
+			if (ws.removed || ws.ephemeral) continue;
+			if (ws.type == web_seed_entry::url_seed)
+				ret.url_seeds.push_back(ws.url);
+			else if (ws.type == web_seed_entry::http_seed)
+				ret.http_seeds.push_back(ws.url);
 		}
 
 		// write have bitmask
@@ -7476,9 +7573,18 @@ bool is_downloading_state(int const st)
 		}
 		else
 		{
+			// we just added this torrent as a seed, or force-rechecked it, and we
+			// have all of it. Assume that we sent the event=completed when we
+			// finished downloading it, and don't send any more.
+			m_complete_sent = true;
 			for (auto& t : m_trackers)
+			{
+#if TORRENT_ABI_VERSION == 1
+				t.complete_sent = true;
+#endif
 				for (auto& aep : t.endpoints)
 					aep.complete_sent = true;
+			}
 
 			if (m_state != torrent_status::finished
 				&& m_state != torrent_status::seeding)
@@ -7565,12 +7671,7 @@ bool is_downloading_state(int const st)
 	bool torrent::is_finished() const
 	{
 		if (is_seed()) return true;
-
-		// this is slightly different from m_picker->is_finished()
-		// because any piece that has *passed* is considered here,
-		// which may be more than the piece we *have* (i.e. written to disk)
-		return valid_metadata() && has_picker()
-			&& m_picker->want().num_pieces - m_picker->num_passed() == 0;
+		return valid_metadata() && has_picker() && m_picker->is_finished();
 	}
 
 	bool torrent::is_inactive() const
@@ -8149,7 +8250,7 @@ bool is_downloading_state(int const st)
 		}
 #endif
 		// if the error happened during initialization, try again now
-		if (!m_connections_initialized && valid_metadata()) init();
+		if (!m_torrent_initialized && valid_metadata()) init();
 		if (!checking_files && should_check_files())
 			start_checking();
 	}
@@ -9148,14 +9249,14 @@ bool is_downloading_state(int const st)
 		int limit = zero_or(settings().get_int(settings_pack::max_web_seed_connections)
 			, 100);
 
-		auto const now = aux::time_now();
+		auto const now = aux::time_now32();
 
 		// keep trying web-seeds if there are any
 		// first find out which web seeds we are connected to
 		for (auto i = m_web_seeds.begin(); i != m_web_seeds.end() && limit > 0;)
 		{
 			auto const w = i++;
-			if (w->removed || w->retry > now)
+			if (w->removed || w->retry > now || !w->interesting)
 				continue;
 
 			--limit;
@@ -10796,11 +10897,15 @@ bool is_downloading_state(int const st)
 	{
 		TORRENT_ASSERT(is_single_thread());
 		TORRENT_ASSERT(b > 0);
-		TORRENT_ASSERT(m_total_redundant_bytes <= std::numeric_limits<std::int32_t>::max() - b);
-		m_total_redundant_bytes += b;
-
 		TORRENT_ASSERT(static_cast<int>(reason) >= 0);
 		TORRENT_ASSERT(static_cast<int>(reason) < static_cast<int>(waste_reason::max));
+
+		if (m_total_redundant_bytes <= std::numeric_limits<std::int32_t>::max() - b)
+			m_total_redundant_bytes += b;
+		else
+			m_total_redundant_bytes = std::numeric_limits<std::int32_t>::max();
+
+		// the stats counters are 64 bits, so we don't check for overflow there
 		m_stats_counters.inc_stats_counter(counters::recv_redundant_bytes, b);
 		m_stats_counters.inc_stats_counter(counters::waste_piece_timed_out + static_cast<int>(reason), b);
 	}
@@ -10809,8 +10914,12 @@ bool is_downloading_state(int const st)
 	{
 		TORRENT_ASSERT(is_single_thread());
 		TORRENT_ASSERT(b > 0);
-		TORRENT_ASSERT(m_total_failed_bytes <= std::numeric_limits<std::int32_t>::max() - b);
-		m_total_failed_bytes += b;
+		if (m_total_failed_bytes <= std::numeric_limits<std::int32_t>::max() - b)
+			m_total_failed_bytes += b;
+		else
+			m_total_failed_bytes = std::numeric_limits<std::int32_t>::max();
+
+		// the stats counters are 64 bits, so we don't check for overflow there
 		m_stats_counters.inc_stats_counter(counters::recv_failed_bytes, b);
 	}
 

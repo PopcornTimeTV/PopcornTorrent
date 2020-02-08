@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2009-2018, Arvid Norberg
+Copyright (c) 2019, Arvid Norberg
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,44 +30,59 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef TORRENT_IO_SERVICE_FWD_HPP_INCLUDED
-#define TORRENT_IO_SERVICE_FWD_HPP_INCLUDED
+#ifndef TORRENT_DEPRECATED_HPP_INCLUDED
+#define TORRENT_DEPRECATED_HPP_INCLUDED
 
-#include "libtorrent/config.hpp"
-#include <boost/version.hpp>
+#if defined __clang__
 
-#if defined TORRENT_BUILD_SIMULATOR
-namespace sim { namespace asio {
+// ====== CLANG ========
 
-	struct io_service;
-}}
-#else
-namespace boost { namespace asio {
-#if BOOST_VERSION < 106600
-	class io_service;
-#else
-	class io_context;
-	typedef io_context io_service;
+# if !defined TORRENT_BUILDING_LIBRARY
+// TODO: figure out which version of clang this is supported in
+#  define TORRENT_DEPRECATED __attribute__ ((deprecated))
+#  define TORRENT_DEPRECATED_ENUM __attribute__ ((deprecated))
+#  define TORRENT_DEPRECATED_MEMBER __attribute__ ((deprecated))
+# endif
+
+#elif defined __GNUC__
+
+// ======== GCC ========
+
+// deprecation markup is only enabled when libtorrent
+// headers are included by clients, not while building
+// libtorrent itself
+# if __GNUC__ >= 3 && !defined TORRENT_BUILDING_LIBRARY
+#  define TORRENT_DEPRECATED __attribute__ ((deprecated))
+# endif
+
+# if __GNUC__ >= 6 && !defined TORRENT_BUILDING_LIBRARY
+#  define TORRENT_DEPRECATED_ENUM __attribute__ ((deprecated))
+#  define TORRENT_DEPRECATED_MEMBER __attribute__ ((deprecated))
+# endif
+
+#elif defined _MSC_VER
+
+// ======= MSVC =========
+
+// deprecation markup is only enabled when libtorrent
+// headers are included by clients, not while building
+// libtorrent itself
+#if !defined TORRENT_BUILDING_LIBRARY
+# define TORRENT_DEPRECATED __declspec(deprecated)
 #endif
-}}
+
 #endif
 
-namespace libtorrent {
-
-#if defined TORRENT_BUILD_SIMULATOR
-	using io_service = sim::asio::io_service;
-#else
-	using io_service = boost::asio::io_service;
+#ifndef TORRENT_DEPRECATED
+#define TORRENT_DEPRECATED
 #endif
 
-#if BOOST_VERSION >= 107000 && !defined TORRENT_BUILD_SIMULATOR
-template <typename T>
-io_service& get_io_service(T& o) { return static_cast<io_service&>(o.get_executor().context()); }
-#else
-template <typename T>
-io_service& get_io_service(T& o) { return o.get_io_service(); }
+#ifndef TORRENT_DEPRECATED_ENUM
+#define TORRENT_DEPRECATED_ENUM
 #endif
 
-}
+#ifndef TORRENT_DEPRECATED_MEMBER
+#define TORRENT_DEPRECATED_MEMBER
+#endif
 
 #endif

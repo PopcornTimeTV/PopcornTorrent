@@ -742,7 +742,7 @@ void upnp::create_port_mapping(http_connection& c, rootdevice& d
 	error_code ec;
 	std::string local_endpoint = print_address(c.socket().local_endpoint(ec).address());
 
-	char soap[2048];
+	char soap[1024];
 	std::snprintf(soap, sizeof(soap), "<?xml version=\"1.0\"?>\n"
 		"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" "
 		"s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
@@ -868,7 +868,7 @@ void upnp::delete_port_mapping(rootdevice& d, port_mapping_t const i)
 
 	char const* soap_action = "DeletePortMapping";
 
-	char soap[2048];
+	char soap[1024];
 	std::snprintf(soap, sizeof(soap), "<?xml version=\"1.0\"?>\n"
 		"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" "
 		"s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
@@ -1077,7 +1077,7 @@ void upnp::get_ip_address(rootdevice& d)
 
 	char const* soap_action = "GetExternalIPAddress";
 
-	char soap[2048];
+	char soap[1024];
 	std::snprintf(soap, sizeof(soap), "<?xml version=\"1.0\"?>\n"
 		"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" "
 		"s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
@@ -1284,7 +1284,7 @@ void upnp::on_upnp_get_ip_address_response(error_code const& e
 #ifndef TORRENT_DISABLE_LOGGING
 	if (s.error_code != -1)
 	{
-		log("error while getting external IP address, code: %u", s.error_code);
+		log("error while getting external IP address, code: %d", s.error_code);
 	}
 #endif
 
@@ -1386,8 +1386,7 @@ void upnp::on_upnp_map_response(error_code const& e
 	if (s.error_code != -1)
 	{
 #ifndef TORRENT_DISABLE_LOGGING
-		log("error while adding port map, code: %u"
-			, s.error_code);
+		log("error while adding port map, code: %d", s.error_code);
 #endif
 	}
 

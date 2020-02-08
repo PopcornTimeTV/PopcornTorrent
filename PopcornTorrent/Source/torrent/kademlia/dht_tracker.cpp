@@ -85,7 +85,7 @@ namespace libtorrent { namespace dht {
 	dht_tracker::dht_tracker(dht_observer* observer
 		, io_service& ios
 		, send_fun_t const& send_fun
-		, dht_settings const& settings
+		, dht::settings const& settings
 		, counters& cnt
 		, dht_storage_interface& storage
 		, dht_state&& state)
@@ -525,7 +525,7 @@ namespace libtorrent { namespace dht {
 			// these are class A networks not available to the public
 			// if we receive messages from here, that seems suspicious
 			static std::uint8_t const class_a[] = { 3, 6, 7, 9, 11, 19, 21, 22, 25
-				, 26, 28, 29, 30, 33, 34, 48, 51, 56 };
+				, 26, 28, 29, 30, 33, 34, 48, 56 };
 
 			if (std::find(std::begin(class_a), std::end(class_a), b[0]) != std::end(class_a))
 			{
@@ -576,7 +576,7 @@ namespace libtorrent { namespace dht {
 
 	dht_tracker::tracker_node::tracker_node(io_service& ios
 		, aux::listen_socket_handle const& s, socket_manager* sock
-		, dht_settings const& settings
+		, dht::settings const& settings
 		, node_id const& nid
 		, dht_observer* observer, counters& cnt
 		, get_foreign_node_t get_foreign_node
@@ -601,7 +601,7 @@ namespace libtorrent { namespace dht {
 		return ret;
 	}
 
-	namespace {
+namespace {
 
 	std::vector<udp::endpoint> save_nodes(node const& dht)
 	{
@@ -613,7 +613,7 @@ namespace libtorrent { namespace dht {
 		return ret;
 	}
 
-	} // anonymous namespace
+} // anonymous namespace
 
 	dht_state dht_tracker::state() const
 	{

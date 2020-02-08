@@ -66,18 +66,25 @@ namespace libtorrent {
 		, std::vector<char>&, error_code&)>;
 #endif
 
+	// this class provides a non-owning handle to a session and a subset of the
+	// interface of the session class. If the underlying session is destructed
+	// any handle to it will no longer be valid. is_valid() will return false and
+	// any operation on it will throw an invalid_session_handle.
 	struct TORRENT_EXPORT session_handle
 	{
 		friend class session;
 		friend struct aux::session_impl;
 
-		session_handle() {}
-
+		// hidden
+		session_handle() = default;
 		session_handle(session_handle const& t) = default;
 		session_handle(session_handle&& t) noexcept = default;
 		session_handle& operator=(session_handle const&) = default;
 		session_handle& operator=(session_handle&&) noexcept = default;
 
+		// returns true if this handle refers to a valid session object. If the
+		// session has been destroyed, all session_handle objects will expire and
+		// not be valid.
 		bool is_valid() const { return !m_impl.expired(); }
 
 		// saves settings (i.e. the settings_pack)
@@ -102,7 +109,6 @@ namespace libtorrent {
 		static constexpr save_state_flags_t TORRENT_DEPRECATED_MEMBER save_tracker_proxy = 10_bit;
 #endif
 
-		// TODO: 2 the ip filter should probably be saved here too
 		// loads and saves all session settings, including dht_settings,
 		// encryption settings and proxy settings. ``save_state`` writes all keys
 		// to the ``entry`` that's passed in, which needs to either not be
@@ -450,6 +456,20 @@ namespace libtorrent {
 				, std::int64_t&, std::string const&)> cb
 			, std::string salt = std::string());
 
+		// ``dht_get_peers()`` will issue a DHT get_peer request to the DHT for the
+		// specified info-hash. The response (the peers) will be posted back in a
+		// dht_get_peers_reply_alert.
+		//
+		// ``dht_announce()`` will issue a DHT announce request to the DHT to the
+		// specified info-hash, advertising the specified port. If the port is
+		// left at its default, 0, the port will be implied by the DHT message's
+		// source port (which may improve connectivity through a NAT).
+		//
+		// Both these functions are exposed for advanced custom use of the DHT.
+		// All torrents eligible to be announce to the DHT will be automatically,
+		// by libtorrent.
+		//
+		// For possible flags, see announce_flags_t.
 		void dht_get_peers(sha1_hash const& info_hash);
 		void dht_announce(sha1_hash const& info_hash, int port = 0, dht::announce_flags_t flags = {});
 
@@ -791,14 +811,6 @@ namespace libtorrent {
 		// shifting.
 		void remove_torrent(const torrent_handle& h, remove_flags_t options = {});
 
-#if TORRENT_ABI_VERSION == 1
-		// deprecated in libtorrent 1.1. use settings_pack instead
-		TORRENT_DEPRECATED
-		void set_pe_settings(pe_settings const& settings);
-		TORRENT_DEPRECATED
-		pe_settings get_pe_settings() const;
-#endif
-
 		// Applies the settings specified by the settings_pack ``s``. This is an
 		// asynchronous operation that will return immediately and actually apply
 		// the settings to the main thread of libtorrent some time later.
@@ -807,6 +819,22 @@ namespace libtorrent {
 		settings_pack get_settings() const;
 
 #if TORRENT_ABI_VERSION == 1
+
+#if defined __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+		// deprecated in libtorrent 1.1. use settings_pack instead
+		TORRENT_DEPRECATED
+		void set_pe_settings(pe_settings const& settings);
+		TORRENT_DEPRECATED
+		pe_settings get_pe_settings() const;
+
+#if defined __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
 		// ``set_i2p_proxy`` sets the i2p_ proxy, and tries to open a persistent
 		// connection to it. The only used fields in the proxy settings structs
 		// are ``hostname`` and ``port``.
@@ -937,6 +965,13 @@ namespace libtorrent {
 		// To control which alerts are posted, set the alert_mask
 		// (settings_pack::alert_mask).
 		//
+		// If the alert queue fills up to the point where alerts are dropped, this
+		// will be indicated by a alerts_dropped_alert, which contains a bitmask
+		// of which types of alerts were dropped. Generally it is a good idea to
+		// make sure the alert queue is large enough, the alert_mask doesn't have
+		// unnecessary categories enabled and to call pop_alert() frequently, to
+		// avoid alerts being dropped.
+		//
 		// the ``set_alert_notify`` function lets the client set a function object
 		// to be invoked every time the alert queue goes from having 0 alerts to
 		// 1 alert. This function is called from within libtorrent, it may be the
@@ -1026,10 +1061,11 @@ namespace libtorrent {
 		constexpr static portmap_protocol udp = portmap_protocol::udp;
 		constexpr static portmap_protocol tcp = portmap_protocol::tcp;
 
-		// add_port_mapping adds a port forwarding on UPnP and/or NAT-PMP,
-		// whichever is enabled. The return value is a handle referring to the
-		// port mapping that was just created. Pass it to delete_port_mapping()
-		// to remove it.
+		// add_port_mapping adds one or more port forwards on UPnP and/or NAT-PMP,
+		// whichever is enabled. A mapping is created for each listen socket
+		// in the session. The return values are all handles referring to the
+		// port mappings that were just created. Pass them to delete_port_mapping()
+		// to remove them.
 		std::vector<port_mapping_t> add_port_mapping(portmap_protocol t, int external_port, int local_port);
 		void delete_port_mapping(port_mapping_t handle);
 

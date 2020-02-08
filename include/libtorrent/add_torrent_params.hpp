@@ -80,7 +80,7 @@ TORRENT_VERSION_NAMESPACE_2
 	//
 	// The ``add_torrent_params`` is also used when requesting resume data for a
 	// torrent. It can be saved to and restored from a file and added back to a
-	// new session. For serialization and deserialization of
+	// new session. For serialization and de-serialization of
 	// ``add_torrent_params`` objects, see read_resume_data() and
 	// write_resume_data().
 #include "libtorrent/aux_/disable_warnings_push.hpp"
@@ -152,6 +152,8 @@ TORRENT_VERSION_NAMESPACE_2
 		// to the session (if DHT is enabled). The hostname may be an IP address.
 		aux::noexcept_movable<std::vector<std::pair<std::string, int>>> dht_nodes;
 
+		// in case there's no other name in this torrent, this name will be used.
+		// The name out of the torrent_info object takes precedence if available.
 		std::string name;
 
 		// the path where the torrent is or will be stored.
@@ -236,6 +238,8 @@ TORRENT_VERSION_NAMESPACE_2
 		int max_uploads = -1;
 		int max_connections = -1;
 
+		// the upload and download rate limits for this torrent, specified in
+		// bytes per second. -1 means unlimited.
 		int upload_limit = -1;
 		int download_limit = -1;
 
@@ -277,7 +281,6 @@ TORRENT_VERSION_NAMESPACE_2
 		// have not received any scrape data.
 		int num_complete = -1;
 		int num_incomplete = -1;
-
 		int num_downloaded = -1;
 
 		// URLs can be added to these two lists to specify additional web
@@ -329,6 +332,8 @@ TORRENT_VERSION_NAMESPACE_2
 		// applied before the torrent is added.
 		aux::noexcept_movable<std::map<file_index_t, std::string>> renamed_files;
 
+		// the posix time of the last time payload was received or sent for this
+		// torrent, respectively.
 		std::time_t last_download = 0;
 		std::time_t last_upload = 0;
 

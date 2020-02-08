@@ -74,6 +74,7 @@ namespace aux {
 
 #if TORRENT_USE_ASSERTS || !defined TORRENT_DISABLE_LOGGING
 
+	// internal
 	struct piece_log_t
 	{
 		explicit piece_log_t(job_action_t j, int b = -1): job(j), block(b) {}
@@ -82,6 +83,7 @@ namespace aux {
 
 		// these are "jobs" thar cause piece_refcount
 		// to be incremented
+		// internal
 		enum artificial_jobs
 		{
 			flushing = static_cast<int>(job_action_t::num_job_ids), // 20
@@ -448,7 +450,7 @@ namespace aux {
 		// adds a block to the cache, marks it as dirty and
 		// associates the job with it. When the block is
 		// flushed, the callback is posted
-		cached_piece_entry* add_dirty_block(disk_io_job* j);
+		cached_piece_entry* add_dirty_block(disk_io_job* j, bool add_hasher);
 
 		enum { blocks_inc_refcount = 1 };
 		void insert_blocks(cached_piece_entry* pe, int block, span<iovec_t const> iov

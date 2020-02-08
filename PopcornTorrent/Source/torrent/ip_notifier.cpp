@@ -32,7 +32,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "libtorrent/aux_/ip_notifier.hpp"
 #include "libtorrent/assert.hpp"
-#include "netinet/ip.h"
 
 #if defined TORRENT_BUILD_SIMULATOR
 // TODO: simulator support
@@ -171,9 +170,9 @@ CFRef<SCNetworkReachabilityRef> create_reachability(SCNetworkReachabilityCallBac
 {
 	TORRENT_ASSERT(callback != nullptr);
 
-	sockaddr_in addr = {};
-	addr.sin_len = sizeof(addr);
-	addr.sin_family = AF_INET;
+	sockaddr addr = {};
+	addr.sa_len = sizeof(addr);
+	addr.sa_family = AF_INET;
 
 	CFRef<SCNetworkReachabilityRef> reach{SCNetworkReachabilityCreateWithAddress(nullptr
 		, reinterpret_cast<sockaddr const*>(&addr))};

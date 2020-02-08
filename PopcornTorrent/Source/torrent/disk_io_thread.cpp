@@ -207,16 +207,17 @@ constexpr disk_job_flags_t disk_interface::cache_hit;
 
 // ------- disk_io_thread ------
 
-	disk_io_thread::disk_io_thread(io_service& ios, counters& cnt)
+	disk_io_thread::disk_io_thread(io_service& ios, aux::session_settings const& sett, counters& cnt)
 		: m_generic_io_jobs(*this)
 		, m_generic_threads(m_generic_io_jobs, ios)
 		, m_hash_io_jobs(*this)
 		, m_hash_threads(m_hash_io_jobs, ios)
+		, m_settings(sett)
 		, m_disk_cache(ios, std::bind(&disk_io_thread::trigger_cache_trim, this))
 		, m_stats_counters(cnt)
 		, m_ios(ios)
 	{
-		m_disk_cache.set_settings(m_settings);
+		settings_updated();
 	}
 
 	storage_interface* disk_io_thread::get_torrent(storage_index_t const storage)
@@ -333,11 +334,10 @@ constexpr disk_job_flags_t disk_interface::cache_hit;
 		}
 	}
 
-	void disk_io_thread::set_settings(settings_pack const* pack)
+	void disk_io_thread::settings_updated()
 	{
 		TORRENT_ASSERT(m_magic == 0x1337);
 		std::unique_lock<std::mutex> l(m_cache_mutex);
-		apply_pack(pack, m_settings);
 		m_disk_cache.set_settings(m_settings);
 		m_file_pool.resize(m_settings.get_int(settings_pack::file_pool_size));
 
@@ -1566,7 +1566,8 @@ constexpr disk_job_flags_t disk_interface::cache_hit;
 			return status_t::fatal_disk_error;
 		}
 
-		pe = m_disk_cache.add_dirty_block(j);
+		pe = m_disk_cache.add_dirty_block(j
+			, !m_settings.get_bool(settings_pack::disable_hash_checks));
 
 		if (pe)
 		{
@@ -1786,7 +1787,8 @@ constexpr disk_job_flags_t disk_interface::cache_hit;
 		std::unique_lock<std::mutex> l(m_cache_mutex);
 		// if we succeed in adding the block to the cache, the job will
 		// be added along with it. we may not free j if so
-		cached_piece_entry* dpe = m_disk_cache.add_dirty_block(j);
+		cached_piece_entry* dpe = m_disk_cache.add_dirty_block(j
+			, !m_settings.get_bool(settings_pack::disable_hash_checks));
 
 		if (dpe != nullptr)
 		{
@@ -2187,6 +2189,9 @@ constexpr disk_job_flags_t disk_interface::cache_hit;
 
 	status_t disk_io_thread::do_hash(disk_io_job* j, jobqueue_t& /* completed_jobs */ )
 	{
+		if (m_settings.get_bool(settings_pack::disable_hash_checks))
+			return status_t::no_error;
+
 		int const piece_size = j->storage->files().piece_size(j->piece);
 		open_mode_t const file_flags = file_flags_for_job(j
 			, m_settings.get_bool(settings_pack::coalesce_reads));
@@ -3396,7 +3401,8 @@ constexpr disk_job_flags_t disk_interface::cache_hit;
 					continue;
 				}
 
-				cached_piece_entry* pe = m_disk_cache.add_dirty_block(j);
+				cached_piece_entry* pe = m_disk_cache.add_dirty_block(j
+					, !m_settings.get_bool(settings_pack::disable_hash_checks));
 
 				if (pe == nullptr)
 				{

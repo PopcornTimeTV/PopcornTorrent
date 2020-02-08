@@ -54,6 +54,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/stack_allocator.hpp"
 #include "libtorrent/aux_/noexcept_movable.hpp"
 #include "libtorrent/portmap.hpp" // for portmap_transport
+#include "libtorrent/aux_/deprecated.hpp"
 
 #include "libtorrent/aux_/disable_warnings_push.hpp"
 #include <boost/shared_array.hpp>
@@ -84,6 +85,7 @@ namespace libtorrent {
 	// this constant represents "max_alert_index" + 1
 	constexpr int num_alert_types = 96;
 
+	// internal
 	enum alert_priority
 	{
 		alert_priority_normal = 0,
@@ -208,6 +210,17 @@ TORRENT_VERSION_NAMESPACE_2
 	TORRENT_DEFINE_ALERT_IMPL(name, seq, prio)
 
 #if TORRENT_ABI_VERSION == 1
+
+#ifdef _MSC_VER
+#pragma warning(push, 1)
+// warning C4996: X: was declared deprecated
+#pragma warning( disable : 4996 )
+#endif
+#if defined __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 	// The ``torrent_added_alert`` is posted once every time a torrent is successfully
 	// added. It doesn't contain any members of its own, but inherits the torrent handle
 	// from its base class.
@@ -223,6 +236,14 @@ TORRENT_VERSION_NAMESPACE_2
 		static constexpr alert_category_t static_category = alert::status_notification;
 		std::string message() const override;
 	};
+
+#if defined __GNUC__
+#pragma GCC diagnostic pop
+#endif
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 #endif
 
 	// The ``torrent_removed_alert`` is posted whenever a torrent is removed. Since
@@ -415,9 +436,11 @@ TORRENT_VERSION_NAMESPACE_2
 			// or that our send buffer watermark is too small, because we can
 			// send it all before the disk gets back to us.
 			// The number of bytes that we keep outstanding, requested from the disk, is calculated
-			// as follows::
+			// as follows:
 			//
-			//   min(512, max(upload_rate * send_buffer_watermark_factor / 100, send_buffer_watermark))
+			// .. code:: C++
+			//
+			//    min(512, max(upload_rate * send_buffer_watermark_factor / 100, send_buffer_watermark))
 			//
 			// If you receive this alert, you might want to either increase your ``send_buffer_watermark``
 			// or ``send_buffer_watermark_factor``.
@@ -694,7 +717,7 @@ TORRENT_VERSION_NAMESPACE_2
 		std::string message() const override;
 	};
 
-	// This alert is generated when a peer is unsnubbed. Essentially when it was snubbed for stalling
+	// This alert is generated when a peer is un-snubbed. Essentially when it was snubbed for stalling
 	// sending data, and now it started sending data again.
 	struct TORRENT_EXPORT peer_unsnubbed_alert final : peer_alert
 	{
@@ -847,6 +870,9 @@ TORRENT_VERSION_NAMESPACE_2
 	// this alert is posted every time a piece completes downloading
 	// and passes the hash check. This alert derives from torrent_alert
 	// which contains the torrent_handle to the torrent the piece belongs to.
+	// Note that being downloaded and passing the hash check may happen before
+	// the piece is also fully flushed to disk. So torrent_handle::have_piece()
+	// may still return false
 	struct TORRENT_EXPORT piece_finished_alert final : torrent_alert
 	{
 		// internal
@@ -1301,7 +1327,9 @@ TORRENT_VERSION_NAMESPACE_2
 	//
 	// Typically, when receiving this alert, you would want to save the torrent file in order
 	// to load it back up again when the session is restarted. Here's an example snippet of
-	// code to do that::
+	// code to do that:
+	//
+	// .. code:: c++
 	//
 	//	torrent_handle h = alert->handle();
 	//	if (h.is_valid()) {
@@ -1644,8 +1672,8 @@ TORRENT_VERSION_NAMESPACE_2
 
 	};
 
-	// This alert is generated when a fastresume file has been passed to
-	// add_torrent() but the files on disk did not match the fastresume file.
+	// This alert is generated when a fast resume file has been passed to
+	// add_torrent() but the files on disk did not match the fast resume file.
 	// The error_code explains the reason why the resume file was rejected.
 	struct TORRENT_EXPORT fastresume_rejected_alert final : torrent_alert
 	{
@@ -1818,6 +1846,17 @@ TORRENT_VERSION_NAMESPACE_2
 	};
 
 #if TORRENT_ABI_VERSION == 1
+
+#ifdef _MSC_VER
+#pragma warning(push, 1)
+// warning C4996: X: was declared deprecated
+#pragma warning( disable : 4996 )
+#endif
+#if defined __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 	// This alert is posted when a bittorrent feature is blocked because of the
 	// anonymous mode. For instance, if the tracker proxy is not set up, no
 	// trackers will be used, because trackers can only be used through proxies
@@ -1845,6 +1884,14 @@ TORRENT_VERSION_NAMESPACE_2
 		int kind;
 		std::string str;
 	};
+
+#if defined __GNUC__
+#pragma GCC diagnostic pop
+#endif
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 #endif // TORRENT_ABI_VERSION
 
 	// This alert is generated when we receive a local service discovery message
@@ -1990,7 +2037,7 @@ TORRENT_VERSION_NAMESPACE_2
 
 	// This alert is always posted when a torrent was attempted to be added
 	// and contains the return status of the add operation. The torrent handle of the new
-	// torrent can be found in the base class' ``handle`` member. If adding
+	// torrent can be found as the ``handle`` member in the base class. If adding
 	// the torrent failed, ``error`` contains the error code.
 	struct TORRENT_EXPORT add_torrent_alert final : torrent_alert
 	{
@@ -2075,6 +2122,7 @@ TORRENT_VERSION_NAMESPACE_2
 	// if this is changed, that parser should also be changed
 	struct TORRENT_EXPORT session_stats_alert final : alert
 	{
+		// internal
 		session_stats_alert(aux::stack_allocator& alloc, counters const& cnt);
 
 #if TORRENT_ABI_VERSION == 1
@@ -2196,6 +2244,7 @@ TORRENT_VERSION_NAMESPACE_2
 	// specifically the overload for looking up immutable items in the DHT.
 	struct TORRENT_EXPORT dht_immutable_item_alert final : alert
 	{
+		// internal
 		dht_immutable_item_alert(aux::stack_allocator& alloc, sha1_hash const& t
 			, entry const& i);
 
@@ -2217,6 +2266,7 @@ TORRENT_VERSION_NAMESPACE_2
 	// specifically the overload for looking up mutable items in the DHT.
 	struct TORRENT_EXPORT dht_mutable_item_alert final : alert
 	{
+		// internal
 		dht_mutable_item_alert(aux::stack_allocator& alloc
 			, std::array<char, 32> const& k, std::array<char, 64> const& sig
 			, std::int64_t sequence, string_view s, entry const& i, bool a);
@@ -2288,6 +2338,7 @@ TORRENT_VERSION_NAMESPACE_2
 	// this alert is used to report errors in the i2p SAM connection
 	struct TORRENT_EXPORT i2p_alert final : alert
 	{
+		// internal
 		i2p_alert(aux::stack_allocator& alloc, error_code const& ec);
 
 		TORRENT_DEFINE_ALERT(i2p_alert, 77)
@@ -2538,6 +2589,8 @@ TORRENT_VERSION_NAMESPACE_2
 		peer_request req;
 	};
 
+	// debug logging of the DHT when dht_log_notification is set in the alert
+	// mask.
 	struct TORRENT_EXPORT dht_log_alert final : alert
 	{
 		enum dht_module_t
@@ -2549,6 +2602,7 @@ TORRENT_VERSION_NAMESPACE_2
 			traversal
 		};
 
+		// internal
 		dht_log_alert(aux::stack_allocator& alloc
 			, dht_module_t m, char const* fmt, va_list v);
 
@@ -2576,6 +2630,7 @@ TORRENT_VERSION_NAMESPACE_2
 		enum direction_t
 		{ incoming, outgoing };
 
+		// internal
 		dht_pkt_alert(aux::stack_allocator& alloc, span<char const> buf
 			, dht_pkt_alert::direction_t d, udp::endpoint const& ep);
 
@@ -2608,8 +2663,10 @@ TORRENT_VERSION_NAMESPACE_2
 
 	};
 
+	// Posted when we receive a response to a DHT get_peers request.
 	struct TORRENT_EXPORT dht_get_peers_reply_alert final : alert
 	{
+		// internal
 		dht_get_peers_reply_alert(aux::stack_allocator& alloc
 			, sha1_hash const& ih
 			, std::vector<tcp::endpoint> const& v);
@@ -2641,6 +2698,7 @@ TORRENT_VERSION_NAMESPACE_2
 	// If the request failed, response() will return a default constructed bdecode_node.
 	struct TORRENT_EXPORT dht_direct_response_alert final : alert
 	{
+		// internal
 		dht_direct_response_alert(aux::stack_allocator& alloc, void* userdata
 			, udp::endpoint const& addr, bdecode_node const& response);
 
@@ -2702,6 +2760,7 @@ TORRENT_VERSION_NAMESPACE_2
 		static constexpr picker_flags_t backup1 = 13_bit;
 		static constexpr picker_flags_t backup2 = 14_bit;
 		static constexpr picker_flags_t end_game = 15_bit;
+		static constexpr picker_flags_t extent_affinity = 16_bit;
 
 		// this is a bitmask of which features were enabled for this particular
 		// pick. The bits are defined in the picker_flags_t enum.
@@ -2735,8 +2794,12 @@ TORRENT_VERSION_NAMESPACE_2
 		aux::allocation_slot m_msg_idx;
 	};
 
+	// posted in response to a call to session::dht_live_nodes(). It contains the
+	// live nodes from the DHT routing table of one of the DHT nodes running
+	// locally.
 	struct TORRENT_EXPORT dht_live_nodes_alert final : alert
 	{
+		// internal
 		dht_live_nodes_alert(aux::stack_allocator& alloc
 			, sha1_hash const& nid
 			, std::vector<std::pair<sha1_hash, udp::endpoint>> const& nodes);
@@ -2746,8 +2809,10 @@ TORRENT_VERSION_NAMESPACE_2
 		static constexpr alert_category_t static_category = alert::dht_notification;
 		std::string message() const override;
 
+		// the local DHT node's node-ID this routing table belongs to
 		sha1_hash node_id;
 
+		// the number of nodes in the routing table and the actual nodes.
 		int num_nodes() const;
 		std::vector<std::pair<sha1_hash, udp::endpoint>> nodes() const;
 
@@ -2770,6 +2835,7 @@ TORRENT_VERSION_NAMESPACE_2
 	// if this is changed, that parser should also be changed
 	struct TORRENT_EXPORT session_stats_header_alert final : alert
 	{
+		// internal
 		explicit session_stats_header_alert(aux::stack_allocator& alloc);
 		TORRENT_DEFINE_ALERT(session_stats_header_alert, 92)
 
@@ -2777,8 +2843,11 @@ TORRENT_VERSION_NAMESPACE_2
 		std::string message() const override;
 	};
 
+	// posted as a response to a call to session::dht_sample_infohashes() with
+	// the information from the DHT response message.
 	struct TORRENT_EXPORT dht_sample_infohashes_alert final : alert
 	{
+		// internal
 		dht_sample_infohashes_alert(aux::stack_allocator& alloc
 			, udp::endpoint const& endp
 			, time_duration interval
@@ -2791,8 +2860,10 @@ TORRENT_VERSION_NAMESPACE_2
 
 		std::string message() const override;
 
+		// the node the request was sent to (and this response was received from)
 		aux::noexcept_movable<udp::endpoint> endpoint;
 
+		// the interval to wait before making another request to this node
 		time_duration const interval;
 
 		// This field indicates how many info-hash keys are currently in the node's storage.
@@ -2800,6 +2871,9 @@ TORRENT_VERSION_NAMESPACE_2
 		// indexer may obtain additional samples after waiting out the interval.
 		int const num_infohashes;
 
+		// returns the number of info-hashes returned by the node, as well as the
+		// actual info-hashes. ``num_samples()`` is more efficient than
+		// ``samples().size()``.
 		int num_samples() const;
 		std::vector<sha1_hash> samples() const;
 
@@ -2859,6 +2933,7 @@ TORRENT_VERSION_NAMESPACE_2
 	// queue grew too big (controlled by alert_queue_size).
 	struct TORRENT_EXPORT alerts_dropped_alert final : alert
 	{
+		// internal
 		explicit alerts_dropped_alert(aux::stack_allocator& alloc
 			, std::bitset<num_alert_types> const&);
 		TORRENT_DEFINE_ALERT_PRIO(alerts_dropped_alert, 95, alert_priority_critical + 1)

@@ -69,6 +69,7 @@ namespace libtorrent {
 	using prio_index_t = aux::strong_typedef<int, struct prio_index_tag_t>;
 	using picker_options_t = flags::bitfield_flag<std::uint16_t, struct picker_options_tag>;
 	using download_queue_t = aux::strong_typedef<std::uint8_t, struct dl_queue_tag>;
+	using piece_extent_t = aux::strong_typedef<int, struct piece_extent_tag>;
 
 	struct piece_count
 	{
@@ -94,7 +95,11 @@ namespace libtorrent {
 			// the number of priority levels
 			priority_levels = 8,
 			// priority factor
-			prio_factor = 3
+			prio_factor = 3,
+			// max blocks per piece
+			// there are counters in downloading_piece that only have 15 bits to
+			// count blocks per piece, that's restricting this
+			max_blocks_per_piece = (1 << 15) - 1
 		};
 
 		struct block_info
@@ -140,6 +145,11 @@ namespace libtorrent {
 		// within properly aligned ranges, not the largest possible
 		// range of pieces.
 		static constexpr picker_options_t align_expanded_pieces = 6_bit;
+
+		// this will create an affinity to pick pieces in extents of 4 MiB, in an
+		// attempt to improve disk I/O by picking ranges of pieces (if pieces are
+		// small)
+		static constexpr picker_options_t piece_extent_affinity = 7_bit;
 
 		struct downloading_piece
 		{
@@ -428,8 +438,24 @@ namespace libtorrent {
 		// been flushed to disk yet)
 		int num_passed() const { return m_num_passed; }
 
-		// return true if we have all the pieces we wanted
-		bool is_finished() const { return m_num_have - m_num_have_filtered == num_pieces() - m_num_filtered; }
+		// return true if all the pieces we want have passed the hash check (but
+		// may not have been written to disk yet)
+		bool is_finished() const
+		{
+			// this expression warrants some explanation:
+			// if the number of pieces we *want* to download
+			// is less than or (more likely) equal to the number of pieces that
+			// have passed the hash check (discounting the pieces that have passed
+			// the check but then had their priority set to 0). Then we're
+			// finished. Note that any piece we *have* implies it's both passed the
+			// hash check *and* been written to disk.
+			// num_pieces() - m_num_filtered - m_num_have_filtered
+			//   <= (num_passed() - m_num_have_filtered)
+			// this can be simplified. Note how m_num_have_filtered appears on both
+			// side of the equation.
+			//
+			return num_pieces() - m_num_filtered <= num_passed();
+		}
 
 		bool is_seeding() const { return m_num_have == num_pieces(); }
 
@@ -468,6 +494,11 @@ namespace libtorrent {
 		span<block_info const> blocks_for_piece(downloading_piece const& dp) const;
 
 	private:
+
+		piece_extent_t extent_for(piece_index_t) const;
+		index_range<piece_index_t> extent_for(piece_extent_t) const;
+
+		void record_downloading_piece(piece_index_t const p);
 
 		int num_pad_blocks() const { return m_num_pad_blocks; }
 
@@ -740,6 +771,13 @@ namespace libtorrent {
 
 		// tracks the number of blocks in a specific piece that are pad blocks
 		std::unordered_map<piece_index_t, int> m_pads_in_piece;
+
+		// when the adjecent_piece affinity is enabled, this contains the most
+		// recent "extents" of adjecent pieces that have been requested from
+		// this is mutable because it's updated by functions to pick pieces, which
+		// are const. That's an efficient place to update it, since it's being
+		// traversed already.
+		mutable std::vector<piece_extent_t> m_recent_extents;
 
 		// the number of bits set in the m_pad_blocks bitfield, i.e.
 		// the number of blocks marked as pads

@@ -52,7 +52,6 @@ namespace libtorrent {
 	constexpr int TORRENT_UDP_HEADER = 8;
 	constexpr int TORRENT_UTP_HEADER = 20;
 	constexpr int TORRENT_SOCKS5_HEADER = 6; // plus the size of the destination address
-
 	constexpr int TORRENT_ETHERNET_MTU = 1500;
 	constexpr int TORRENT_TEREDO_MTU = 1280;
 	constexpr int TORRENT_INET_MIN_MTU = 576;
@@ -108,11 +107,12 @@ namespace libtorrent {
 
 	using packet_ptr = std::unique_ptr<packet, packet_deleter>;
 
+	// internal
 	inline packet_ptr create_packet(int const size)
 	{
 		packet* p = static_cast<packet*>(std::malloc(sizeof(packet) + aux::numeric_cast<std::uint16_t>(size)));
 		if (p == nullptr) aux::throw_ex<std::bad_alloc>();
-		new (p) packet();
+		p = new (p) packet();
 		p->allocated = aux::numeric_cast<std::uint16_t>(size);
 		return packet_ptr(p);
 	}
